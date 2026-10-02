@@ -1,0 +1,112 @@
+id: launch-review
+title: Launch Review
+author: Northwind
+brand: emporion
+theme:
+  background: "#14181f"
+  surface: "#222b3a"
+  text: "#f4f1ea"
+  muted: "#b4b0a6"
+  accent: "#e2a354"
+  fontHeading: Source Serif 4
+  fontBody: Inter
+  fontMono: JetBrains Mono
+  align: left
+  headingScale: 1
+  radius: 16
+slides:
+  - id: title
+    layout: title
+    title: Launch Review
+    subtitle: Decide what ships on Friday
+    notes: Open with the decision, not the status report.
+    side:
+      - type: callout
+        text: Twenty minutes. Three questions. One owner.
+  - id: agenda
+    layout: section
+    title: Three decisions
+    subtitle: Scope, date, and the condition to proceed
+    notes: Read the three questions, then go straight to scope.
+  - id: scope
+    layout: content
+    title: Scope is the constraint
+    notes: Do not relitigate last quarter. Ask which line is still open.
+    blocks:
+      - type: paragraph
+        text: The release holds if any of these stay open.
+      - type: bullets
+        items:
+          - text: Export YAML, PDF, Word, and PowerPoint
+            step: 1
+          - text: Keep taken notes on the deck
+            step: 2
+          - text: Leave the main stage fixed
+            step: 3
+      - type: callout
+        text: A missing owner is an open item.
+        step: 3
+    side:
+      - type: code
+        language: yaml
+        code: |
+          widgets:
+            - id: ship-scope
+              type: radio
+              prompt: Is scope acceptable?
+      - type: callout
+        text: The side column is reference material. The script stays in the notes band.
+    widgets:
+      - id: ship-scope
+        type: radio
+        prompt: Is scope acceptable?
+        options:
+          - "Yes"
+          - Cut
+          - Stop
+      - id: risks
+        type: checkbox
+        prompt: Risks still open
+        options:
+          - Staffing
+          - Date
+          - Quality
+  - id: principle
+    layout: quote
+    title: Principle
+    notes: Pause after the line. Let the room answer.
+    blocks:
+      - type: quote
+        text: A missing decision is a decision to slip.
+        attribution: Launch chair
+  - id: date
+    layout: content
+    title: Pick a date
+    subtitle: Friday is the default
+    notes: Move the date only when someone names the condition.
+    theme:
+      background: "#1b2430"
+      accent: "#8eb6ff"
+    blocks:
+      - type: paragraph
+        text: Move Friday only with a named owner and a written condition.
+      - type: image
+        alt: Three-step launch sequence
+        src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAACgCAYAAACc/t08AAAEbUlEQVR4nO3cQUocURSGUffhNAvIYrLD7CzDzAKZJwQcdBptWq16z+t3BmckShXcn/4Q8eHxy9c/AAB0POx+AAAA1hKAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBOA7/fj+bfszAG9jvzCX/b6PAHyFf8d2r93PCvzPfmEu+z2eALzDrUP7/eunQ4QPzH5hLvs9jwC84blju5dDhL3sF+ay3/MJwBe89fBuHeLud4IK+4W57HcNAfiMo47PEcJ69gtz2e86AvDK0cfnCGEd+4W57HctAXjhrONzhHA++4W57Hc9AXjhzOO7PsLd7wqfjf3CXPa7ngB8suL4HCGcw35hLvvdQwA+cYAwl/3CXPa7hwBcfHyOEI5lvzCX/e4jAB0gjGa/MJf97iMAHSCMZr8wl/3uIwA3HyBwDPuFuQSgABSAwJvYL8wlAAVgIv58iMCx7Bfm2rXf3f2xWz4AH/0GED4F+4W5dux3d3vsJgD9ESqMZr8wl/3uIwAdIIxmvzCX/e4jAB0gjGa/MJf97iMAHSCMZr8wl/3uIwA3HKHjg2PZL8xlv3sIwCcOEOayX5jLfvcQgBdWHKHjg3PYL8xlv+sJwAtn/0+iy5+/+13hs7FfmMt+1xOAV846QscH57NfmMt+1xKAzzj6CB0frGO/MJf9riMAX3DUETo+WM9+YS77XUMA3nB5PK89xOvv3f0uUGO/MJf9nk8A3uH6mK6P8tbXdz871NkvzGW/5xGAr3Dr0BwefGz2C3PZ7/EEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYv4CEd5QaIocBOsAAAAASUVORK5CYII="
+      - type: divider
+      - type: paragraph
+        text: Record the condition in the decision row before you leave the slide.
+    widgets:
+      - id: when
+        type: select
+        prompt: Ship date
+        options:
+          - Friday
+          - Next Monday
+          - Undated
+      - id: confidence
+        type: scale
+        prompt: Confidence
+      - id: condition
+        type: text
+        prompt: Condition to proceed
