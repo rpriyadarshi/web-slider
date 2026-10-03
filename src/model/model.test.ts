@@ -4,7 +4,7 @@ import { parseManifest, presentTalk, resolveManifest, sourceHash } from "./insta
 import { parseDeck } from "./parse";
 import { DEFAULT_THEME, resolveTheme } from "./schema";
 import { serializeDeck } from "./serialize";
-import { formatSessionBlock, sessionFromDeck } from "./session";
+import { formatSessionBlock, normalizeSession, PANE, sessionFromDeck } from "./session";
 import { blockToText } from "./text";
 import { jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleNumber } from "./steps";
 
@@ -158,6 +158,23 @@ slides:
     expect(deck.theme?.background).toBeUndefined();
     expect(resolveTheme(deck.theme).background).toBe(DEFAULT_THEME.background);
     expect(resolveTheme(deck.theme).fontHeading).toBe("Source Serif 4");
+  });
+});
+
+describe("session panes", () => {
+  it("keeps an older session and fills pane sizes that were never stored", () => {
+    const deck = parseDeck(validDeck);
+    const restored = normalizeSession(deck, {
+      slideIndex: 0,
+      revealed: 0,
+      answers: {},
+      notes: {},
+      ui: { toc: true, side: false, bottom: true, theme: "dark" },
+    });
+    expect(restored.ui.tocWidth).toBe(PANE.tocWidth);
+    expect(restored.ui.bottomHeight).toBe(PANE.bottomHeight);
+    expect(restored.ui.decisionsWidth).toBe(PANE.decisionsWidth);
+    expect(restored.ui.notesWidth).toBe(PANE.notesWidth);
   });
 });
 

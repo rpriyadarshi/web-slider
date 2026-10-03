@@ -3,7 +3,8 @@ import { bindProbe, type ProbePath } from "../model/probe";
 import type { Widget } from "../model/schema";
 import type { WidgetAnswer } from "../model/session";
 import { WidgetList } from "../widgets/WidgetControl";
-import { Icon, IconButton, IconMark } from "./IconButton";
+import { Icon, IconButton } from "./IconButton";
+import { Splitter } from "./Splitter";
 
 export function BottomBar({
   slideId,
@@ -15,11 +16,16 @@ export function BottomBar({
   onNotes,
   onNotesFocus,
   onHide,
+  pinned = true,
+  onPin,
   feedback = false,
   nextPreview,
   slideIndex = 0,
   probe = null,
   onProbe,
+  onDecisions,
+  onNotesWidth,
+  onHeight,
 }: {
   slideId: string;
   widgets: Widget[];
@@ -30,18 +36,31 @@ export function BottomBar({
   onNotes: (value: string) => void;
   onNotesFocus?: () => void;
   onHide: () => void;
+  pinned?: boolean;
+  onPin?: () => void;
   feedback?: boolean;
   nextPreview?: ReactNode;
   slideIndex?: number;
   probe?: ProbePath | null;
   onProbe?: (path: ProbePath) => void;
+  onDecisions?: (delta: number) => void;
+  onNotesWidth?: (delta: number) => void;
+  onHeight?: (delta: number) => void;
 }) {
   return (
-    <footer className="bottom">
-      <section className="decisions" aria-label="Decisions">
-        <div className="panel-head">
-          <IconMark label="Decisions" name="examples" />
+    <footer className={feedback ? "bottom feedback" : pinned ? "bottom" : "bottom pane floating bottom-float"}>
+      {onHeight ? <Splitter className="row" axis="y" label="Resize presenter strip" onDelta={onHeight} /> : null}
+      {feedback ? null : (
+        <div className="panel-actions bottom-actions">
+          <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
+            <Icon name="pin" />
+          </IconButton>
+          <IconButton label="Hide" onClick={onHide}>
+            <Icon name="hide" />
+          </IconButton>
         </div>
+      )}
+      <section className="decisions" aria-label="Decisions">
         <WidgetList
           slideId={slideId}
           slideIndex={slideIndex}
@@ -52,17 +71,8 @@ export function BottomBar({
           onProbe={onProbe}
         />
       </section>
+      {onDecisions ? <Splitter className="col" axis="x" label="Resize decisions" onDelta={onDecisions} /> : null}
       <section className="notes-col" aria-label="Notes">
-        <div className="panel-head">
-          <IconMark label={feedback ? "Feedback" : "Notes"} name="notes" />
-          {feedback ? null : (
-            <div className="panel-actions">
-              <IconButton label="Hide" onClick={onHide}>
-                <Icon name="hide" />
-              </IconButton>
-            </div>
-          )}
-        </div>
         <div className="notes-grid">
           <div className="script">
             <h3>Script</h3>
@@ -79,9 +89,16 @@ export function BottomBar({
               placeholder={feedback ? "Tell the presenter what you think" : "Notes you take during the talk"}
             />
           </label>
-          {nextPreview ? <div className="next-preview">{nextPreview}</div> : null}
         </div>
       </section>
+      {onNotesWidth ? <Splitter className="col" axis="x" label="Resize notes" onDelta={onNotesWidth} /> : null}
+      {feedback ? null : (
+        <section className="next-col" aria-label="Next">
+          <div className="next-preview">
+            <div className="next-fit">{nextPreview}</div>
+          </div>
+        </section>
+      )}
     </footer>
   );
 }

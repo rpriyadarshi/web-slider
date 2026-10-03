@@ -4,6 +4,17 @@ import { revealThresholds } from "./steps";
 
 export type WidgetAnswer = string | string[] | number;
 
+export const PANE = {
+  tocWidth: 284,
+  yamlWidth: 380,
+  sideWidth: 344,
+  bottomHeight: 210,
+  decisionsWidth: 480,
+  notesWidth: 320,
+} as const;
+
+export type PaneSize = keyof typeof PANE;
+
 export type DeckSession = {
   slideIndex: number;
   revealed: number;
@@ -17,12 +28,36 @@ export type DeckSession = {
     tocPinned: boolean;
     sidePinned: boolean;
     yamlPinned: boolean;
+    bottomPinned: boolean;
     theme: "light" | "dark";
+    tocWidth: number;
+    yamlWidth: number;
+    sideWidth: number;
+    bottomHeight: number;
+    decisionsWidth: number;
+    notesWidth: number;
   };
 };
 
 export function emptyChrome(): DeckSession["ui"] {
-  return { toc: true, side: false, bottom: true, yaml: true, tocPinned: false, sidePinned: false, yamlPinned: true, theme: "dark" };
+  return {
+    toc: true,
+    side: false,
+    bottom: true,
+    yaml: true,
+    tocPinned: false,
+    sidePinned: false,
+    yamlPinned: true,
+    bottomPinned: true,
+    theme: "dark",
+    ...PANE,
+  };
+}
+
+export function clampPane(key: PaneSize, value: number): number {
+  const min = key === "bottomHeight" ? 120 : 160;
+  const max = key === "bottomHeight" ? 640 : 960;
+  return Math.min(max, Math.max(min, Math.round(value)));
 }
 
 export function sessionFromDeck(deck: Deck): DeckSession {
@@ -115,9 +150,21 @@ export function normalizeSession(deck: Deck, input: unknown): DeckSession {
       tocPinned: ui.tocPinned === true,
       sidePinned: ui.sidePinned === true,
       yamlPinned: ui.yamlPinned !== false,
+      bottomPinned: ui.bottomPinned !== false,
       theme,
+      tocWidth: paneSize(ui.tocWidth, "tocWidth"),
+      yamlWidth: paneSize(ui.yamlWidth, "yamlWidth"),
+      sideWidth: paneSize(ui.sideWidth, "sideWidth"),
+      bottomHeight: paneSize(ui.bottomHeight, "bottomHeight"),
+      decisionsWidth: paneSize(ui.decisionsWidth, "decisionsWidth"),
+      notesWidth: paneSize(ui.notesWidth, "notesWidth"),
     },
   };
+}
+
+function paneSize(value: unknown, key: PaneSize): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return PANE[key];
+  return clampPane(key, value);
 }
 
 export function clampRevealed(slide: Deck["slides"][number], revealed: number): number {

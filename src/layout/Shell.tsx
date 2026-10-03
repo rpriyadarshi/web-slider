@@ -4,7 +4,7 @@ import { bytesToBlob, downloadBlob, downloadText } from "../export/download";
 import { deckToYaml } from "../export/yaml";
 import type { Deck } from "../model/schema";
 import { resolveTheme } from "../model/schema";
-import { formatSessionBlock, type DeckSession, type WidgetAnswer } from "../model/session";
+import { clampPane, formatSessionBlock, type DeckSession, type PaneSize, type WidgetAnswer } from "../model/session";
 import { locateProbe, probeAt, slideIndexInProbe, type ProbePath } from "../model/probe";
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
 import { startCaptions } from "../present/captions";
@@ -15,7 +15,12 @@ import { Icon, IconButton } from "./IconButton";
 import { Overview } from "./Overview";
 import { SidePanel } from "./SidePanel";
 import { Toc } from "./Toc";
+import { Splitter } from "./Splitter";
 import { YamlPane } from "./YamlPane";
+
+function resizeUi(ui: DeckSession["ui"], key: PaneSize, delta: number): DeckSession["ui"] {
+  return { ...ui, [key]: clampPane(key, ui[key] + delta) };
+}
 
 export function Shell({
   deck,
@@ -198,8 +203,10 @@ export function Shell({
           onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }));
         } else if (session.ui.yaml && !session.ui.yamlPinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }));
-        } else if (session.ui.toc && !session.ui.tocPinned) {
+        }         else if (session.ui.toc && !session.ui.tocPinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, toc: false } }));
+        } else if (session.ui.bottom && !session.ui.bottomPinned) {
+          onSession((current) => ({ ...current, ui: { ...current.ui, bottom: false } }));
         } else {
           return;
         }
@@ -283,7 +290,7 @@ export function Shell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [blank, deck, embed, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, session.ui.yaml, session.ui.yamlPinned, themeOpen]);
+  }, [blank, deck, embed, exportOpen, onSession, overview, session.ui.bottom, session.ui.bottomPinned, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, session.ui.yaml, session.ui.yamlPinned, themeOpen]);
 
   function jump(index: number) {
     onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
@@ -317,6 +324,40 @@ export function Shell({
   }
 
   const menuOpen = themeOpen || exportOpen;
+  const presenter = (
+    <BottomBar
+      feedback={embed}
+      slideId={slide.id}
+      widgets={slide.widgets ?? []}
+      answers={session.answers[slide.id]}
+      script={slide.notes}
+      notes={session.notes[slide.id] ?? ""}
+      onAnswer={setAnswer}
+      slideIndex={session.slideIndex}
+      probe={probe}
+      onProbe={embed ? undefined : selectProbe}
+      onNotesFocus={embed ? undefined : showSession}
+      onNotes={(value) => {
+        onSession((current) => ({
+          ...current,
+          notes: { ...current.notes, [slide.id]: value },
+        }));
+      }}
+      pinned={session.ui.bottomPinned}
+      onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottomPinned: !current.ui.bottomPinned } }))}
+      onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: false } }))}
+      onDecisions={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "decisionsWidth", delta) }))}
+      onNotesWidth={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "notesWidth", delta) }))}
+      onHeight={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "bottomHeight", -delta) }))}
+      nextPreview={
+        embed ? undefined : nextSlide ? (
+              <SlideView deck={deck} slide={nextSlide} revealed={0} assets={assets} />
+        ) : (
+          <p>End of deck</p>
+        )
+      }
+    />
+  );
 
   return (
     <div
@@ -335,6 +376,13 @@ export function Shell({
         ["--line" as string]: palette.line,
         ["--accent" as string]: palette.accent,
         ["--highlight" as string]: palette.highlight,
+        ["--toc-col" as string]: session.ui.toc && session.ui.tocPinned ? `${session.ui.tocWidth}px` : "0px",
+        ["--yaml-col" as string]: session.ui.yaml && session.ui.yamlPinned ? `${session.ui.yamlWidth}px` : "0px",
+        ["--side-col" as string]: session.ui.side && session.ui.sidePinned ? `${session.ui.sideWidth}px` : "0px",
+        ["--bottom-row" as string]: embed || (session.ui.bottom && session.ui.bottomPinned) ? `${session.ui.bottomHeight}px` : "0px",
+        ["--bottom-size" as string]: `${session.ui.bottomHeight}px`,
+        ["--decisions-col" as string]: `${session.ui.decisionsWidth}px`,
+        ["--notes-col" as string]: `${session.ui.notesWidth}px`,
       }}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
@@ -415,11 +463,32 @@ export function Shell({
             <Icon name={fullscreen ? "exit" : "fullscreen"} />
           </IconButton>
           <IconButton
+            label="Outline"
+            pressed={session.ui.toc}
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, toc: !current.ui.toc } }))}
+          >
+            <Icon name="outline" />
+          </IconButton>
+          <IconButton
+            label="Examples"
+            pressed={session.ui.side}
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: !current.ui.side } }))}
+          >
+            <Icon name="examples" />
+          </IconButton>
+          <IconButton
             label="YAML"
             pressed={session.ui.yaml}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: !current.ui.yaml } }))}
           >
             <Icon name="yaml" />
+          </IconButton>
+          <IconButton
+            label="Presenter"
+            pressed={session.ui.bottom}
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: !current.ui.bottom } }))}
+          >
+            <Icon name="notes" />
           </IconButton>
           <IconButton label="Open" onClick={requestOpen}>
             <Icon name="open" />
@@ -550,6 +619,16 @@ export function Shell({
         </div>
       </header>
 
+      {!embed && session.ui.toc && session.ui.tocPinned ? (
+        <Splitter className="shell-toc" axis="x" label="Resize outline" onDelta={(delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "tocWidth", delta) }))} />
+      ) : null}
+      {!embed && session.ui.yaml && session.ui.yamlPinned ? (
+        <Splitter className="shell-yaml" axis="x" label="Resize YAML" onDelta={(delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "yamlWidth", -delta) }))} />
+      ) : null}
+      {!embed && session.ui.side && session.ui.sidePinned ? (
+        <Splitter className="shell-side" axis="x" label="Resize examples" onDelta={(delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "sideWidth", -delta) }))} />
+      ) : null}
+
       {menuOpen ? (
         <button
           type="button"
@@ -596,16 +675,33 @@ export function Shell({
           />
         ) : null}
         {!embed && !session.ui.side ? (
-          <button
-            type="button"
-            className="reopen right icon-button"
-            aria-label="Examples"
-            title="Examples"
+          <IconButton
+            className="reopen right"
+            label="Examples"
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: true } }))}
           >
             <Icon name="examples" />
-          </button>
+          </IconButton>
         ) : null}
+        {!embed && !session.ui.yaml ? (
+          <IconButton
+            className="reopen yaml"
+            label="YAML"
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: true } }))}
+          >
+            <Icon name="yaml" />
+          </IconButton>
+        ) : null}
+        {!embed && !session.ui.bottom ? (
+          <IconButton
+            className="reopen presenter"
+            label="Presenter"
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: true } }))}
+          >
+            <Icon name="notes" />
+          </IconButton>
+        ) : null}
+        {!embed && session.ui.bottom && !session.ui.bottomPinned ? presenter : null}
         {!embed && session.ui.side && !session.ui.sidePinned ? (
           <SidePanel
             className="pane floating right"
@@ -634,17 +730,6 @@ export function Shell({
             onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: true } }))}
             onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
           />
-        ) : null}
-        {!embed && !session.ui.bottom ? (
-          <button
-            type="button"
-            className="reopen bottom icon-button"
-            aria-label="Notes"
-            title="Notes"
-            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: true } }))}
-          >
-            <Icon name="notes" />
-          </button>
         ) : null}
         <SlideView
           deck={deck}
@@ -697,35 +782,7 @@ export function Shell({
         />
       ) : null}
 
-      {embed || session.ui.bottom ? (
-        <BottomBar
-          feedback={embed}
-          slideId={slide.id}
-          widgets={slide.widgets ?? []}
-          answers={session.answers[slide.id]}
-          script={slide.notes}
-          notes={session.notes[slide.id] ?? ""}
-          onAnswer={setAnswer}
-          slideIndex={session.slideIndex}
-          probe={probe}
-          onProbe={embed ? undefined : selectProbe}
-          onNotesFocus={embed ? undefined : showSession}
-          onNotes={(value) => {
-            onSession((current) => ({
-              ...current,
-              notes: { ...current.notes, [slide.id]: value },
-            }));
-          }}
-          onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: false } }))}
-          nextPreview={
-            embed ? undefined : nextSlide ? (
-              <SlideView deck={deck} slide={nextSlide} revealed={0} assets={assets} />
-            ) : (
-              <p>End of deck</p>
-            )
-          }
-        />
-      ) : null}
+      {embed || (session.ui.bottom && session.ui.bottomPinned) ? presenter : null}
 
       {overview ? <Overview slides={deck.slides} current={session.slideIndex} onJump={jump} onClose={() => setOverview(false)} /> : null}
       {persistError ? (
