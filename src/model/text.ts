@@ -16,6 +16,12 @@ export function blockToText(block: Block): string {
       return block.attribution ? `"${block.text}" — ${block.attribution}` : `"${block.text}"`;
     case "bullets":
       return block.items.map((item) => `• ${item.text}`).join("\n");
+    case "numbered":
+      return block.items.map((item, index) => `${index + 1}. ${item.text}`).join("\n");
+    case "table":
+      return [block.headers.join(" | "), ...block.rows.map((row) => row.join(" | "))].join("\n");
+    case "link":
+      return block.href ? `${block.text} (${block.href})` : block.text;
     case "code":
       return block.code.replace(/\s+$/, "");
     case "image":

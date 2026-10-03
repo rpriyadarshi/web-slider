@@ -25,14 +25,23 @@ export function Overview({
           <button
             key={slide.id}
             type="button"
+            className={slide.hidden ? "hidden-slide" : undefined}
             aria-current={index === current ? "true" : undefined}
             onClick={() => onJump(index)}
           >
-            <span className="num">{index + 1}</span>
+            <span className="num">{slide.hidden ? "—" : visibleLabel(slides, index)}</span>
             <span>{slide.title}</span>
           </button>
         ))}
       </div>
     </div>
   );
+}
+
+function visibleLabel(slides: Slide[], index: number): string {
+  let count = 0;
+  for (let cursor = 0; cursor <= index; cursor += 1) {
+    if (!slides[cursor]?.hidden) count += 1;
+  }
+  return String(count);
 }

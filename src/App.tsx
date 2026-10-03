@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import sampleDeck from "./sample/deck.yaml?raw";
+import { Audience } from "./layout/Audience";
 import { ErrorScreen } from "./layout/ErrorScreen";
 import { Shell } from "./layout/Shell";
 import { StartScreen } from "./layout/StartScreen";
@@ -12,6 +13,7 @@ import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
 
 const search = new URLSearchParams(window.location.search);
 const embed = search.get("embed") === "1";
+const audienceId = search.get("audience") === "1" ? search.get("id") : null;
 const deckParam = search.get("deck");
 
 export function App() {
@@ -200,6 +202,7 @@ export function App() {
     />
   );
 
+  if (audienceId) return <Audience deckId={audienceId} />;
   if (!hydrated) return fileInput;
   if (error) {
     return (
@@ -245,6 +248,7 @@ export function App() {
         session={session}
         assets={assetUrls}
         packageFiles={packageFiles}
+        sourceYaml={deckYaml}
         embed={embed}
         onSession={(recipe) => setSession((current) => (current ? recipe(current) : current))}
         onOpenFile={openFile}

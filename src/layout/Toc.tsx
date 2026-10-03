@@ -36,11 +36,11 @@ export function Toc({
           <li key={slide.id}>
             <button
               type="button"
-              className={slide.layout === "section" ? "section" : undefined}
+              className={[slide.layout === "section" ? "section" : "", slide.hidden ? "hidden-slide" : ""].filter(Boolean).join(" ") || undefined}
               aria-current={index === current ? "true" : undefined}
               onClick={() => onJump(index)}
             >
-              <span className="num">{index + 1}</span>
+              <span className="num">{slide.hidden ? "—" : visibleLabel(slides, index)}</span>
               <span>{slide.title}</span>
             </button>
           </li>
@@ -48,4 +48,12 @@ export function Toc({
       </ol>
     </nav>
   );
+}
+
+function visibleLabel(slides: Slide[], index: number): string {
+  let count = 0;
+  for (let cursor = 0; cursor <= index; cursor += 1) {
+    if (!slides[cursor]?.hidden) count += 1;
+  }
+  return String(count);
 }

@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrandLockup, EMPORION_FAVICON, resolveBrand, resolveChrome, type ChromeMode } from "../brand/kit";
 import { bytesToBlob, downloadBlob, downloadText } from "../export/download";
 import { deckToYaml } from "../export/yaml";
 import type { Deck } from "../model/schema";
 import { resolveTheme } from "../model/schema";
 import type { DeckSession, WidgetAnswer } from "../model/session";
-import { jumpTo, moveBack, moveForward } from "../model/steps";
+import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
 import { SlideView } from "../slides/SlideView";
 import { BottomBar } from "./BottomBar";
 import { Icon, IconButton } from "./IconButton";
@@ -24,6 +24,7 @@ export function Shell({
   embed = false,
   exportDeck,
   packageFiles,
+  sourceYaml = "",
 }: {
   deck: Deck;
   session: DeckSession;
@@ -35,9 +36,12 @@ export function Shell({
   embed?: boolean;
   exportDeck?: Deck;
   packageFiles?: Map<string, Uint8Array>;
+  sourceYaml?: string;
 }) {
   const portable = exportDeck ?? deck;
   const slide = deck.slides[session.slideIndex];
+  const nextIndex = visibleIndexes(deck).find((index) => index > session.slideIndex);
+  const nextSlide = nextIndex === undefined ? undefined : deck.slides[nextIndex];
   const theme = resolveTheme(deck.theme, slide.theme);
   const rawBrand = resolveBrand(deck.brand);
   const brand = rawBrand && {
@@ -52,7 +56,10 @@ export function Shell({
   const [fullscreen, setFullscreen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
-  const elapsed = useElapsed();
+  const [blank, setBlank] = useState<null | "black" | "white">(null);
+  const digits = useRef("");
+  const { elapsed, restart } = useElapsed();
+  const clock = useClock();
   const palette = resolveChrome(deck.theme, mode, brand);
 
   useEffect(() => {
@@ -96,6 +103,40 @@ export function Shell({
   }, [brand]);
 
   useEffect(() => {
+    if (embed || !sourceYaml) return;
+    const channel = new BroadcastChannel(`web-slider:${deck.id}`);
+    const send = () => {
+      channel.postMessage({
+        type: "web-slider:show",
+        yaml: sourceYaml,
+        slideIndex: session.slideIndex,
+        revealed: session.revealed,
+        blank,
+      });
+    };
+    send();
+    const onHello = (event: MessageEvent) => {
+      const data = event.data as { type?: string };
+      if (data?.type === "web-slider:hello") send();
+    };
+    channel.addEventListener("message", onHello);
+    return () => {
+      channel.removeEventListener("message", onHello);
+      channel.close();
+    };
+  }, [blank, deck.id, embed, session.revealed, session.slideIndex, sourceYaml]);
+
+  useEffect(() => {
+    if (!slide.autoAdvance || blank) return;
+    const last = revealThresholds(slide).at(-1) ?? 0;
+    if (session.revealed < last) return;
+    const timer = window.setTimeout(() => {
+      onSession((current) => ({ ...current, ...moveForward(deck, current.slideIndex, current.revealed) }));
+    }, slide.autoAdvance * 1000);
+    return () => window.clearTimeout(timer);
+  }, [blank, deck, onSession, session.revealed, slide]);
+
+  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (overview) setOverview(false);
@@ -112,6 +153,34 @@ export function Shell({
         return;
       }
       if (isTypingTarget(event.target)) return;
+      if (blank && event.key !== "b" && event.key !== "B" && event.key !== "w" && event.key !== "W") {
+        setBlank(null);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "b" || event.key === "B") {
+        setBlank("black");
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "w" || event.key === "W") {
+        setBlank("white");
+        event.preventDefault();
+        return;
+      }
+      if (/^[0-9]$/.test(event.key)) {
+        digits.current = `${digits.current}${event.key}`.slice(-3);
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "Enter" && digits.current) {
+        const target = jumpToVisibleNumber(deck, Number(digits.current));
+        digits.current = "";
+        if (target) onSession((current) => ({ ...current, ...target }));
+        event.preventDefault();
+        return;
+      }
+      digits.current = "";
       if (event.key === " " && event.target instanceof HTMLElement && event.target.tagName === "BUTTON") return;
       if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === "PageDown" || event.key === " ") {
         event.preventDefault();
@@ -121,10 +190,13 @@ export function Shell({
         onSession((current) => ({ ...current, ...moveBack(deck, current.slideIndex, current.revealed) }));
       } else if (event.key === "Home") {
         event.preventDefault();
-        onSession((current) => ({ ...current, slideIndex: 0, revealed: 0 }));
+        const first = visibleIndexes(deck)[0] ?? 0;
+        onSession((current) => ({ ...current, slideIndex: first, revealed: 0 }));
       } else if (event.key === "End") {
         event.preventDefault();
-        onSession((current) => ({ ...current, ...jumpTo(deck, deck.slides.length - 1) }));
+        const visible = visibleIndexes(deck);
+        const last = visible[visible.length - 1] ?? deck.slides.length - 1;
+        onSession((current) => ({ ...current, ...jumpTo(deck, last) }));
       } else if (event.key === "o" || event.key === "O") {
         setOverview((open) => !open);
       } else if (event.key === "f" || event.key === "F") {
@@ -133,7 +205,7 @@ export function Shell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [deck, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, themeOpen]);
+  }, [blank, deck, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, themeOpen]);
 
   function jump(index: number) {
     onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
@@ -204,7 +276,7 @@ export function Shell({
             <Icon name="previous" />
           </IconButton>
           <p className="slide-count">
-            {session.slideIndex + 1} / {deck.slides.length}
+            {visibleNumber(deck, session.slideIndex) ?? "—"} / {visibleIndexes(deck).length}
           </p>
           <IconButton
             label="Next"
@@ -214,9 +286,32 @@ export function Shell({
           </IconButton>
         </div>
         <div className="toolbar-actions" hidden={embed}>
+          <p className="timer" aria-label="Clock" title="Clock">
+            {clock}
+          </p>
           <p className="timer" aria-label="Elapsed time" title="Elapsed time">
             {formatElapsed(elapsed)}
           </p>
+          <IconButton label="Restart timer" onClick={restart}>
+            <Icon name="restart" />
+          </IconButton>
+          {blank ? (
+            <p className="timer" title="Audience screen">
+              Audience is {blank}
+            </p>
+          ) : null}
+          <IconButton
+            label="Audience window"
+            onClick={() => {
+              window.open(
+                `${window.location.pathname}?audience=1&id=${encodeURIComponent(deck.id)}`,
+                "web-slider-audience",
+                "width=1280,height=720",
+              );
+            }}
+          >
+            <Icon name="audience" />
+          </IconButton>
           <IconButton label="Overview" pressed={overview} onClick={() => setOverview((open) => !open)}>
             <Icon name="overview" />
           </IconButton>
@@ -328,6 +423,18 @@ export function Shell({
                 >
                   <Icon name="package" />
                 </IconButton>
+                <IconButton
+                  label="Handout"
+                  disabled={exporting !== null}
+                  onClick={() =>
+                    void runExport("handout", async () => {
+                      const { buildHandout } = await import("../export/docx");
+                      downloadBlob(await buildHandout(portable, session), `${portable.id}-handout.docx`);
+                    })
+                  }
+                >
+                  <Icon name="notes" />
+                </IconButton>
                 <p className="font-limit">
                   PDF embeds the deck fonts. Word and PowerPoint name them and will substitute if they are not installed.
                 </p>
@@ -336,7 +443,7 @@ export function Shell({
           </div>
         </div>
         <div className="progress" aria-hidden="true">
-          <span style={{ width: `${((session.slideIndex + 1) / deck.slides.length) * 100}%` }} />
+          <span style={{ width: `${((visibleNumber(deck, session.slideIndex) ?? visibleIndexes(deck).length) / visibleIndexes(deck).length) * 100}%` }} />
         </div>
       </header>
 
@@ -434,7 +541,15 @@ export function Shell({
             <Icon name="notes" />
           </button>
         ) : null}
-        <SlideView deck={deck} slide={slide} revealed={session.revealed} />
+        <SlideView
+          deck={deck}
+          slide={slide}
+          revealed={session.revealed}
+          onOpenSlide={(slideId) => {
+            const index = deck.slides.findIndex((item) => item.id === slideId);
+            if (index >= 0) jump(index);
+          }}
+        />
       </main>
 
       {!embed && session.ui.side && session.ui.sidePinned ? (
@@ -464,6 +579,13 @@ export function Shell({
             }))
           }
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: false } }))}
+          nextPreview={
+            embed ? undefined : nextSlide ? (
+              <SlideView deck={deck} slide={nextSlide} revealed={0} />
+            ) : (
+              <p>End of deck</p>
+            )
+          }
         />
       ) : null}
 
@@ -483,14 +605,23 @@ export function Shell({
   );
 }
 
-function useElapsed(): number {
-  const [start] = useState(() => Date.now());
+function useElapsed(): { elapsed: number; restart: () => void } {
+  const [start, setStart] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
-  return Math.floor((now - start) / 1000);
+  return { elapsed: Math.floor((now - start) / 1000), restart: () => setStart(Date.now()) };
+}
+
+function useClock(): string {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatElapsed(totalSeconds: number): string {

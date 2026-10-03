@@ -7,33 +7,82 @@ export function Blocks({
   blocks,
   revealed,
   dark,
+  onOpenSlide,
 }: {
   blocks: Block[] | undefined;
   revealed: number;
   dark: boolean;
+  onOpenSlide?: (slideId: string) => void;
 }) {
   const visible = (blocks ?? []).filter((block) => isRevealed(block.step, revealed));
   if (visible.length === 0) return null;
   return (
     <div className="blocks">
       {visible.map((block, index) => (
-        <BlockView key={index} block={block} revealed={revealed} dark={dark} />
+        <BlockView key={index} block={block} revealed={revealed} dark={dark} onOpenSlide={onOpenSlide} />
       ))}
     </div>
   );
 }
 
-function BlockView({ block, revealed, dark }: { block: Block; revealed: number; dark: boolean }) {
+function BlockView({
+  block,
+  revealed,
+  dark,
+  onOpenSlide,
+}: {
+  block: Block;
+  revealed: number;
+  dark: boolean;
+  onOpenSlide?: (slideId: string) => void;
+}) {
   if (block.type === "paragraph") return <p className="block paragraph">{block.text}</p>;
-  if (block.type === "bullets") {
+  if (block.type === "bullets" || block.type === "numbered") {
     const items = block.items.filter((item) => isRevealed(item.step, revealed));
     if (items.length === 0) return null;
+    const List = block.type === "numbered" ? "ol" : "ul";
     return (
-      <ul className="block bullets">
+      <List className={block.type === "numbered" ? "block numbered" : "block bullets"}>
         {items.map((item, index) => (
           <li key={`${item.text}-${index}`}>{item.text}</li>
         ))}
-      </ul>
+      </List>
+    );
+  }
+  if (block.type === "table") {
+    return (
+      <table className="block data-table">
+        <thead>
+          <tr>
+            {block.headers.map((header) => (
+              <th key={header}>{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {block.rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  if (block.type === "link") {
+    if (block.slide) {
+      return (
+        <button type="button" className="block slide-link" onClick={() => onOpenSlide?.(block.slide!)}>
+          {block.text}
+        </button>
+      );
+    }
+    return (
+      <a className="block slide-link" href={block.href} target="_blank" rel="noreferrer">
+        {block.text}
+      </a>
     );
   }
   if (block.type === "quote") {

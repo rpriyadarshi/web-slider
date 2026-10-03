@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Widget } from "../model/schema";
 import type { WidgetAnswer } from "../model/session";
 import { WidgetList } from "../widgets/WidgetControl";
@@ -13,6 +14,7 @@ export function BottomBar({
   onNotes,
   onHide,
   feedback = false,
+  nextPreview,
 }: {
   slideId: string;
   widgets: Widget[];
@@ -23,6 +25,7 @@ export function BottomBar({
   onNotes: (value: string) => void;
   onHide: () => void;
   feedback?: boolean;
+  nextPreview?: ReactNode;
 }) {
   return (
     <footer className="bottom">
@@ -56,6 +59,7 @@ export function BottomBar({
               placeholder={feedback ? "Tell the presenter what you think" : "Notes you take during the talk"}
             />
           </label>
+          {nextPreview ? <div className="next-preview">{nextPreview}</div> : null}
         </div>
       </section>
     </footer>

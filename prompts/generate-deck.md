@@ -18,6 +18,9 @@ When the deck needs font files or several images, also produce a zip package:
 id: launch-review          # letters, numbers, _ -
 title: Launch Review
 author: Northwind          # optional
+footer: Launch Review      # optional line on every slide
+showSlideNumber: true      # omit to show numbers; false hides them
+aspect: "16:9"             # 16:9 or 4:3
 brand: emporion            # shorthand for the Emporion Court mark
 # or spell the brand out:
 # brand:
@@ -64,6 +67,8 @@ slides:
     layout: title         # title, section, content, quote
     subtitle: Optional
     notes: Speaker script, shown read-only.
+    hidden: false          # true keeps the slide in the outline but out of the talk and exports
+    autoAdvance: 8         # optional seconds after the last build; omit so the talk stays manual
     blocks: []
     side: []              # examples column
     widgets: []           # feedback row
@@ -79,6 +84,9 @@ Use these on `blocks` and `side`. `step` hides the block until the presenter adv
 
 - `paragraph`: `text`
 - `bullets`: `items` of `{ text, step? }`
+- `numbered`: same item shape as bullets
+- `table`: `headers` (list of strings) and `rows` (list of string lists, one cell per header)
+- `link`: `text`, plus either `href` (`https://...`) or `slide` (an existing slide id)
 - `quote`: `text`, optional `attribution`
 - `code`: `code`, optional `language` (`yaml`, `typescript`, `javascript`, `python`, `json`, `bash`, `css`, `html`, `markdown`)
 - `image`: `src`, optional `alt`. `src` is `https://`, a `data:` URI, or a package path.

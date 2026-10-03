@@ -1,10 +1,20 @@
 import type { Deck, Slide } from "../model/schema";
 import { resolveTheme } from "../model/schema";
-import { isRevealed } from "../model/steps";
+import { isRevealed, visibleIndexes, visibleNumber } from "../model/steps";
 import { isDarkHex } from "../highlight";
 import { Blocks } from "./Blocks";
 
-export function SlideView({ deck, slide, revealed }: { deck: Deck; slide: Slide; revealed: number }) {
+export function SlideView({
+  deck,
+  slide,
+  revealed,
+  onOpenSlide,
+}: {
+  deck: Deck;
+  slide: Slide;
+  revealed: number;
+  onOpenSlide?: (slideId: string) => void;
+}) {
   const theme = resolveTheme(deck.theme, slide.theme);
   const quoteCandidate = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
   const quote = quoteCandidate && isRevealed(quoteCandidate.step, revealed) ? quoteCandidate : undefined;
@@ -15,6 +25,7 @@ export function SlideView({ deck, slide, revealed }: { deck: Deck; slide: Slide;
     <article
       className={`slide layout-${slide.layout}`}
       data-align={slide.layout === "content" ? theme.align : "center"}
+      data-aspect={deck.aspect ?? "16:9"}
       style={{
         background: theme.background,
         color: theme.text,
@@ -39,8 +50,16 @@ export function SlideView({ deck, slide, revealed }: { deck: Deck; slide: Slide;
             {quote.attribution ? <footer>{quote.attribution}</footer> : null}
           </blockquote>
         ) : null}
-        <Blocks blocks={blocks} revealed={revealed} dark={dark} />
+        <Blocks blocks={blocks} revealed={revealed} dark={dark} onOpenSlide={onOpenSlide} />
       </div>
+      <footer className="slide-footer">
+        <span>{deck.footer ?? ""}</span>
+        {deck.showSlideNumber === false ? null : (
+          <span>
+            {visibleNumber(deck, deck.slides.indexOf(slide)) ?? ""} / {visibleIndexes(deck).length}
+          </span>
+        )}
+      </footer>
     </article>
   );
 }

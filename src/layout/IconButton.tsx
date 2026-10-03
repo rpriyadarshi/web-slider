@@ -20,7 +20,9 @@ export type IconName =
   | "package"
   | "light"
   | "dark"
-  | "pin";
+  | "pin"
+  | "restart"
+  | "audience";
 
 export function Icon({ name }: { name: IconName }) {
   return (
@@ -147,6 +149,18 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M9 4h6l-1 6 3 3H7l3-3z" />
       <path d="M12 13v7" />
+    </>
+  ),
+  restart: (
+    <>
+      <path d="M20 12a8 8 0 1 1-2.3-5.7" />
+      <polyline points="20 4 20 10 14 10" />
+    </>
+  ),
+  audience: (
+    <>
+      <rect x="3" y="5" width="18" height="12" rx="1.5" />
+      <path d="M8 21h8M12 17v4" />
     </>
   ),
 };

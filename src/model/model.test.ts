@@ -4,7 +4,8 @@ import { parseDeck } from "./parse";
 import { DEFAULT_THEME, resolveTheme } from "./schema";
 import { serializeDeck } from "./serialize";
 import { sessionFromDeck } from "./session";
-import { moveBack, moveForward, revealThresholds } from "./steps";
+import { blockToText } from "./text";
+import { jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleNumber } from "./steps";
 
 const sample = readFileSync(new URL("../sample/deck.yaml", import.meta.url), "utf8");
 
@@ -52,7 +53,9 @@ slides:
 describe("parseDeck", () => {
   it("parses the bundled sample and round-trips it", () => {
     const deck = parseDeck(sample);
-    expect(deck.slides.map((slide) => slide.layout)).toEqual(["title", "section", "content", "quote", "content"]);
+    expect(deck.slides.map((slide) => slide.layout)).toEqual(["title", "section", "content", "quote", "content", "content", "content"]);
+    expect(deck.footer).toBe("Launch Review");
+    expect(deck.slides.at(-1)?.hidden).toBe(true);
     expect(deck.slides.some((slide) => slide.widgets?.some((widget) => widget.type === "scale"))).toBe(true);
     expect(deck.slides.some((slide) => slide.side?.some((block) => block.type === "code"))).toBe(true);
     expect(deck.brand).toMatchObject({ wordmark: "EMPORION", tail: "AI", accent: "#3DB892" });
@@ -168,5 +171,36 @@ describe("steps", () => {
     const back = moveBack(deck, 1, 0);
     expect(back.slideIndex).toBe(0);
     expect(back.revealed).toBe(0);
+  });
+
+  it("skips hidden slides and jumps by the visible slide number", () => {
+    const deck = parseDeck(`
+id: review
+title: Review
+slides:
+  - id: a
+    title: A
+    layout: content
+  - id: b
+    title: B
+    hidden: true
+    layout: content
+  - id: c
+    title: C
+    layout: content
+    blocks:
+      - type: numbered
+        items:
+          - text: One
+            step: 1
+`);
+    expect(moveForward(deck, 0, 0)).toEqual({ slideIndex: 2, revealed: 0 });
+    expect(moveBack(deck, 2, 0).slideIndex).toBe(0);
+    expect(jumpToVisibleNumber(deck, 2)?.slideIndex).toBe(2);
+    expect(jumpToVisibleNumber(deck, 3)).toBeNull();
+    expect(visibleNumber(deck, 2)).toBe(2);
+    expect(visibleNumber(deck, 1)).toBeNull();
+    const numbered = deck.slides[2]?.blocks?.[0];
+    expect(numbered && blockToText(numbered)).toBe("1. One");
   });
 });

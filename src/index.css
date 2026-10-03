@@ -331,6 +331,13 @@ button.primary {
   border-radius: var(--slide-radius, 16px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   padding: 7% 8%;
+  display: flex;
+  flex-direction: column;
+}
+
+.slide[data-aspect="4:3"] {
+  width: min(100cqw, calc(100cqh * 4 / 3));
+  height: min(100cqh, calc(100cqw * 3 / 4));
 }
 
 .slide-copy { animation: rise 180ms ease; }
@@ -385,8 +392,83 @@ button.primary {
   margin: 0;
 }
 
-.bullets { padding-left: 1.2em; }
-.bullets li + li { margin-top: 0.35em; }
+.bullets, .numbered { padding-left: 1.2em; }
+.bullets li + li, .numbered li + li { margin-top: 0.35em; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--slide-body), sans-serif;
+  font-size: 18px;
+}
+
+.data-table th, .data-table td {
+  border-bottom: 1px solid color-mix(in srgb, var(--slide-text) 22%, transparent);
+  text-align: left;
+  padding: 6px 8px;
+}
+
+.slide-link {
+  color: var(--slide-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 22px;
+  text-decoration: underline;
+  width: auto;
+}
+
+.slide-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+  font-family: var(--slide-body), sans-serif;
+  font-size: 14px;
+  color: var(--slide-muted);
+}
+
+.hidden-slide { opacity: 0.45; }
+
+.notes-grid:has(.next-preview) {
+  grid-template-columns: 1fr 1fr 180px;
+}
+
+.next-preview {
+  min-height: 0;
+  overflow: hidden;
+  container-type: size;
+}
+
+.next-preview .slide {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.next-preview .slide-title,
+.next-preview .slide-sub,
+.next-preview .paragraph,
+.next-preview .bullets,
+.next-preview .numbered,
+.next-preview .data-table,
+.next-preview .slide-link,
+.next-preview .slide-footer,
+.next-preview .callout,
+.next-preview .quote p,
+.next-preview .pull-quote p {
+  font-size: 7px;
+}
+
+.next-preview .slide-copy { animation: none; min-height: 0; }
+
+.audience { height: 100dvh; background: #000; }
+.audience .stage { height: 100%; grid-column: auto; grid-row: auto; }
+.audience-blank { position: fixed; inset: 0; z-index: 30; }
 
 .callout, .quote, .pull-quote {
   background: var(--slide-surface);

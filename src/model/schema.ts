@@ -63,6 +63,11 @@ export function isAssetRef(src: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(src);
 }
 
+const idSchema = z
+  .string()
+  .min(1)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "must use letters, numbers, hyphens, or underscores");
+
 const bulletItemSchema = z
   .object({
     text: z.string().min(1),
@@ -105,12 +110,31 @@ export const blockSchema = z.discriminatedUnion("type", [
     .strict(),
   z.object({ type: z.literal("callout"), text: z.string().min(1), step: stepField }).strict(),
   z.object({ type: z.literal("divider"), step: stepField }).strict(),
+  z
+    .object({
+      type: z.literal("numbered"),
+      items: z.array(bulletItemSchema).min(1),
+      step: stepField,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("table"),
+      headers: z.array(z.string().min(1)).min(1),
+      rows: z.array(z.array(z.string())).min(1),
+      step: stepField,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("link"),
+      text: z.string().min(1),
+      href: z.string().optional(),
+      slide: idSchema.optional(),
+      step: stepField,
+    })
+    .strict(),
 ]);
-
-const idSchema = z
-  .string()
-  .min(1)
-  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "must use letters, numbers, hyphens, or underscores");
 
 const optionsSchema = z.array(z.string().min(1)).min(2);
 
@@ -168,6 +192,8 @@ export const slideSchema = z
     subtitle: z.string().optional(),
     notes: z.string().optional(),
     takenNotes: z.string().optional(),
+    hidden: z.boolean().optional(),
+    autoAdvance: z.number().positive().max(3600).optional(),
     theme: colorsSchema.optional(),
     blocks: z.array(blockSchema).optional(),
     side: z.array(blockSchema).optional(),
@@ -201,6 +227,9 @@ export const deckSchema = z
     id: idSchema,
     title: z.string().min(1),
     author: z.string().min(1).optional(),
+    footer: z.string().optional(),
+    showSlideNumber: z.boolean().optional(),
+    aspect: z.enum(["16:9", "4:3"]).optional(),
     brand: brandSchema.optional(),
     theme: themeSchema.optional(),
     fonts: z.record(fontNameSchema, fontFileSchema).optional(),
@@ -208,6 +237,47 @@ export const deckSchema = z
   })
   .strict()
   .superRefine((deck, ctx) => {
+    deck.slides.forEach((slide, slideIndex) => {
+      slide.blocks?.forEach((block, blockIndex) => {
+        if (block.type === "link") {
+          const hasHref = block.href !== undefined;
+          const hasSlide = block.slide !== undefined;
+          if (hasHref === hasSlide) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["slides", slideIndex, "blocks", blockIndex],
+              message: "link needs either an https href or a slide id",
+            });
+          }
+          if (block.href !== undefined && !block.href.startsWith("https://")) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["slides", slideIndex, "blocks", blockIndex, "href"],
+              message: "href must be an https URL",
+            });
+          }
+          if (block.slide !== undefined && !deck.slides.some((candidate) => candidate.id === block.slide)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["slides", slideIndex, "blocks", blockIndex, "slide"],
+              message: `unknown slide id "${block.slide}"`,
+            });
+          }
+        }
+        if (block.type === "table") {
+          block.rows.forEach((row, rowIndex) => {
+            if (row.length !== block.headers.length) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["slides", slideIndex, "blocks", blockIndex, "rows", rowIndex],
+                message: `row has ${row.length} cells but the table has ${block.headers.length} headers`,
+              });
+            }
+          });
+        }
+      });
+    });
+
     for (const name of [deck.theme?.fontHeading, deck.theme?.fontBody, deck.theme?.fontMono]) {
       if (name && !isBuiltInFont(name) && !deck.fonts?.[name]?.regular) {
         ctx.addIssue({

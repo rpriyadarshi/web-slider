@@ -1,6 +1,8 @@
 id: launch-review
 title: Launch Review
 author: Northwind
+footer: Launch Review
+aspect: "16:9"
 brand:
   name: Emporion AI
   wordmark: EMPORION
@@ -131,3 +133,29 @@ slides:
       - id: condition
         type: text
         prompt: Condition to proceed
+  - id: plan
+    layout: content
+    title: How Friday gets confirmed
+    notes: Point at the table, then use the link if the room goes back to scope.
+    blocks:
+      - type: numbered
+        items:
+          - text: Name the owner
+          - text: Write the condition
+          - text: Confirm Friday
+      - type: table
+        headers: [Option, Owner]
+        rows:
+          - [Friday, Launch chair]
+          - [Next Monday, Product]
+      - type: link
+        text: Back to scope
+        slide: scope
+  - id: appendix
+    hidden: true
+    layout: content
+    title: Appendix
+    notes: Kept out of the talk. Open it from the outline when someone asks.
+    blocks:
+      - type: paragraph
+        text: This slide stays out of the talk and out of exports.

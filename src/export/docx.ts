@@ -22,10 +22,18 @@ const PAGE_WIDTH = 12240;
 const PAGE_HEIGHT = 15840;
 
 export async function buildDocx(deck: Deck, session: DeckSession): Promise<Blob> {
+  return buildDocument(deck, session, false);
+}
+
+export async function buildHandout(deck: Deck, session: DeckSession): Promise<Blob> {
+  return buildDocument(deck, session, true);
+}
+
+async function buildDocument(deck: Deck, session: DeckSession, handout: boolean): Promise<Blob> {
   const theme = resolveTheme(deck.theme);
   const sections = [];
-  for (const slide of deck.slides) {
-    sections.push(await sectionForSlide(deck, slide, session));
+  for (const slide of deck.slides.filter((item) => !item.hidden)) {
+    sections.push(await sectionForSlide(deck, slide, session, handout));
   }
 
   const document = new Document({
@@ -37,7 +45,7 @@ export async function buildDocx(deck: Deck, session: DeckSession): Promise<Blob>
   return Packer.toBlob(document);
 }
 
-async function sectionForSlide(deck: Deck, slide: Slide, session: DeckSession) {
+async function sectionForSlide(deck: Deck, slide: Slide, session: DeckSession, handout: boolean) {
   const theme = resolveTheme(deck.theme, slide.theme);
   const paragraphs: Paragraph[] = [
     paragraph(slide.title, theme.fontHeading, 36, theme.text, true),
@@ -58,14 +66,14 @@ async function sectionForSlide(deck: Deck, slide: Slide, session: DeckSession) {
       );
     }
   }
-  if (slide.notes) {
+  if (slide.notes || handout) {
     paragraphs.push(paragraph("Script", theme.fontHeading, 14, theme.accent, true));
-    paragraphs.push(...lines(slide.notes, theme.fontBody, 13, theme.muted, false));
+    paragraphs.push(...lines(slide.notes || "No script.", theme.fontBody, 13, theme.muted, false));
   }
   const taken = session.notes[slide.id];
-  if (taken) {
+  if (taken || handout) {
     paragraphs.push(paragraph("Taken notes", theme.fontHeading, 14, theme.accent, true));
-    paragraphs.push(...lines(taken, theme.fontBody, 13, theme.text, false));
+    paragraphs.push(...lines(taken || "No notes taken.", theme.fontBody, 13, theme.text, false));
   }
 
   const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };

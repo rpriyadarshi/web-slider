@@ -16,7 +16,7 @@ export async function buildPptx(deck: Deck, session: DeckSession): Promise<Blob>
   pptx.title = deck.title;
   if (deck.author) pptx.author = deck.author;
 
-  for (const slide of deck.slides) {
+  for (const slide of deck.slides.filter((item) => !item.hidden)) {
     await addSlide(pptx, deck, slide, session);
   }
 
