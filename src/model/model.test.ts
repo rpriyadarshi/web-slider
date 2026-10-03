@@ -1,21 +1,20 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { parseManifest, presentTalk, resolveManifest, sourceHash } from "./install";
 import { parseDeck } from "./parse";
 import { DEFAULT_THEME, resolveTheme } from "./schema";
 import { serializeDeck } from "./serialize";
-import { sessionFromDeck } from "./session";
+import { formatSessionBlock, sessionFromDeck } from "./session";
 import { blockToText } from "./text";
 import { jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleNumber } from "./steps";
 
-const sample = readFileSync(new URL("../sample/deck.yaml", import.meta.url), "utf8");
+const sample = readFileSync(new URL("../../public/examples/launch-review.yaml", import.meta.url), "utf8");
+const northwind = readFileSync(new URL("../../public/themes/northwind/manifest.yaml", import.meta.url), "utf8");
 
 const validDeck = `
 id: review
 title: Review
 author: Ada
-theme:
-  fontHeading: Source Serif 4
-  align: left
 slides:
   - id: open
     title: Open
@@ -51,7 +50,7 @@ slides:
 `;
 
 describe("parseDeck", () => {
-  it("parses the bundled sample and round-trips it", () => {
+  it("parses the bundled sample and round-trips it", async () => {
     const deck = parseDeck(sample);
     expect(deck.slides.map((slide) => slide.layout)).toEqual([
       "title",
@@ -67,15 +66,26 @@ describe("parseDeck", () => {
     expect(deck.slides.at(-1)?.hidden).toBe(true);
     expect(deck.slides.some((slide) => slide.widgets?.some((widget) => widget.type === "scale"))).toBe(true);
     expect(deck.slides.some((slide) => slide.side?.some((block) => block.type === "code"))).toBe(true);
-    expect(deck.brand).toMatchObject({ wordmark: "EMPORION", tail: "AI", accent: "#3DB892" });
-    expect(deck.theme?.type?.mark).toBe(22);
-    expect(deck.theme?.type?.wordmark).toBe(12);
-    expect(resolveTheme(deck.theme).type.title).toBe(58);
+    expect(sample).not.toContain("Keep taken notes on the deck");
+    expect(sample).toContain("Keep taken notes in the session");
+    expect(deck.brand).toBeUndefined();
+    expect(deck.theme).toBeUndefined();
+    const manifest = resolveManifest(parseManifest(northwind), await sourceHash(northwind));
+    const presented = presentTalk(deck, manifest);
+    expect(presented.brand).toBe("emporion");
+    expect(presented.theme?.type?.mark).toBe(22);
+    expect(presented.theme?.type?.wordmark).toBe(12);
+    expect(resolveTheme(presented.theme).type.title).toBe(58);
+    expect(presented.theme?.chrome).toBe("dark");
+    expect(presented.theme?.chromeDark?.ground).toBe("#121212");
+    expect(resolveTheme(presented.theme, deck.slides.find((slide) => slide.id === "date")?.theme).accent).toBe("#8eb6ff");
     expect(resolveTheme({ type: { mark: 40 } }).type).toMatchObject({ mark: 40, wordmark: 12, title: 58 });
-    expect(deck.theme?.chrome).toBe("dark");
-    expect(deck.theme?.chromeDark?.ground).toBe("#121212");
     const again = parseDeck(serializeDeck(deck, sessionFromDeck(deck)));
     expect(again).toEqual(deck);
+    const exported = serializeDeck(presented, sessionFromDeck(deck));
+    expect(exported).not.toContain("brand:");
+    expect(parseDeck(exported).theme).toBeUndefined();
+    expect(parseDeck(exported).slides.find((slide) => slide.id === "date")?.theme?.accent).toBe("#8eb6ff");
   });
 
   it("rejects an empty file, a non-mapping, unknown keys, bad image paths, and duplicate ids", () => {
@@ -110,7 +120,7 @@ slides:
     ).toThrow(/duplicate slide id/);
   });
 
-  it("rejects an unknown brand id", () => {
+  it("rejects a brand or theme copied into the talk", () => {
     expect(() =>
       parseDeck(`
 id: a
@@ -166,6 +176,15 @@ describe("session merge", () => {
     expect(restored.notes.scope).toBe("Asked who owns the date.");
     expect(again.slides[0]?.takenNotes).toBeUndefined();
     expect(again.theme?.background).toBeUndefined();
+  });
+
+  it("formats the current slide session as its own record", () => {
+    const text = formatSessionBlock("scope", "They said yes.", { ship: "Yes", risks: ["Date"] });
+    expect(text).toContain("slide: scope");
+    expect(text).toContain("takenNotes: They said yes.");
+    expect(text).toContain("ship: 'Yes'");
+    expect(text).toContain("Date");
+    expect(formatSessionBlock("scope", "", {})).toContain("answers: {}");
   });
 });
 

@@ -13,6 +13,7 @@ export function BottomBar({
   notes,
   onAnswer,
   onNotes,
+  onNotesFocus,
   onHide,
   feedback = false,
   nextPreview,
@@ -27,6 +28,7 @@ export function BottomBar({
   notes: string;
   onAnswer: (widgetId: string, answer: WidgetAnswer | undefined) => void;
   onNotes: (value: string) => void;
+  onNotesFocus?: () => void;
   onHide: () => void;
   feedback?: boolean;
   nextPreview?: ReactNode;
@@ -72,7 +74,7 @@ export function BottomBar({
             {feedback ? "Feedback" : "Taken notes"}
             <textarea
               value={notes}
-              onFocus={() => onProbe?.(["slides", slideIndex, "takenNotes"])}
+              onFocus={() => onNotesFocus?.()}
               onChange={(event) => onNotes(event.target.value)}
               placeholder={feedback ? "Tell the presenter what you think" : "Notes you take during the talk"}
             />

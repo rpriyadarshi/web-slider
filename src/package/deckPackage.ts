@@ -35,7 +35,7 @@ export function packageAssetRefs(deck: Deck): string[] {
     if (!value || value.startsWith("https://") || value.startsWith("data:")) return;
     refs.add(value);
   };
-  if (deck.brand && deck.brand !== "emporion") {
+  if (deck.brand && typeof deck.brand !== "string") {
     add(deck.brand.mark);
     add(deck.brand.markDark);
   }
@@ -85,7 +85,7 @@ export function deckWithAssetUrls(deck: Deck, urls: Map<string, string>): Deck {
   const mapBlocks = (blocks: Block[] | undefined) =>
     blocks?.map((block) => (block.type === "image" ? { ...block, src: mapRef(block.src) } : block));
   const brand =
-    deck.brand && deck.brand !== "emporion"
+    deck.brand && typeof deck.brand !== "string"
       ? {
           ...deck.brand,
           mark: mapRef(deck.brand.mark),

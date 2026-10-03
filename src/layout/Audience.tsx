@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { presentTalk, type Install } from "../model/install";
 import { parseDeck } from "../model/parse";
 import type { Deck } from "../model/schema";
+import { deckWithAssetUrls } from "../package/deckPackage";
 import { SlideView } from "../slides/SlideView";
 
-export function Audience({ deckId }: { deckId: string }) {
+export function Audience({ deckId, install }: { deckId: string; install: Install }) {
   const [deck, setDeck] = useState<Deck | null>(null);
   const [slideIndex, setSlideIndex] = useState(0);
   const [revealed, setRevealed] = useState(0);
@@ -35,7 +37,7 @@ export function Audience({ deckId }: { deckId: string }) {
       if (!data || data.type !== "web-slider:show" || typeof data.yaml !== "string") return;
       try {
         const parsed = parseDeck(data.yaml);
-        setDeck(parsed);
+        setDeck(deckWithAssetUrls(presentTalk(parsed, install.manifest), install.assetUrls));
         setSlideIndex(typeof data.slideIndex === "number" ? data.slideIndex : 0);
         setRevealed(typeof data.revealed === "number" ? data.revealed : 0);
         setBlank(data.blank === "black" || data.blank === "white" ? data.blank : null);
@@ -52,7 +54,7 @@ export function Audience({ deckId }: { deckId: string }) {
       channel.removeEventListener("message", onMessage);
       channel.close();
     };
-  }, [deckId]);
+  }, [deckId, install]);
 
   if (error) return <p className="banner">{error}</p>;
   if (!deck) return <main className="start"><p>Waiting for the presenter window.</p></main>;
@@ -62,7 +64,7 @@ export function Audience({ deckId }: { deckId: string }) {
   return (
     <div className="audience">
       <div className="stage">
-        <SlideView deck={deck} slide={slide} revealed={revealed} laser={laser} />
+        <SlideView deck={deck} slide={slide} revealed={revealed} laser={laser} assets={install.assetUrls} />
       </div>
       {blank ? <div className="audience-blank" style={{ background: blank }} /> : null}
       {caption ? <p className="captions audience-captions">{caption}</p> : null}

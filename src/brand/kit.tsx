@@ -1,13 +1,6 @@
 import type { BrandInput } from "../model/schema";
-import favicon from "./emporion/favicon.svg";
-import markDark from "./emporion/mark-on-dark.svg";
-import markLight from "./emporion/mark.svg";
-
-export const EMPORION_FAVICON = favicon;
 
 export const CHROME = {
-  emerald: "#3DB892",
-  citrine: "#E4B84A",
   light: {
     ground: "#FAFAFA",
     paper: "#FFFFFF",
@@ -27,7 +20,6 @@ export const CHROME = {
 export type ChromeMode = "light" | "dark";
 
 export type ResolvedBrand = {
-  id: "emporion" | "custom";
   wordmark: string;
   tail?: string;
   accent: string;
@@ -38,19 +30,12 @@ export type ResolvedBrand = {
 
 export function resolveBrand(brand: BrandInput | undefined): ResolvedBrand | null {
   if (!brand) return null;
-  if (brand === "emporion") {
-    return {
-      id: "emporion",
-      wordmark: "EMPORION",
-      tail: "AI",
-      accent: CHROME.emerald,
-      highlight: CHROME.citrine,
-      markLight,
-      markDark,
-    };
+  if (typeof brand === "string") {
+    throw new Error(
+      `Brand "${brand}" is a package name and was not loaded. A missing package is not replaced with another brand.`,
+    );
   }
   return {
-    id: "custom",
     wordmark: brand.wordmark,
     tail: brand.tail,
     accent: brand.accent,
@@ -67,14 +52,19 @@ export function resolveChrome(
 ) {
   const base = CHROME[mode];
   const override = mode === "light" ? theme?.chromeLight : theme?.chromeDark;
+  const accent = brand?.accent ?? theme?.accent;
+  const highlight = brand?.highlight ?? theme?.highlight;
+  if (!accent || !highlight) {
+    throw new Error("The theme has no accent or highlight. Set them on the brand or the theme.");
+  }
   return {
     ground: override?.ground ?? base.ground,
     paper: override?.paper ?? base.paper,
     text: override?.text ?? base.text,
     muted: override?.muted ?? base.muted,
     line: override?.line ?? base.line,
-    accent: brand?.accent ?? theme?.accent ?? CHROME.emerald,
-    highlight: brand?.highlight ?? theme?.highlight ?? CHROME.citrine,
+    accent,
+    highlight,
   };
 }
 
@@ -85,6 +75,15 @@ type ChromeColors = {
   muted?: string;
   line?: string;
 };
+
+export function withAssetUrls(brand: ResolvedBrand | null, assets?: Map<string, string>): ResolvedBrand | null {
+  if (!brand) return null;
+  return {
+    ...brand,
+    markLight: assets?.get(brand.markLight) ?? brand.markLight,
+    markDark: assets?.get(brand.markDark) ?? brand.markDark,
+  };
+}
 
 export function BrandLockup({ brand, mode }: { brand: ResolvedBrand; mode: ChromeMode }) {
   const mark = mode === "dark" ? brand.markDark : brand.markLight;

@@ -241,6 +241,8 @@ const fontFileSchema = z
   })
   .strict();
 
+export const fontsSchema = z.record(fontNameSchema, fontFileSchema);
+
 export const customBrandSchema = z
   .object({
     name: z.string().min(1),
@@ -253,7 +255,11 @@ export const customBrandSchema = z
   })
   .strict();
 
-export const brandSchema = z.union([z.literal("emporion"), customBrandSchema]);
+export const packageNameSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "must be a package name");
+
+export const brandSchema = z.union([packageNameSchema, customBrandSchema]);
 
 export const deckSchema = z
   .object({
@@ -263,9 +269,6 @@ export const deckSchema = z
     footer: z.string().optional(),
     showSlideNumber: z.boolean().optional(),
     aspect: z.enum(["16:9", "4:3"]).optional(),
-    brand: brandSchema.optional(),
-    theme: themeSchema.optional(),
-    fonts: z.record(fontNameSchema, fontFileSchema).optional(),
     slides: z.array(slideSchema).min(1),
   })
   .strict()
@@ -327,16 +330,6 @@ export const deckSchema = z
       });
     });
 
-    for (const name of [deck.theme?.fontHeading, deck.theme?.fontBody, deck.theme?.fontMono]) {
-      if (name && !isBuiltInFont(name) && !deck.fonts?.[name]?.regular) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["fonts", name],
-          message: `font "${name}" needs a fonts entry with a regular file. Built-in faces are ${FONT_NAMES.join(", ")}.`,
-        });
-      }
-    }
-
     const slideIds = new Set<string>();
     deck.slides.forEach((slide, slideIndex) => {
       if (slideIds.has(slide.id)) {
@@ -390,8 +383,23 @@ export type Block = z.infer<typeof blockSchema>;
 export type BulletItem = z.infer<typeof bulletItemSchema>;
 export type Widget = z.infer<typeof widgetSchema>;
 export type Slide = z.infer<typeof slideSchema>;
+export type BrandObject = z.infer<typeof customBrandSchema>;
 export type BrandInput = z.infer<typeof brandSchema>;
-export type Deck = z.infer<typeof deckSchema>;
+export type FontMap = z.infer<typeof fontsSchema>;
+type Talk = z.infer<typeof deckSchema>;
+export type Deck = Talk & {
+  brand?: BrandInput;
+  theme?: ThemeInput;
+  fonts?: FontMap;
+};
+
+export function missingFontNames(theme: ThemeInput | undefined, fonts: FontMap | undefined): string[] {
+  const missing: string[] = [];
+  for (const name of [theme?.fontHeading, theme?.fontBody, theme?.fontMono]) {
+    if (name && !isBuiltInFont(name) && !fonts?.[name]?.regular) missing.push(name);
+  }
+  return missing;
+}
 
 export const DEFAULT_TYPE = {
   title: 58,

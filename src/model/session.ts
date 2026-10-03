@@ -1,3 +1,4 @@
+import YAML from "js-yaml";
 import type { Deck, Widget } from "./schema";
 import { revealThresholds } from "./steps";
 
@@ -45,6 +46,21 @@ export function sessionFromDeck(deck: Deck): DeckSession {
     notes,
     ui: { ...emptyChrome(), theme: deck.theme?.chrome ?? "dark" },
   };
+}
+
+export function formatSessionBlock(
+  slideId: string,
+  notes: string,
+  answers: Record<string, WidgetAnswer> | undefined,
+): string {
+  return YAML.dump(
+    {
+      slide: slideId,
+      takenNotes: notes,
+      answers: answers ?? {},
+    },
+    { lineWidth: -1, noRefs: true },
+  );
 }
 
 export function answerFor(session: DeckSession, slideId: string, widgetId: string): WidgetAnswer | undefined {

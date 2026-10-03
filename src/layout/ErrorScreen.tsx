@@ -1,28 +1,43 @@
 export function ErrorScreen({
   message,
+  eyebrow = "Cannot open this deck",
+  heading = "The file failed validation.",
   canReturn,
   storageBroken,
+  showOpen = true,
   onOpen,
   onReturn,
   onDiscard,
+  onReload,
 }: {
   message: string;
+  eyebrow?: string;
+  heading?: string;
   canReturn: boolean;
   storageBroken: boolean;
+  showOpen?: boolean;
   onOpen: () => void;
   onReturn: () => void;
   onDiscard: () => void;
+  onReload?: () => void;
 }) {
   return (
     <main className="start">
       <section className="start-card">
-        <p className="eyebrow">Cannot open this deck</p>
-        <h1>The file failed validation.</h1>
+        <p className="eyebrow">{eyebrow}</p>
+        <h1>{heading}</h1>
         <pre className="error-body">{message}</pre>
         <div className="start-actions">
-          <button type="button" className="primary" onClick={onOpen}>
-            Open another file
-          </button>
+          {showOpen ? (
+            <button type="button" className="primary" onClick={onOpen}>
+              Open another file
+            </button>
+          ) : null}
+          {onReload ? (
+            <button type="button" className="primary" onClick={onReload}>
+              Reload
+            </button>
+          ) : null}
           {canReturn ? (
             <button type="button" onClick={onReturn}>
               Return to the open deck

@@ -42,9 +42,6 @@ export function serializeDeck(deck: Deck, session: DeckSession): string {
     footer: deck.footer,
     showSlideNumber: deck.showSlideNumber,
     aspect: deck.aspect,
-    brand: deck.brand,
-    theme: deck.theme,
-    fonts: deck.fonts,
     slides,
   });
 

@@ -6,14 +6,15 @@ export type RasterImage = {
 };
 
 export async function loadBrandMark(src: string): Promise<RasterImage | null> {
+  const url = fetchableMark(src);
   try {
-    return await loadRaster(src);
+    return await loadRaster(url);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes("Only PNG and JPEG")) throw error;
   }
   if (typeof document === "undefined") return null;
-  const bytes = await drawSvgToPng(src);
+  const bytes = await drawSvgToPng(url);
   return { bytes, mime: "image/png", width: 128, height: 128 };
 }
 
@@ -57,6 +58,19 @@ export function fitBox(
   }
   const scale = Math.min(maxWidth / width, maxHeight / height);
   return { width: width * scale, height: height * scale };
+}
+
+function fetchableMark(src: string): string {
+  if (
+    src.startsWith("https://") ||
+    src.startsWith("http://") ||
+    src.startsWith("data:") ||
+    src.startsWith("blob:") ||
+    src.startsWith("/")
+  ) {
+    return src;
+  }
+  return `/${src}`;
 }
 
 async function readImageBytes(src: string): Promise<{ bytes: Uint8Array; mimeHint: string | null }> {

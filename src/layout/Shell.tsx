@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { BrandLockup, EMPORION_FAVICON, resolveBrand, resolveChrome, type ChromeMode } from "../brand/kit";
+import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls, type ChromeMode } from "../brand/kit";
 import { bytesToBlob, downloadBlob, downloadText } from "../export/download";
 import { deckToYaml } from "../export/yaml";
 import type { Deck } from "../model/schema";
 import { resolveTheme } from "../model/schema";
-import type { DeckSession, WidgetAnswer } from "../model/session";
+import { formatSessionBlock, type DeckSession, type WidgetAnswer } from "../model/session";
 import { locateProbe, probeAt, slideIndexInProbe, type ProbePath } from "../model/probe";
-import { writeYamlIn } from "../model/yamlLive";
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
 import { startCaptions } from "../present/captions";
 import { SlideView } from "../slides/SlideView";
+import { fontFaceRules } from "../theme/fonts";
 import { BottomBar } from "./BottomBar";
 import { Icon, IconButton } from "./IconButton";
 import { Overview } from "./Overview";
@@ -26,6 +26,7 @@ export function Shell({
   persistError,
   assets,
   embed = false,
+  manifestPath,
   exportDeck,
   packageFiles,
   sourceYaml = "",
@@ -42,6 +43,7 @@ export function Shell({
   persistError: string | null;
   assets?: Map<string, string>;
   embed?: boolean;
+  manifestPath?: string;
   exportDeck?: Deck;
   packageFiles?: Map<string, Uint8Array>;
   sourceYaml?: string;
@@ -55,12 +57,7 @@ export function Shell({
   const nextIndex = visibleIndexes(deck).find((index) => index > session.slideIndex);
   const nextSlide = nextIndex === undefined ? undefined : deck.slides[nextIndex];
   const theme = resolveTheme(deck.theme, slide.theme);
-  const rawBrand = resolveBrand(deck.brand);
-  const brand = rawBrand && {
-    ...rawBrand,
-    markLight: assets?.get(rawBrand.markLight) ?? rawBrand.markLight,
-    markDark: assets?.get(rawBrand.markDark) ?? rawBrand.markDark,
-  };
+  const brand = withAssetUrls(resolveBrand(deck.brand), assets);
   const mode = session.ui.theme;
   const [overview, setOverview] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
@@ -83,9 +80,13 @@ export function Shell({
   const [yamlDraft, setYamlDraft] = useState(sourceYaml);
   const [probe, setProbe] = useState<ProbePath | null>(null);
   const [probeSelection, setProbeSelection] = useState<{ start: number; end: number; token: number } | null>(null);
+  const [sessionLit, setSessionLit] = useState(false);
+  const [sessionMark, setSessionMark] = useState(0);
   const probeToken = useRef(0);
+  const sessionText = formatSessionBlock(slide.id, session.notes[slide.id] ?? "", session.answers[slide.id]);
 
   function selectProbe(path: ProbePath) {
+    setSessionLit(false);
     setProbe(path);
     const range = locateProbe(yamlDraft, path);
     if (!range) return;
@@ -93,7 +94,14 @@ export function Shell({
     setProbeSelection({ start: range.start, end: range.end, token: probeToken.current });
   }
 
+  function showSession() {
+    setProbe(null);
+    setSessionLit(true);
+    setSessionMark((mark) => mark + 1);
+  }
+
   function caretProbe(offset: number, jump: boolean) {
+    setSessionLit(false);
     const path = probeAt(yamlDraft, offset);
     setProbe(path);
     if (!jump) return;
@@ -111,17 +119,7 @@ export function Shell({
 
   useEffect(() => {
     if (!deck.fonts) return;
-    const rules = Object.entries(deck.fonts)
-      .map(([name, face]) => {
-        const regular = assets?.get(face.regular) ?? (face.regular.startsWith("data:") || face.regular.startsWith("https://") ? face.regular : "");
-        if (!regular) return "";
-        const semiRef = face.semibold;
-        const semibold = semiRef
-          ? (assets?.get(semiRef) ?? (semiRef.startsWith("data:") || semiRef.startsWith("https://") ? semiRef : regular))
-          : regular;
-        return `@font-face{font-family:"${name}";src:url("${regular}") format("truetype");font-weight:400;font-display:swap;}@font-face{font-family:"${name}";src:url("${semibold}") format("truetype");font-weight:600;font-display:swap;}`;
-      })
-      .join("");
+    const rules = fontFaceRules(deck.fonts, assets);
     if (!rules) return;
     const style = document.createElement("style");
     style.dataset.deckFonts = deck.id;
@@ -135,19 +133,6 @@ export function Shell({
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
-
-  useEffect(() => {
-    if (brand?.id !== "emporion") return;
-    let link = document.querySelector<HTMLLinkElement>("link[data-brand-icon='true']");
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      link.setAttribute("data-brand-icon", "true");
-      document.head.appendChild(link);
-    }
-    link.type = "image/svg+xml";
-    link.href = EMPORION_FAVICON;
-  }, [brand]);
 
   useEffect(() => {
     if (embed || !sourceYaml) return;
@@ -305,22 +290,6 @@ export function Shell({
     setOverview(false);
   }
 
-  function publishField(path: ProbePath, value: unknown) {
-    if (embed || yamlError || !onYaml) return;
-    try {
-      const next = writeYamlIn(yamlDraft, path, value);
-      setYamlDraft(next);
-      onYaml(next);
-      const range = locateProbe(next, path);
-      if (!range) return;
-      probeToken.current += 1;
-      setProbe(path);
-      setProbeSelection({ start: range.start, end: range.end, token: probeToken.current });
-    } catch {
-      return;
-    }
-  }
-
   function setAnswer(widgetId: string, answer: WidgetAnswer | undefined) {
     onSession((current) => {
       const existing = { ...(current.answers[slide.id] ?? {}) };
@@ -328,10 +297,6 @@ export function Shell({
       else existing[widgetId] = answer;
       return { ...current, answers: { ...current.answers, [slide.id]: existing } };
     });
-    const widgetIndex = (slide.widgets ?? []).findIndex((widget) => widget.id === widgetId);
-    if (widgetIndex < 0) return;
-    const stored = answer === undefined || (Array.isArray(answer) && answer.length === 0) ? undefined : answer;
-    publishField(["slides", session.slideIndex, "widgets", widgetIndex, "answer"], stored);
   }
 
   function setMode(next: ChromeMode) {
@@ -356,6 +321,7 @@ export function Shell({
   return (
     <div
       className={embed ? "shell embed" : "shell"}
+      data-manifest={manifestPath}
       data-theme={mode}
       data-toc-pin={session.ui.toc && session.ui.tocPinned ? "open" : "closed"}
       data-side-pin={session.ui.side && session.ui.sidePinned ? "open" : "closed"}
@@ -515,7 +481,7 @@ export function Shell({
                         import("../theme/fonts"),
                       ]);
                       downloadBlob(
-                        bytesToBlob(await buildPdf(deck, session, await loadFontFiles()), "application/pdf"),
+                        bytesToBlob(await buildPdf(deck, session, await loadFontFiles(deck.fonts, assets)), "application/pdf"),
                         `${deck.id}.pdf`,
                       );
                     })
@@ -566,7 +532,7 @@ export function Shell({
                   onClick={() =>
                     void runExport("handout", async () => {
                       const { buildHandout } = await import("../export/docx");
-                      downloadBlob(await buildHandout(portable, session), `${portable.id}-handout.docx`);
+                      downloadBlob(await buildHandout(deck, session), `${deck.id}-handout.docx`);
                     })
                   }
                 >
@@ -657,6 +623,9 @@ export function Shell({
             error={yamlError}
             pinned={false}
             selection={probeSelection}
+            sessionText={sessionText}
+            sessionLit={sessionLit}
+            sessionMark={sessionMark}
             onCaret={caretProbe}
             onChange={(value) => {
               setYamlDraft(value);
@@ -714,6 +683,7 @@ export function Shell({
           slideIndex={session.slideIndex}
           probe={probe}
           onProbe={embed ? undefined : selectProbe}
+          assets={assets}
         />
       </main>
 
@@ -724,6 +694,9 @@ export function Shell({
           error={yamlError}
           pinned
           selection={probeSelection}
+          sessionText={sessionText}
+          sessionLit={sessionLit}
+          sessionMark={sessionMark}
           onCaret={caretProbe}
           onChange={(value) => {
             setYamlDraft(value);
@@ -757,17 +730,17 @@ export function Shell({
           slideIndex={session.slideIndex}
           probe={probe}
           onProbe={embed ? undefined : selectProbe}
+          onNotesFocus={embed ? undefined : showSession}
           onNotes={(value) => {
             onSession((current) => ({
               ...current,
               notes: { ...current.notes, [slide.id]: value },
             }));
-            publishField(["slides", session.slideIndex, "takenNotes"], value);
           }}
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: false } }))}
           nextPreview={
             embed ? undefined : nextSlide ? (
-              <SlideView deck={deck} slide={nextSlide} revealed={0} />
+              <SlideView deck={deck} slide={nextSlide} revealed={0} assets={assets} />
             ) : (
               <p>End of deck</p>
             )

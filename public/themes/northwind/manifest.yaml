@@ -1,0 +1,44 @@
+# Admin theme. Talk files instantiate this. They do not copy it.
+# brand: emporion names the package themes/emporion/. The brand object in that package is the lockup.
+# A custom brand names files beside this manifest, such as brand/mark.svg.
+brand: emporion
+aspect: "16:9"
+showSlideNumber: true
+theme:
+  background: "#14181f"
+  surface: "#222b3a"
+  text: "#f4f1ea"
+  muted: "#b4b0a6"
+  accent: "#e2a354"
+  fontHeading: Source Serif 4
+  fontBody: Inter
+  fontMono: JetBrains Mono
+  align: left
+  headingScale: 1
+  radius: 16
+  type:
+    title: 58
+    section: 52
+    slide: 36
+    body: 22
+    sub: 20
+    author: 16
+    table: 18
+    footer: 14
+    wordmark: 12
+    mark: 22
+    caption: 18
+  highlight: "#E4B84A"
+  chrome: dark
+  chromeLight:
+    ground: "#FAFAFA"
+    paper: "#FFFFFF"
+    text: "#1F1F1F"
+    muted: "#5E5E5E"
+    line: "#E0E0E0"
+  chromeDark:
+    ground: "#121212"
+    paper: "#1E1E1E"
+    text: "#E8E8E8"
+    muted: "#A6A6A6"
+    line: "#333333"

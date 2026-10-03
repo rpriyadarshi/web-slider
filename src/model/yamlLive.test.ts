@@ -17,21 +17,21 @@ slides:
         options: [Yes, No]
 `;
 
-describe("live YAML fields", () => {
-  it("writes taken notes and a widget answer without dropping the rest of the file", () => {
-    const withNotes = writeYamlIn(source, ["slides", 0, "takenNotes"], "They said yes.");
-    const withAnswer = writeYamlIn(withNotes, ["slides", 0, "widgets", 0, "answer"], "Yes");
-    expect(withAnswer).toContain("# keep");
-    expect(withAnswer).toContain("notes: Say this.");
-    const deck = parseDeck(withAnswer);
-    expect(deck.slides[0]?.takenNotes).toBe("They said yes.");
-    expect(deck.slides[0]?.widgets?.[0]?.answer).toBe("Yes");
+describe("YAML path edits", () => {
+  it("sets a field and keeps the rest of the file, including comments", () => {
+    const titled = writeYamlIn(source, ["slides", 0, "title"], "Scope is the constraint");
+    const withFooter = writeYamlIn(titled, ["footer"], "Launch Review");
+    expect(withFooter).toContain("# keep");
+    expect(withFooter).toContain("notes: Say this.");
+    const deck = parseDeck(withFooter);
+    expect(deck.slides[0]?.title).toBe("Scope is the constraint");
+    expect(deck.footer).toBe("Launch Review");
   });
 
-  it("removes taken notes when the field is cleared", () => {
-    const written = writeYamlIn(source, ["slides", 0, "takenNotes"], "Note");
-    const cleared = writeYamlIn(written, ["slides", 0, "takenNotes"], "");
-    expect(cleared).not.toContain("takenNotes");
-    expect(parseDeck(cleared).slides[0]?.takenNotes).toBeUndefined();
+  it("removes a field when the value is cleared", () => {
+    const written = writeYamlIn(source, ["footer"], "Launch Review");
+    const cleared = writeYamlIn(written, ["footer"], "");
+    expect(cleared).not.toContain("footer");
+    expect(parseDeck(cleared).footer).toBeUndefined();
   });
 });

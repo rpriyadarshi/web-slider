@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import sampleDeck from "./sample/deck.yaml?raw";
 import { Audience } from "./layout/Audience";
 import { ErrorScreen } from "./layout/ErrorScreen";
 import { Shell } from "./layout/Shell";
 import { StartScreen } from "./layout/StartScreen";
 import { replaceListItem, replaceSlideTitle } from "./model/edit";
+import { loadInstall, presentTalk, type Install } from "./model/install";
 import { parseDeck } from "./model/parse";
 import type { Deck } from "./model/schema";
 import { serializeDeck } from "./model/serialize";
@@ -12,6 +12,9 @@ import { clampRevealed, normalizeSession, sessionFromDeck, type DeckSession } fr
 import { importPptx } from "./import/pptx";
 import { bindPackageAssets, deckWithAssetUrls, packageAssetRefs, readDeckPackage } from "./package/deckPackage";
 import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
+import { applyFontFaces } from "./theme/fonts";
+
+const EXAMPLE_DECK = "examples/launch-review.yaml";
 
 const search = new URLSearchParams(window.location.search);
 const embed = search.get("embed") === "1";
@@ -31,22 +34,30 @@ export function App() {
   const [hydrated, setHydrated] = useState(false);
   const [persistError, setPersistError] = useState<string | null>(null);
   const [yamlError, setYamlError] = useState<string | null>(null);
+  const [install, setInstall] = useState<Install | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
   const yamlGen = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const deckRef = useRef<Deck | null>(null);
+  const installRef = useRef<Install | null>(null);
   const openRef = useRef<(source: string, files: Map<string, Uint8Array>, baseUrl?: string) => Promise<void>>(
     async () => undefined,
   );
   deckRef.current = deck;
 
   async function openPrepared(source: string, files: Map<string, Uint8Array>, baseUrl?: string) {
+    const loaded = installRef.current;
+    if (!loaded) throw new Error("The theme package is not loaded.");
     try {
       const parsed = parseDeck(source);
-      const next = sessionFromDeck(parsed);
+      const presented = presentTalk(parsed, loaded.manifest);
+      const next = sessionFromDeck(presented);
       parseDeck(serializeDeck(parsed, next));
-      const urls = await bindPackageAssets(packageAssetRefs(parsed), files, baseUrl);
+      const deckUrls = await bindPackageAssets(packageAssetRefs(parsed), files, baseUrl);
+      const urls = new Map(loaded.assetUrls);
+      for (const [key, value] of deckUrls) urls.set(key, value);
       setSourceDeck(parsed);
-      setDeck(deckWithAssetUrls(parsed, urls));
+      setDeck(deckWithAssetUrls(presented, urls));
       setDeckYaml(source);
       setPackageFiles(files);
       setAssetUrls(urls);
@@ -67,13 +78,18 @@ export function App() {
     const gen = ++yamlGen.current;
     void (async () => {
       try {
+        const loaded = installRef.current;
+        if (!loaded) throw new Error("The theme package is not loaded.");
         const parsed = parseDeck(text);
+        const presented = presentTalk(parsed, loaded.manifest);
         const refs = packageAssetRefs(parsed);
-        const urls = refs.every((ref) => assetUrls.has(ref)) ? assetUrls : await bindPackageAssets(refs, packageFiles);
+        const deckUrls = refs.every((ref) => assetUrls.has(ref)) ? assetUrls : await bindPackageAssets(refs, packageFiles);
+        const urls = new Map(loaded.assetUrls);
+        for (const [key, value] of deckUrls) urls.set(key, value);
         if (yamlGen.current !== gen) return;
         setAssetUrls(urls);
         setSourceDeck(parsed);
-        setDeck(deckWithAssetUrls(parsed, urls));
+        setDeck(deckWithAssetUrls(presented, urls));
         setDeckYaml(text);
         setYamlError(null);
         setSession((current) => {
@@ -93,7 +109,8 @@ export function App() {
   function commitEdit(mutate: (current: Deck) => Deck) {
     if (!sourceDeck || !session) return;
     try {
-      const yaml = serializeDeck(mutate(sourceDeck), session);
+      const edited = mutate(sourceDeck);
+      const yaml = serializeDeck(edited, sessionFromDeck(edited));
       parseDeck(yaml);
       onYaml(yaml);
     } catch (caught) {
@@ -102,6 +119,32 @@ export function App() {
   }
 
   useEffect(() => {
+    if (!install?.manifest.fonts) return;
+    return applyFontFaces(install.manifest.fonts, install.assetUrls);
+  }, [install]);
+
+  useEffect(() => {
+    let cancel = false;
+    void loadInstall({
+      fetch: (input, init) => window.fetch(input, init),
+      origin: window.location.origin,
+    })
+      .then((loaded) => {
+        if (cancel) return;
+        installRef.current = loaded;
+        setInstall(loaded);
+      })
+      .catch((caught: unknown) => {
+        if (cancel) return;
+        setInstallError(messageOf(caught));
+      });
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!install) return;
     if (embed) {
       const onMessage = (event: MessageEvent) => {
         const data = event.data as { type?: string; yaml?: unknown; zip?: unknown };
@@ -146,11 +189,14 @@ export function App() {
       const saved = loadPersisted();
       if (saved) {
         const parsed = parseDeck(saved.deckYaml);
-        const next = normalizeSession(parsed, saved.session);
+        const presented = presentTalk(parsed, install.manifest);
+        const next = normalizeSession(presented, saved.session);
         parseDeck(serializeDeck(parsed, next));
+        const urls = new Map(install.assetUrls);
         setSourceDeck(parsed);
-        setDeck(parsed);
+        setDeck(deckWithAssetUrls(presented, urls));
         setDeckYaml(saved.deckYaml);
+        setAssetUrls(urls);
         setSession(next);
       }
     } catch (caught) {
@@ -160,7 +206,7 @@ export function App() {
     } finally {
       setHydrated(true);
     }
-  }, []);
+  }, [install]);
 
   useEffect(() => {
     if (!hydrated || !deck || !session || embed) return;
@@ -256,7 +302,30 @@ export function App() {
     />
   );
 
-  if (audienceId) return <Audience deckId={audienceId} />;
+  if (installError) {
+    return (
+      <ErrorScreen
+        eyebrow="Cannot boot this install"
+        heading="The theme package failed to load."
+        message={installError}
+        canReturn={false}
+        storageBroken={false}
+        showOpen={false}
+        onOpen={() => undefined}
+        onReturn={() => undefined}
+        onDiscard={() => undefined}
+        onReload={() => window.location.reload()}
+      />
+    );
+  }
+  if (!install) {
+    return (
+      <main className="start">
+        <p>Loading the theme.</p>
+      </main>
+    );
+  }
+  if (audienceId) return <Audience deckId={audienceId} install={install} />;
   if (!hydrated) return fileInput;
   if (error) {
     return (
@@ -285,9 +354,28 @@ export function App() {
       <>
         {fileInput}
         <StartScreen
+          install={install}
           onOpenFile={openFile}
           requestOpen={() => inputRef.current?.click()}
-          onExample={() => void openPrepared(sampleDeck, new Map())}
+          onExample={() => {
+            void (async () => {
+              try {
+                const response = await fetch(new URL(EXAMPLE_DECK, window.location.origin));
+                if (!response.ok) {
+                  throw new Error(`Example failed to load (${response.status}): ${EXAMPLE_DECK}`);
+                }
+                const text = await response.text();
+                const start = text.trimStart().slice(0, 20).toLowerCase();
+                if (start.startsWith("<!doctype") || start.startsWith("<html")) {
+                  throw new Error(`Example not found: ${EXAMPLE_DECK}. The server returned HTML instead of the deck.`);
+                }
+                await openPrepared(text, new Map());
+              } catch (caught) {
+                setError(messageOf(caught));
+                setCanReturn(deckRef.current !== null);
+              }
+            })();
+          }}
         />
       </>
     );
@@ -298,6 +386,7 @@ export function App() {
       <Shell
         key={deck.id}
         deck={deck}
+        manifestPath={install.manifestPath}
         exportDeck={sourceDeck ?? deck}
         session={session}
         assets={assetUrls}

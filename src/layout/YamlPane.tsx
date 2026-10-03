@@ -47,6 +47,9 @@ export function YamlPane({
   error,
   pinned,
   selection,
+  sessionText,
+  sessionLit,
+  sessionMark,
   onChange,
   onCaret,
   onPin,
@@ -57,6 +60,9 @@ export function YamlPane({
   error: string | null;
   pinned: boolean;
   selection: { start: number; end: number; token: number } | null;
+  sessionText: string;
+  sessionLit: boolean;
+  sessionMark: number;
   onChange: (value: string) => void;
   onCaret: (offset: number, jump: boolean) => void;
   onPin: () => void;
@@ -64,6 +70,7 @@ export function YamlPane({
   className: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const sessionRef = useRef<HTMLElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const applying = useRef(false);
   const onChangeRef = useRef(onChange);
@@ -90,6 +97,10 @@ export function YamlPane({
             if (applying.current) return;
             if (update.docChanged) onChangeRef.current(update.state.doc.toString());
             if (update.selectionSet) {
+              const userEdit = update.transactions.some(
+                (transaction) => transaction.isUserEvent("select") || transaction.isUserEvent("input"),
+              );
+              if (!userEdit) return;
               const head = update.state.selection.main.head;
               const pointer = update.transactions.some((transaction) => transaction.isUserEvent("select.pointer"));
               onCaretRef.current(head, pointer);
@@ -114,6 +125,11 @@ export function YamlPane({
     view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
     applying.current = false;
   }, [value]);
+
+  useEffect(() => {
+    if (sessionMark === 0) return;
+    sessionRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [sessionMark]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -143,6 +159,18 @@ export function YamlPane({
       </div>
       {error ? <p className="yaml-error">{error}</p> : null}
       <div ref={host} className="yaml-editor" aria-label="Deck YAML" />
+      <section
+        ref={sessionRef}
+        className="yaml-session"
+        aria-label="Session"
+        data-lit={sessionLit ? "true" : undefined}
+      >
+        <div className="panel-head">
+          <h2>Session</h2>
+        </div>
+        <p className="yaml-session-note">This run. Not the deck file.</p>
+        <pre>{sessionText}</pre>
+      </section>
     </section>
   );
 }

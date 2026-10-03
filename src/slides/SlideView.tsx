@@ -1,4 +1,4 @@
-import { BrandLockup, resolveBrand } from "../brand/kit";
+import { BrandLockup, resolveBrand, withAssetUrls } from "../brand/kit";
 import type { Deck, Slide } from "../model/schema";
 import { resolveTheme } from "../model/schema";
 import { isRevealed, visibleIndexes, visibleNumber } from "../model/steps";
@@ -19,6 +19,7 @@ export function SlideView({
   slideIndex = 0,
   probe = null,
   onProbe,
+  assets,
 }: {
   deck: Deck;
   slide: Slide;
@@ -32,9 +33,10 @@ export function SlideView({
   slideIndex?: number;
   probe?: ProbePath | null;
   onProbe?: (path: ProbePath) => void;
+  assets?: Map<string, string>;
 }) {
   const theme = resolveTheme(deck.theme, slide.theme);
-  const brand = resolveBrand(deck.brand);
+  const brand = withAssetUrls(resolveBrand(deck.brand), assets);
   const quoteCandidate = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
   const quote = quoteCandidate && isRevealed(quoteCandidate.step, revealed) ? quoteCandidate : undefined;
   const dark = isDarkHex(theme.background);
@@ -125,11 +127,7 @@ export function SlideView({
       {laser ? <span className="laser" style={{ left: `${laser.x * 100}%`, top: `${laser.y * 100}%` }} /> : null}
       <footer className="slide-footer">
         <span className="slide-brand">
-          {brand ? (
-            <span {...bindProbe(["brand"], probe, onProbe)}>
-              <BrandLockup brand={brand} mode={dark ? "dark" : "light"} />
-            </span>
-          ) : null}
+          {brand ? <BrandLockup brand={brand} mode={dark ? "dark" : "light"} /> : null}
           {deck.footer ? <span {...bindProbe(["footer"], probe, onProbe)}>{deck.footer}</span> : null}
         </span>
         {deck.showSlideNumber === false ? null : (

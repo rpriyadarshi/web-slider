@@ -1,20 +1,32 @@
 # Generate a Web Slider presentation
 
-You write a presentation as YAML for Web Slider. The file is the whole deck: colors, type sizes, chrome theme, brand, slides, side examples, and the feedback widgets at the bottom. The presenter draws the brand lockup on every slide from `brand` and `theme.type`. Do not invent keys. If a value is illegal, the presenter rejects the file.
+You write a presentation as YAML for Web Slider. You write the author deck: slides, scripts, and widget prompts. Do not invent keys. If a value is illegal, the presenter rejects the file.
+
+## Roles
+
+Web Slider has four roles. You write only the author deck.
+
+- **System.** The schema, the layouts, the block and widget types, the default type scale, and presenter behavior. This is in the software. A customer does not edit a file to change it.
+- **Admin theme.** Brand, chrome, the type scale, marks, and fonts. That package is `manifest.yaml`, named by `web-slider.config.yaml`. The presenter draws the lockup and the type scale from the loaded manifest. A name with no slash is a package name: `manifest: emporion` and `brand: emporion` both load `themes/emporion/manifest.yaml`. `brand` as a name uses the brand object in that package (`wordmark`, `tail`, colors, and mark paths). Do not copy them into the deck.
+- **Author deck.** Slides, scripts, and widget prompts. This is the file you write, and it is the YAML pane. A slide may override `background`, `surface`, `text`, `muted`, and `accent`. Do not put `brand`, `theme`, or `fonts` on the deck.
+- **Presenter session.** Answers and taken notes. The browser keeps them until a download or a handout merges them. Leave `takenNotes` and `answer` out of a new deck.
+
+Boot order is the base install, then `web-slider.config.yaml` points at a `manifest.yaml` (or a package name such as `emporion`, which loads `themes/emporion/manifest.yaml`), then the user opens a deck YAML. If the config file is missing, the presenter loads the package named `emporion` through that same rule. If the config names a missing manifest, or a package, a brand reference, or a mark file is missing, the presenter shows the error and does not substitute another theme. YAML is for files a person or an AI writes. JSON is for artifacts only the system writes, such as a resolved theme cache and the session. Do not generate `web-slider.config.yaml`, `manifest.yaml`, or `manifest.resolved.json`. The shipped example `examples/launch-review.yaml` is an author deck. It does not carry brand, theme, or fonts.
 
 Laser, captions, the blank screen, and the audience window are presenter controls. They are not YAML.
 
-The presenter also has a YAML pane beside the slide. That pane is the deck file, not a second design surface. A free-form canvas is out of scope: if a change cannot be written as legal YAML, the editor does not offer it. The AI path and the pane edit the same file. Clicking a part of the slide, including a widget, selects the matching YAML node, and the caret in the YAML marks the matching part of the slide. Notes taken during the talk are written into the file as `takenNotes` on that slide. A recorded widget answer is written as `answer`.
+The presenter also has a YAML pane beside the slide. That pane is the author deck, not a second design surface. A free-form canvas is out of scope: if a change cannot be written as legal YAML, the editor does not offer it. The AI path and the pane edit the same file. Clicking a part of the slide, including a widget, selects the matching YAML node, and the caret in the YAML marks the matching part of the slide. A read-only session block in that pane shows the notes and answers recorded during the talk. Those stay in the browser until export. They are not written into the deck YAML while someone is presenting.
 
 ## Output
 
-Prefer one self-contained `.yaml` file. Put marks and images inline as `data:` URIs or `https://` URLs.
+Prefer one self-contained `.yaml` file. Put slide images inline as `data:` URIs or `https://` URLs. Marks and extra fonts belong to the manifest, not this file.
 
-When the deck needs font files or several images, also produce a zip package:
+When the deck needs several images, also produce a zip package:
 
 - `deck.yaml` at the root
-- other files at the relative paths named in the YAML, such as `brand/mark.svg` or `fonts/BrandSerif-Regular.ttf`
+- image files at the relative paths named in the YAML
 - no `..` path segments
+- no copy of the manifest, the mark, or the font files
 
 ## Deck
 
@@ -23,60 +35,8 @@ id: launch-review          # letters, numbers, _ -
 title: Launch Review
 author: Northwind          # optional
 footer: Launch Review      # optional line beside the lockup
-showSlideNumber: true      # omit to show numbers; false hides them
-aspect: "16:9"             # 16:9 or 4:3
-brand: emporion            # shorthand for the Emporion Court mark
-# or spell the brand out:
-# brand:
-#   name: Northwind
-#   wordmark: NORTHWIND
-#   tail: AI              # optional second word, drawn in highlight
-#   accent: "#3DB892"
-#   highlight: "#E4B84A"  # tail color on the slide
-#   mark: brand/mark.svg  # https, data URI, or package path
-#   markDark: brand/mark-dark.svg  # used when the slide background is dark
-theme:
-  background: "#14181f"   # slide card
-  surface: "#222b3a"
-  text: "#f4f1ea"
-  muted: "#b4b0a6"
-  accent: "#e2a354"
-  highlight: "#E4B84A"    # outline highlight; the lockup tail uses brand.highlight when the brand sets one
-  fontHeading: Source Serif 4
-  fontBody: Inter
-  fontMono: JetBrains Mono
-  align: left             # left or center
-  headingScale: 1         # up to 3; multiplies title, section, and slide
-  radius: 16              # up to 48
-  type:                   # px. Same size on every slide. Omit a key for the default.
-    title: 58             # max 200
-    section: 52           # max 200
-    slide: 36             # content and quote titles, max 160
-    body: 22              # max 96
-    sub: 20
-    author: 16
-    table: 18
-    footer: 14
-    wordmark: 12          # lockup wordmark
-    mark: 22              # lockup mark, width and height, max 128
-    caption: 18
-  chrome: dark            # light or dark presenter shell
-  chromeLight:
-    ground: "#FAFAFA"
-    paper: "#FFFFFF"
-    text: "#1F1F1F"
-    muted: "#5E5E5E"
-    line: "#E0E0E0"
-  chromeDark:
-    ground: "#121212"
-    paper: "#1E1E1E"
-    text: "#E8E8E8"
-    muted: "#A6A6A6"
-    line: "#333333"
-fonts:                    # only for faces that are not built in
-  Brand Serif:
-    regular: fonts/BrandSerif-Regular.ttf
-    semibold: fonts/BrandSerif-Semibold.ttf
+# showSlideNumber and aspect come from the manifest.
+# Set them here only when this talk differs.
 slides:
   - id: intro
     title: Welcome
@@ -90,11 +50,11 @@ slides:
     widgets: []           # feedback row
 ```
 
-Built-in fonts, which need no `fonts` entry: Inter, Source Serif 4, JetBrains Mono. Any other family must have a `fonts` entry.
+The manifest, which you do not write, supplies the brand, the type scale, chrome, the default aspect, and fonts. Built-in faces are Inter, Source Serif 4, and JetBrains Mono. The package's `fonts` map names the files; the shipped files are in `themes/emporion/fonts/`. `brand: emporion` on a manifest uses the brand object in `themes/emporion/manifest.yaml`, including `mark.svg` and `mark-on-dark.svg` beside that file. A brand written in place names `mark` and optional `markDark` as `https` URLs, `data` URIs, or paths beside the manifest that declares them.
 
-Colors are `#rrggbb`. A slide may override `background`, `surface`, `text`, `muted`, and `accent` with its own `theme`. Do not put type sizes on a slide.
+Colors are `#rrggbb`. A slide may override `background`, `surface`, `text`, `muted`, and `accent` with its own `theme`. Do not put type sizes, chrome, or a brand on a slide or on the deck.
 
-The lockup is the mark plus the wordmark. The presenter draws it in the footer of every slide, including the audience window, and in PDF, Word, and PowerPoint. Do not add an image block that repeats the logo. Set the size with `theme.type.mark` and `theme.type.wordmark`.
+The lockup is the mark plus the wordmark. The presenter draws it in the footer of every slide, including the audience window, and in PDF, Word, and PowerPoint, from the loaded theme. Do not add an image block that repeats the logo.
 
 `autoAdvance` is at most 3600. It starts only after the last build on that slide.
 

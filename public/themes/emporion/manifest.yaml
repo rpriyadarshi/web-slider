@@ -1,0 +1,38 @@
+# Package name emporion. A manifest value with no slash loads themes/<name>/manifest.yaml.
+# This file declares the brand. Another manifest may set brand to this package name.
+# Marks and fonts are paths beside this file.
+brand:
+  name: Emporion
+  wordmark: EMPORION
+  tail: AI
+  accent: "#3DB892"
+  highlight: "#E4B84A"
+  mark: mark.svg
+  markDark: mark-on-dark.svg
+fonts:
+  Inter:
+    regular: fonts/Inter-Regular.ttf
+    semibold: fonts/Inter-SemiBold.ttf
+  Source Serif 4:
+    regular: fonts/SourceSerif4-Regular.ttf
+    semibold: fonts/SourceSerif4-Semibold.ttf
+  JetBrains Mono:
+    regular: fonts/JetBrainsMono-Regular.ttf
+    semibold: fonts/JetBrainsMono-Bold.ttf
+aspect: "16:9"
+showSlideNumber: true
+theme:
+  highlight: "#E4B84A"
+  chrome: dark
+  chromeLight:
+    ground: "#FAFAFA"
+    paper: "#FFFFFF"
+    text: "#1F1F1F"
+    muted: "#5E5E5E"
+    line: "#E0E0E0"
+  chromeDark:
+    ground: "#121212"
+    paper: "#1E1E1E"
+    text: "#E8E8E8"
+    muted: "#A6A6A6"
+    line: "#333333"
