@@ -1,8 +1,8 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { yaml } from "@codemirror/lang-yaml";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { EditorState } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { EditorState, StateEffect, StateField } from "@codemirror/state";
+import { Decoration, EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { useEffect, useRef } from "react";
 import { Icon, IconButton, IconMark } from "./IconButton";
@@ -16,6 +16,33 @@ const yamlHighlight = HighlightStyle.define([
   { tag: [tags.punctuation, tags.separator, tags.meta, tags.derefOperator], color: "var(--muted)" },
   { tag: tags.labelName, color: "var(--highlight)" },
 ]);
+
+const setProbeMark = StateEffect.define<{ from: number; to: number } | null>();
+
+const probeMark = StateField.define({
+  create() {
+    return Decoration.none;
+  },
+  update(marks, transaction) {
+    for (const effect of transaction.effects) {
+      if (!effect.is(setProbeMark)) continue;
+      const range = effect.value;
+      if (!range) return Decoration.none;
+      const doc = transaction.state.doc;
+      const from = Math.max(0, Math.min(range.from, doc.length));
+      const to = Math.max(from, Math.min(range.to, doc.length));
+      const first = doc.lineAt(from);
+      const last = doc.lineAt(to === from ? from : Math.max(from, to - 1));
+      const lines = [];
+      for (let number = first.number; number <= last.number; number += 1) {
+        lines.push(Decoration.line({ class: "cm-yaml-probe" }).range(doc.line(number).from));
+      }
+      return Decoration.set(lines, true);
+    }
+    return marks.map(transaction.changes);
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
 
 const yamlTheme = EditorView.theme({
   "&": {
@@ -37,9 +64,6 @@ const yamlTheme = EditorView.theme({
     borderRight: "1px solid var(--line)",
   },
   ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "transparent" },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-    backgroundColor: "color-mix(in srgb, var(--highlight) 35%, transparent)",
-  },
 });
 
 export function YamlPane({
@@ -91,6 +115,7 @@ export function YamlPane({
           yaml(),
           syntaxHighlighting(yamlHighlight),
           yamlTheme,
+          probeMark,
           EditorState.tabSize.of(2),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.updateListener.of((update) => {
@@ -104,6 +129,12 @@ export function YamlPane({
               const head = update.state.selection.main.head;
               const pointer = update.transactions.some((transaction) => transaction.isUserEvent("select.pointer"));
               onCaretRef.current(head, pointer);
+              queueMicrotask(() => {
+                const editor = viewRef.current;
+                if (!editor) return;
+                const current = editor.state.doc.lineAt(Math.min(head, editor.state.doc.length));
+                editor.dispatch({ effects: setProbeMark.of({ from: current.from, to: current.to }) });
+              });
             }
           }),
         ],
@@ -139,6 +170,7 @@ export function YamlPane({
     applying.current = true;
     view.dispatch({
       selection: { anchor: start, head: end },
+      effects: setProbeMark.of(end > start ? { from: start, to: end } : null),
       scrollIntoView: true,
     });
     applying.current = false;

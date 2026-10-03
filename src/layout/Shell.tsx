@@ -635,27 +635,6 @@ export function Shell({
             onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
           />
         ) : null}
-        {!embed &&
-        ((session.ui.toc && !session.ui.tocPinned) ||
-          (session.ui.side && !session.ui.sidePinned) ||
-          (session.ui.yaml && !session.ui.yamlPinned)) ? (
-          <button
-            type="button"
-            className="stage-scrim"
-            aria-label="Hide"
-            onClick={() =>
-              onSession((current) => ({
-                ...current,
-                ui: {
-                  ...current.ui,
-                  toc: current.ui.tocPinned ? current.ui.toc : false,
-                  side: current.ui.sidePinned ? current.ui.side : false,
-                  yaml: current.ui.yamlPinned ? current.ui.yaml : false,
-                },
-              }))
-            }
-          />
-        ) : null}
         {!embed && !session.ui.bottom ? (
           <button
             type="button"

@@ -20,6 +20,10 @@ describe("YAML cross-probe", () => {
     expect(title && source.slice(title.start, title.end)).toContain("title: Scope");
     const bullet = locateProbe(source, ["slides", 0, "blocks", 0, "items", 1]);
     expect(bullet && source.slice(bullet.start, bullet.end)).toContain("Second");
+    const list = locateProbe(source, ["slides", 0, "blocks", 0]);
+    const listText = list ? source.slice(list.start, list.end) : "";
+    expect(listText).toContain("First");
+    expect(listText).toContain("Second");
   });
 
   it("resolves the caret to the deepest node", () => {

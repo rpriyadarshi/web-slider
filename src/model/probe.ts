@@ -24,9 +24,7 @@ export function locateProbe(source: string, path: ProbePath): { start: number; e
   const key = probeKey(path);
   const found = indexProbes(source).find((range) => probeKey(range.path) === key);
   if (!found) return null;
-  const lineEnd = source.indexOf("\n", found.start);
-  const end = lineEnd === -1 ? found.end : Math.min(found.end, lineEnd);
-  return { start: found.start, end: Math.max(found.start, end) };
+  return { start: found.start, end: Math.max(found.start, found.end) };
 }
 
 export function probeAt(source: string, offset: number): ProbePath | null {

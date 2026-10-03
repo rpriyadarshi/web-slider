@@ -679,6 +679,15 @@ textarea { flex: 1; resize: none; min-height: 72px; }
   height: 100%;
 }
 
+.yaml-editor .cm-editor .cm-selectionBackground {
+  background-color: color-mix(in srgb, var(--highlight) 45%, transparent) !important;
+}
+
+.yaml-editor .cm-yaml-probe {
+  background-color: color-mix(in srgb, var(--highlight) 28%, transparent);
+  box-shadow: inset 3px 0 0 var(--highlight);
+}
+
 .yaml-error {
   margin: 0;
   padding: 8px 10px;
@@ -821,7 +830,7 @@ textarea { flex: 1; resize: none; min-height: 72px; }
 
 .export-popup { width: 248px; flex-wrap: wrap; }
 
-.scrim, .stage-scrim {
+.scrim {
   position: absolute;
   inset: 0;
   z-index: 3;
