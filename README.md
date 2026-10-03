@@ -4,10 +4,10 @@ A browser presenter for YAML slide decks. Open a file, present it, record decisi
 
 ```bash
 npm install
-npm run dev
+npm run dev -- --config examples/northwind/web-slider.config.yaml
 ```
 
-`npm test` checks the deck schema, navigation, PowerPoint import, and the exporters. `npm run build` produces the static site.
+`npm test` checks the deck schema, navigation, PowerPoint import, and the exporters. `npm run build` produces the static site. `npm run dev` and `npm run preview` take the same `--config` flag. The path is site-root relative: the file lives under `public/`, and the URL does not include `public/`.
 
 ## Roles
 
@@ -15,23 +15,30 @@ Four roles. The talk file is only one of them.
 
 **System.** The schema, the layouts, the block and widget types, the default type scale, and presenter behavior. This is in the software. A customer does not edit a file to change it.
 
-**Admin theme.** Brand, chrome, the type scale, marks, and fonts. This is `manifest.yaml`, the file named by the config. Asset files stay SVG, TTF, PNG, or JPEG next to that manifest. The built-in package is `themes/emporion/`: `manifest.yaml`, `mark.svg`, `mark-on-dark.svg`, `favicon.svg`, and the font files in `fonts/`. A config or brand value with no slash is a package name, so `manifest: emporion` and `brand: emporion` both mean `themes/emporion/manifest.yaml`. The same rule applies to any other package name. `brand` as a name uses the brand object in that package. A missing package, a brand cycle, or a missing mark stops the app. The deck does not copy this package.
+**Admin theme.** Brand, chrome, the type scale, marks, and fonts. This is `manifest.yaml`, the file named by the config. Asset files stay SVG, TTF, PNG, or JPEG next to that manifest. `themes/` holds built-in product themes. Only `themes/emporion/` ships: `manifest.yaml`, `mark.svg`, `mark-on-dark.svg`, `favicon.svg`, and the font files in `fonts/`. `examples/northwind/` is a sample admin install, not a second product theme. Its config points at `examples/northwind/manifest.yaml`, and that manifest sets `brand: emporion`. A config or brand value with no slash is a package name, so `manifest: emporion` and `brand: emporion` both mean `themes/emporion/manifest.yaml`. The same rule applies to any other package name. `brand` as a name uses the brand object in that package. A missing package, a brand cycle, or a missing mark stops the app. The deck does not copy this package.
 
-**Author deck.** Slides, scripts, and widget prompts. This is the YAML pane. An AI generates this file. A slide may override a color. The deck does not restate the mark or the type scale. The shipped example is `examples/launch-review.yaml`.
+**Author deck.** Slides, scripts, and widget prompts. This is the YAML pane. An AI generates this file. A slide may override a color. The deck does not restate the mark or the type scale. `examples/launch-review.yaml` is a sample talk. It does not carry brand, theme, or fonts.
 
 **Presenter session.** Answers and taken notes. They stay in the browser for this run. Export and the handout merge them into the downloaded file.
 
 ## Boot order
 
-1. The base install is the app, the schema, the theme packages under `themes/`, and the presenter. Font files ship in `themes/emporion/fonts/` and are named by that package's manifest.
-2. `web-slider.config.yaml` at the site root points at a manifest. `manifest: themes/northwind/manifest.yaml` is a site-root path. A name with no slash, such as `manifest: emporion`, loads `themes/<name>/manifest.yaml`. If that config file is missing, the install loads the package named `emporion` through that same rule. If the config names a missing manifest, a package or one of its mark or font files is missing, a brand name cycles, or the YAML is invalid, the app stops and shows the error. It does not substitute another brand.
-3. The user opens a deck YAML. Open loads only the talk file, on top of the theme already loaded.
+1. The base install is the app, the schema, the theme packages under `themes/`, and the presenter. Font files ship in `themes/emporion/fonts/` and are named by that package's manifest. `themes/` holds built-in product themes. Only emporion ships. `examples/northwind` is a sample admin, not a second product theme. `examples/launch-review.yaml` is a sample talk.
+2. A config file names the admin manifest. Precedence is the `--config` flag, then the `config` query parameter, then the boot screen asks. The flag is a site-root path:
+
+   ```bash
+   npm run dev -- --config examples/northwind/web-slider.config.yaml
+   npm run preview -- --config examples/northwind/web-slider.config.yaml
+   ```
+
+   `?config=examples/northwind/web-slider.config.yaml` is the same kind of path. The sample admin config sets `manifest: examples/northwind/manifest.yaml`. A name with no slash, such as `manifest: emporion` or `brand: emporion`, loads `themes/<name>/manifest.yaml`. When no flag and no query are set, the boot screen asks for a config file or a site path before any theme loads. A missing config is not replaced with a theme package. A config path or a manifest path that contains `..` or is an absolute filesystem path fails validation. If the config names a missing manifest, a package or one of its mark or font files is missing, a brand name cycles, or the YAML is invalid, the app stops and shows the error. It does not substitute another brand.
+3. The user opens a deck YAML. Open loads only the talk file, on top of the theme already loaded. Load example fetches `examples/launch-review.yaml`.
 
 YAML is for files a person or an AI writes: the config, the manifest, and the deck. JSON is for artifacts only the system writes: an optional `manifest.resolved.json` cache beside the manifest, and the session. People do not edit those JSON files. This presenter resolves the manifest in memory. If `manifest.resolved.json` is present and its hash matches the manifest, it must agree with that resolution. A stale hash is ignored and the manifest is resolved again. This browser build does not write the cache file, because it cannot update the install directory.
 
 ## Open a deck
 
-The start screen and the Open icon take a `.yaml` or `.yml` file, a `.zip` package, or a `.pptx` file. You can also drop a file onto the window. Load example fetches `examples/launch-review.yaml`. That file is an author talk. It does not carry brand, theme, or fonts.
+After a config has loaded, the start screen and the Open icon take a `.yaml` or `.yml` talk file, a `.zip` package, or a `.pptx` file. You can also drop a file onto the window. Open loads only that talk. Load example fetches `examples/launch-review.yaml`. That file is a sample talk. It does not carry brand, theme, or fonts.
 
 Opening a file replaces the deck on screen. This browser keeps that deck, the widget answers, and the notes taken during the talk. Download YAML to keep the answers and the notes. That download merges them into a new file, and comments from the original file are not copied into it.
 
@@ -41,7 +48,7 @@ A `.pptx` import keeps each slide's title, bullets, and speaker notes. Pictures,
 
 ## Theme
 
-`web-slider.config.yaml` names the manifest. The shipped install points at `themes/northwind/manifest.yaml`. `manifest: emporion` is a package name and loads `themes/emporion/manifest.yaml`. A missing config file loads that same package name through the same rule. A config that points at a file that is not there is an error. A missing mark or font file is an error, and the app does not substitute another brand.
+The config names the manifest. The sample admin, `examples/northwind/web-slider.config.yaml`, points at `examples/northwind/manifest.yaml`. That manifest is an admin install. It is not a second product theme. `manifest: emporion` is a package name and loads `themes/emporion/manifest.yaml`. `brand: emporion` on the Northwind manifest uses the brand object in that package. A config that points at a file that is not there is an error. A missing mark or font file is an error, and the app does not substitute another brand.
 
 The manifest holds `brand`, `theme` (colors, type scale, chrome), optional `fonts`, the default `aspect`, and `showSlideNumber`. A `brand` value that is a package name, such as `brand: emporion`, loads `themes/<name>/manifest.yaml` and uses that file's brand object: `name`, `wordmark`, optional `tail`, `accent`, `highlight`, `mark`, and optional `markDark`. A brand written in place is that same mapping. A mark or font file is an `https` URL, a `data` URI, or a path relative to the manifest that declares it, such as `mark.svg` or `fonts/Inter-Regular.ttf`. Those files stay SVG, TTF, PNG, or JPEG. Omitted theme fields use the built-in defaults after the manifest validates. Unknown keys are rejected and the theme is not loaded.
 

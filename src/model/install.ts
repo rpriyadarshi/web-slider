@@ -15,14 +15,11 @@ import {
   type ThemeInput,
 } from "./schema";
 
-/** Package loaded when web-slider.config.yaml is absent. The shipped config names the package when that file is present. */
-const defaultPackageName = "emporion";
-
 const manifestPathSchema = z
   .string()
   .min(1)
-  .refine((value) => isPackageName(value) || isManifestPath(value), {
-    message: "must be a package name or a path such as themes/northwind/manifest.yaml",
+  .refine((value) => isPackageName(value) || isSiteYamlPath(value), {
+    message: "must be a package name or a site path such as examples/northwind/manifest.yaml",
   });
 
 export const configSchema = z
@@ -153,25 +150,69 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(sortValue(value));
 }
 
-export async function loadInstall(env: { fetch: typeof fetch; origin: string }): Promise<Install> {
+export type BootConfig = { status: "config-required" } | { status: "path"; path: string };
+
+export type ConfigRequest = { path: string; source?: never } | { source: string; path?: never };
+
+/** Command-line config, then the `config` query, then the boot screen asks. */
+export function resolveBootConfig(input: { cli?: string | null; query?: string | null }): BootConfig {
+  const cli = blank(input.cli);
+  if (cli) return { status: "path", path: cli };
+  const query = blank(input.query);
+  if (query) return { status: "path", path: query };
+  return { status: "config-required" };
+}
+
+/** `import.meta.env.VITE_SLIDER_CONFIG` is the command-line path. The document attribute carries the same flag for preview. */
+export function injectedConfigPath(envValue: unknown, attribute: string | null | undefined): string {
+  const fromEnv = typeof envValue === "string" ? envValue.trim() : "";
+  if (fromEnv) return fromEnv;
+  return attribute?.trim() ?? "";
+}
+
+export async function loadInstall(
+  env: { fetch: typeof fetch; origin: string },
+  request: ConfigRequest,
+): Promise<Install> {
   const origin = env.origin.endsWith("/") ? env.origin : `${env.origin}/`;
-  const configUrl = new URL("web-slider.config.yaml", origin);
-  const configResponse = await env.fetch(configUrl);
-  if (configResponse.status === 404) {
-    return loadManifestAt(env, origin, packageManifestPath(defaultPackageName), missingPackage);
-  }
-  if (!configResponse.ok) {
-    throw new Error(`Config failed to load (${configResponse.status}): web-slider.config.yaml`);
-  }
-  const configBody = await readBody(configResponse);
-  if (configBody.html) {
-    return loadManifestAt(env, origin, packageManifestPath(defaultPackageName), missingPackage);
-  }
-  const config = parseConfig(configBody.text);
+  const config =
+    "source" in request && typeof request.source === "string"
+      ? parseConfig(request.source)
+      : await readConfigFile(env, origin, "path" in request && typeof request.path === "string" ? request.path : "");
   if (isPackageName(config.manifest)) {
     return loadManifestAt(env, origin, packageManifestPath(config.manifest), missingPackage);
   }
   return loadManifestAt(env, origin, config.manifest, missingManifest);
+}
+
+async function readConfigFile(
+  env: { fetch: typeof fetch; origin: string },
+  origin: string,
+  configPath: string,
+): Promise<{ manifest: string }> {
+  const path = configPath.trim();
+  if (!path) {
+    throw new Error("Config required. Pass --config, open ?config=, or choose a config file before a theme can load.");
+  }
+  if (!isSiteYamlPath(path)) {
+    throw new Error(
+      `Config failed validation:\npath: must be a site path such as examples/northwind/web-slider.config.yaml. A filesystem path or ../ cannot be read.`,
+    );
+  }
+  const configResponse = await env.fetch(new URL(path, origin));
+  if (configResponse.status === 404) {
+    throw new Error(`Config not found: ${path}. A missing config is not replaced with a theme package.`);
+  }
+  if (!configResponse.ok) {
+    throw new Error(`Config failed to load (${configResponse.status}): ${path}`);
+  }
+  const configBody = await readBody(configResponse);
+  if (configBody.html) {
+    throw new Error(
+      `Config not found: ${path}. The server returned HTML instead of the file. A missing config is not replaced with a theme package.`,
+    );
+  }
+  return parseConfig(configBody.text);
 }
 
 async function loadManifestAt(
@@ -307,7 +348,7 @@ function parseYaml<T>(source: string, schema: z.ZodType<T>, label: string, mappi
 
 function missingManifest(path: string): Error {
   return new Error(
-    `Manifest not found: ${path}. web-slider.config.yaml points at this file. A missing manifest is not replaced with another package.`,
+    `Manifest not found: ${path}. The config points at this file. A missing manifest is not replaced with another package.`,
   );
 }
 
@@ -323,9 +364,15 @@ async function readBody(response: Response): Promise<{ text: string; html: boole
   return { text, html: type.includes("text/html") || text.trimStart().startsWith("<") };
 }
 
-function isManifestPath(value: string): boolean {
+function isSiteYamlPath(value: string): boolean {
   if (value.startsWith("/") || value.includes("\\") || value.includes("://") || value.split("/").includes("..")) return false;
   return /^[A-Za-z0-9][A-Za-z0-9_./-]*\.ya?ml$/.test(value);
+}
+
+function blank(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
 }
 
 function definedFields<T extends Record<string, unknown>>(value: T | undefined): Partial<T> {

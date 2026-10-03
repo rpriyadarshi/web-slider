@@ -139,6 +139,31 @@ button.primary {
   color: var(--text);
 }
 
+.config-form {
+  margin: 0 0 18px;
+}
+
+.config-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.config-row {
+  display: flex;
+  gap: 10px;
+}
+
+.config-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+
 .error-body {
   white-space: pre-wrap;
   background: #1a1212;

@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "node scripts/launch.mjs dev",
+    "build": "tsc -p tsconfig.json --noEmit && node scripts/launch.mjs build",
+    "preview": "node scripts/launch.mjs preview",
     "test": "vitest run"
   },
   "dependencies": {

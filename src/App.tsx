@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Audience } from "./layout/Audience";
+import { ConfigScreen } from "./layout/ConfigScreen";
 import { ErrorScreen } from "./layout/ErrorScreen";
 import { Shell } from "./layout/Shell";
 import { StartScreen } from "./layout/StartScreen";
 import { replaceListItem, replaceSlideTitle } from "./model/edit";
-import { loadInstall, presentTalk, type Install } from "./model/install";
+import { injectedConfigPath, loadInstall, presentTalk, resolveBootConfig, type Install } from "./model/install";
 import { parseDeck } from "./model/parse";
 import type { Deck } from "./model/schema";
 import { serializeDeck } from "./model/serialize";
@@ -20,6 +21,22 @@ const search = new URLSearchParams(window.location.search);
 const embed = search.get("embed") === "1";
 const audienceId = search.get("audience") === "1" ? search.get("id") : null;
 const deckParam = search.get("deck");
+const bootRequest = resolveBootConfig({
+  cli: injectedConfigPath(
+    import.meta.env.VITE_SLIDER_CONFIG,
+    typeof document === "undefined" ? null : document.documentElement.getAttribute("data-slider-config"),
+  ),
+  query: search.get("config"),
+});
+
+type BootPhase = { kind: "loading" } | { kind: "ask"; error: string | null } | { kind: "ready" };
+
+function browserEnv() {
+  return {
+    fetch: (input: RequestInfo | URL, init?: RequestInit) => window.fetch(input, init),
+    origin: window.location.origin,
+  };
+}
 
 export function App() {
   const [deck, setDeck] = useState<Deck | null>(null);
@@ -35,7 +52,9 @@ export function App() {
   const [persistError, setPersistError] = useState<string | null>(null);
   const [yamlError, setYamlError] = useState<string | null>(null);
   const [install, setInstall] = useState<Install | null>(null);
-  const [installError, setInstallError] = useState<string | null>(null);
+  const [bootPhase, setBootPhase] = useState<BootPhase>(
+    bootRequest.status === "config-required" ? { kind: "ask", error: null } : { kind: "loading" },
+  );
   const yamlGen = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const deckRef = useRef<Deck | null>(null);
@@ -124,24 +143,47 @@ export function App() {
   }, [install]);
 
   useEffect(() => {
+    if (bootRequest.status !== "path") return;
     let cancel = false;
-    void loadInstall({
-      fetch: (input, init) => window.fetch(input, init),
-      origin: window.location.origin,
-    })
+    void loadInstall(browserEnv(), { path: bootRequest.path })
       .then((loaded) => {
         if (cancel) return;
         installRef.current = loaded;
         setInstall(loaded);
+        setBootPhase({ kind: "ready" });
       })
       .catch((caught: unknown) => {
         if (cancel) return;
-        setInstallError(messageOf(caught));
+        setBootPhase({ kind: "ask", error: messageOf(caught) });
       });
     return () => {
       cancel = true;
     };
   }, []);
+
+  async function loadConfigPath(path: string) {
+    setBootPhase({ kind: "loading" });
+    try {
+      const loaded = await loadInstall(browserEnv(), { path });
+      installRef.current = loaded;
+      setInstall(loaded);
+      setBootPhase({ kind: "ready" });
+    } catch (caught) {
+      setBootPhase({ kind: "ask", error: messageOf(caught) });
+    }
+  }
+
+  async function loadConfigSource(source: string) {
+    setBootPhase({ kind: "loading" });
+    try {
+      const loaded = await loadInstall(browserEnv(), { source });
+      installRef.current = loaded;
+      setInstall(loaded);
+      setBootPhase({ kind: "ready" });
+    } catch (caught) {
+      setBootPhase({ kind: "ask", error: messageOf(caught) });
+    }
+  }
 
   useEffect(() => {
     if (!install) return;
@@ -302,28 +344,25 @@ export function App() {
     />
   );
 
-  if (installError) {
-    return (
-      <ErrorScreen
-        eyebrow="Cannot boot this install"
-        heading="The theme package failed to load."
-        message={installError}
-        canReturn={false}
-        storageBroken={false}
-        showOpen={false}
-        onOpen={() => undefined}
-        onReturn={() => undefined}
-        onDiscard={() => undefined}
-        onReload={() => window.location.reload()}
-      />
-    );
-  }
   if (!install) {
-    return (
-      <main className="start">
-        <p>Loading the theme.</p>
-      </main>
-    );
+    if (bootPhase.kind === "ask") {
+      return (
+        <ConfigScreen
+          error={bootPhase.error}
+          onPath={(path) => void loadConfigPath(path)}
+          onSource={(source) => void loadConfigSource(source)}
+          onFailure={(message) => setBootPhase({ kind: "ask", error: message })}
+        />
+      );
+    }
+    if (bootPhase.kind === "loading") {
+      return (
+        <main className="start" data-boot="loading">
+          <p>Loading the theme.</p>
+        </main>
+      );
+    }
+    throw new Error("The theme package is not loaded.");
   }
   if (audienceId) return <Audience deckId={audienceId} install={install} />;
   if (!hydrated) return fileInput;

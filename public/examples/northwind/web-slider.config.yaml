@@ -1,2 +1,2 @@
 # Names the admin theme for this install. This file is not the theme.
-manifest: themes/northwind/manifest.yaml
+manifest: examples/northwind/manifest.yaml

@@ -9,7 +9,7 @@ import { blockToText } from "./text";
 import { jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleNumber } from "./steps";
 
 const sample = readFileSync(new URL("../../public/examples/launch-review.yaml", import.meta.url), "utf8");
-const northwind = readFileSync(new URL("../../public/themes/northwind/manifest.yaml", import.meta.url), "utf8");
+const northwind = readFileSync(new URL("../../public/examples/northwind/manifest.yaml", import.meta.url), "utf8");
 
 const validDeck = `
 id: review

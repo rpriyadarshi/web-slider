@@ -6,21 +6,25 @@ import { serializeDeck } from "./serialize";
 import { sessionFromDeck } from "./session";
 import {
   canonicalJson,
+  injectedConfigPath,
   loadInstall,
   parseManifest,
   presentTalk,
+  resolveBootConfig,
   resolveManifest,
   sourceHash,
 } from "./install";
 
 const origin = "http://slider.test/";
-const configUrl = `${origin}web-slider.config.yaml`;
-const northwindUrl = `${origin}themes/northwind/manifest.yaml`;
-const cacheUrl = `${origin}themes/northwind/manifest.resolved.json`;
+const configPath = "examples/northwind/web-slider.config.yaml";
+const configUrl = `${origin}${configPath}`;
+const northwindPath = "examples/northwind/manifest.yaml";
+const northwindUrl = `${origin}${northwindPath}`;
+const cacheUrl = `${origin}examples/northwind/manifest.resolved.json`;
 const packageDir = "themes/emporion";
 const packageManifestPath = `${packageDir}/manifest.yaml`;
-const shippedConfig = readFileSync(new URL("../../public/web-slider.config.yaml", import.meta.url), "utf8");
-const shippedManifest = readFileSync(new URL("../../public/themes/northwind/manifest.yaml", import.meta.url), "utf8");
+const shippedConfig = readFileSync(new URL(`../../public/${configPath}`, import.meta.url), "utf8");
+const shippedManifest = readFileSync(new URL(`../../public/${northwindPath}`, import.meta.url), "utf8");
 const packageManifest = readFileSync(new URL(`../../public/${packageManifestPath}`, import.meta.url), "utf8");
 const markLight = readFileSync(new URL(`../../public/${packageDir}/mark.svg`, import.meta.url), "utf8");
 const markDark = readFileSync(new URL(`../../public/${packageDir}/mark-on-dark.svg`, import.meta.url), "utf8");
@@ -70,15 +74,70 @@ function routes(map: Record<string, { status: number; body: string; type?: strin
 }
 
 describe("theme package", () => {
-  it("loads the shipped config and manifest, and the sample talk does not copy them", async () => {
+  it("asks for a config when none is injected and the query is empty", async () => {
+    expect(resolveBootConfig({ cli: injectedConfigPath(undefined, null), query: null })).toEqual({
+      status: "config-required",
+    });
+    expect(resolveBootConfig({ cli: injectedConfigPath("", "  "), query: "" })).toEqual({ status: "config-required" });
+    expect(resolveBootConfig({ cli: "  ", query: null })).toEqual({ status: "config-required" });
+    const { fetchImpl, calls } = routes(packageAssets());
+    await expect(loadInstall({ fetch: fetchImpl, origin }, { path: "   " })).rejects.toThrow(/Config required/);
+    expect(calls).toEqual([]);
+  });
+
+  it("loads northwind from the injected config path and lets that path outrank the query", async () => {
+    const boot = resolveBootConfig({
+      cli: injectedConfigPath(configPath, "examples/other/web-slider.config.yaml"),
+      query: "examples/other/web-slider.config.yaml",
+    });
+    expect(boot).toEqual({ status: "path", path: configPath });
     const { fetchImpl, calls } = routes({
       [configUrl]: { status: 200, body: shippedConfig },
       [northwindUrl]: { status: 200, body: shippedManifest },
       ...packageAssets(),
     });
-    const install = await loadInstall({ fetch: fetchImpl, origin });
-    expect(install.manifestPath).toBe("themes/northwind/manifest.yaml");
+    const install = await loadInstall({ fetch: fetchImpl, origin }, { path: boot.status === "path" ? boot.path : "" });
+    expect(install.manifestPath).toBe(northwindPath);
+    expect(install.manifest.brand).toEqual(resolvedBrand);
+    expect(install.manifest.theme.background).toBe("#14181f");
+    expect(calls).toContain(`${origin}${packageManifestPath}`);
+    expect(calls).toContain(`${origin}${packageDir}/mark-on-dark.svg`);
+    expect(calls).not.toContain(`${origin}web-slider.config.yaml`);
+    expect(calls.some((url) => url.includes("examples/other/"))).toBe(false);
+  });
+
+  it("loads northwind from the config query when no command-line path is set", async () => {
+    expect(injectedConfigPath(undefined, configPath)).toBe(configPath);
+    const boot = resolveBootConfig({
+      cli: injectedConfigPath("", null),
+      query: configPath,
+    });
+    expect(boot).toEqual({ status: "path", path: configPath });
+    const { fetchImpl, calls } = routes({
+      [configUrl]: { status: 200, body: shippedConfig },
+      [northwindUrl]: { status: 200, body: shippedManifest },
+      ...packageAssets(),
+    });
+    const install = await loadInstall({ fetch: fetchImpl, origin }, { path: boot.status === "path" ? boot.path : "" });
+    expect(install.manifestPath).toBe(northwindPath);
+    expect(install.manifest.brand).toEqual(resolvedBrand);
+    expect(calls).toContain(configUrl);
+    expect(calls).toContain(`${origin}${packageManifestPath}`);
+    expect(calls).not.toContain(`${origin}web-slider.config.yaml`);
+  });
+
+  it("loads the sample admin config, resolves brand: emporion through themes/emporion/, and the sample talk does not copy them", async () => {
+    expect(shippedConfig).toContain("manifest: examples/northwind/manifest.yaml");
+    expect(shippedManifest).toContain("brand: emporion");
+    const { fetchImpl, calls } = routes({
+      [configUrl]: { status: 200, body: shippedConfig },
+      [northwindUrl]: { status: 200, body: shippedManifest },
+      ...packageAssets(),
+    });
+    const install = await loadInstall({ fetch: fetchImpl, origin }, { path: configPath });
+    expect(install.manifestPath).toBe(northwindPath);
     expect(calls).toContain(cacheUrl);
+    expect(calls).not.toContain(`${origin}web-slider.config.yaml`);
     expect(calls).toContain(`${origin}${packageManifestPath}`);
     expect(calls).toContain(`${origin}${packageDir}/mark.svg`);
     expect(calls).toContain(`${origin}${packageDir}/mark-on-dark.svg`);
@@ -105,26 +164,29 @@ describe("theme package", () => {
     expect(parseDeck(exported).slides.find((slide) => slide.id === "date")?.theme?.accent).toBe("#8eb6ff");
   });
 
-  it("loads the default package when the config file is missing", async () => {
-    const { fetchImpl, calls } = routes({
+  it("fails when the config file is missing and does not load a package", async () => {
+    const missing = routes(packageAssets());
+    await expect(loadInstall({ fetch: missing.fetchImpl, origin }, { path: configPath })).rejects.toThrow(
+      /Config not found: examples\/northwind\/web-slider.config.yaml/,
+    );
+    await expect(loadInstall({ fetch: missing.fetchImpl, origin }, { path: configPath })).rejects.toThrow(
+      /not replaced with a theme package/,
+    );
+    expect(missing.calls).not.toContain(`${origin}${packageManifestPath}`);
+
+    const html = routes({
+      [configUrl]: { status: 200, type: "text/html", body: "<!doctype html><html></html>" },
       ...packageAssets(),
     });
-    const install = await loadInstall({ fetch: fetchImpl, origin });
-    expect(install.manifestPath).toBe(packageManifestPath);
-    expect(install.manifest.brand).toEqual(resolvedBrand);
-    expect(install.manifest.theme.highlight).toBe("#E4B84A");
-    expect(install.assetUrls.get(`${packageDir}/mark.svg`)).toBe(`${origin}${packageDir}/mark.svg`);
-    expect(calls).toContain(configUrl);
-    expect(calls).toContain(`${origin}${packageManifestPath}`);
-    expect(calls).toContain(`${origin}${packageDir}/mark-on-dark.svg`);
+    await expect(loadInstall({ fetch: html.fetchImpl, origin }, { path: configPath })).rejects.toThrow(
+      /Config not found: examples\/northwind\/web-slider.config.yaml/,
+    );
+    expect(html.calls).not.toContain(`${origin}${packageManifestPath}`);
   });
 
   it("resolves a package name in manifest to themes/<name>/manifest.yaml", async () => {
-    const { fetchImpl, calls } = routes({
-      [configUrl]: { status: 200, body: "manifest: emporion\n" },
-      ...packageAssets(),
-    });
-    const install = await loadInstall({ fetch: fetchImpl, origin });
+    const { fetchImpl, calls } = routes(packageAssets());
+    const install = await loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: emporion\n" });
     expect(install.manifestPath).toBe(packageManifestPath);
     expect(install.manifest.brand).toEqual(resolvedBrand);
     expect(calls).toContain(`${origin}${packageManifestPath}`);
@@ -143,11 +205,10 @@ brand:
   mark: mark.svg
 `;
     const { fetchImpl, calls } = routes({
-      [configUrl]: { status: 200, body: "manifest: harbor\n" },
       [`${origin}themes/harbor/manifest.yaml`]: { status: 200, body: harborManifest },
       [`${origin}themes/harbor/mark.svg`]: { status: 200, type: "image/svg+xml", body: "<svg></svg>" },
     });
-    const install = await loadInstall({ fetch: fetchImpl, origin });
+    const install = await loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: harbor\n" });
     expect(install.manifestPath).toBe("themes/harbor/manifest.yaml");
     expect(install.manifest.brand).toMatchObject({ wordmark: "HARBOR", mark: "themes/harbor/mark.svg" });
     expect(calls).toContain(`${origin}themes/harbor/manifest.yaml`);
@@ -166,13 +227,12 @@ brand:
   markDark: mark-dark.svg
 `;
     const { fetchImpl, calls } = routes({
-      [configUrl]: { status: 200, body: "manifest: themes/custom/manifest.yaml\n" },
       [`${origin}themes/custom/manifest.yaml`]: { status: 200, body: "brand: harbor\ntheme:\n  highlight: \"#CCAA44\"\n" },
       [`${origin}themes/harbor/manifest.yaml`]: { status: 200, body: harborManifest },
       [`${origin}themes/harbor/mark.svg`]: { status: 200, type: "image/svg+xml", body: "<svg></svg>" },
       [`${origin}themes/harbor/mark-dark.svg`]: { status: 200, type: "image/svg+xml", body: "<svg></svg>" },
     });
-    const install = await loadInstall({ fetch: fetchImpl, origin });
+    const install = await loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: themes/custom/manifest.yaml\n" });
     expect(install.manifestPath).toBe("themes/custom/manifest.yaml");
     expect(install.manifest.brand).toMatchObject({
       wordmark: "HARBOR",
@@ -185,84 +245,99 @@ brand:
 
   it("fails when a brand package cycles or is missing", async () => {
     const cycle = routes({
-      [configUrl]: { status: 200, body: "manifest: alpha\n" },
       [`${origin}themes/alpha/manifest.yaml`]: { status: 200, body: "brand: beta\n" },
       [`${origin}themes/beta/manifest.yaml`]: { status: 200, body: "brand: alpha\n" },
     });
-    await expect(loadInstall({ fetch: cycle.fetchImpl, origin })).rejects.toThrow(/Brand package cycle/);
-    await expect(loadInstall({ fetch: cycle.fetchImpl, origin })).rejects.toThrow(/not replaced with another brand/);
+    await expect(loadInstall({ fetch: cycle.fetchImpl, origin }, { source: "manifest: alpha\n" })).rejects.toThrow(
+      /Brand package cycle/,
+    );
+    await expect(loadInstall({ fetch: cycle.fetchImpl, origin }, { source: "manifest: alpha\n" })).rejects.toThrow(
+      /not replaced with another brand/,
+    );
 
     const missingBrand = routes({
-      [configUrl]: { status: 200, body: "manifest: themes/custom/manifest.yaml\n" },
       [`${origin}themes/custom/manifest.yaml`]: { status: 200, body: "brand: harbor\n" },
     });
-    await expect(loadInstall({ fetch: missingBrand.fetchImpl, origin })).rejects.toThrow(
-      /Theme package not found: themes\/harbor\/manifest\.yaml/,
-    );
+    await expect(
+      loadInstall({ fetch: missingBrand.fetchImpl, origin }, { source: "manifest: themes/custom/manifest.yaml\n" }),
+    ).rejects.toThrow(/Theme package not found: themes\/harbor\/manifest\.yaml/);
   });
 
   it("fails when the package or its mark is missing", async () => {
-    const missingPackage = routes({
-      [configUrl]: { status: 200, body: "manifest: emporion\n" },
-    });
-    await expect(loadInstall({ fetch: missingPackage.fetchImpl, origin })).rejects.toThrow(
+    const missingPackage = routes({});
+    await expect(loadInstall({ fetch: missingPackage.fetchImpl, origin }, { source: "manifest: emporion\n" })).rejects.toThrow(
       /Theme package not found: themes\/emporion\/manifest\.yaml/,
     );
-    await expect(loadInstall({ fetch: missingPackage.fetchImpl, origin })).rejects.toThrow(/not replaced with another brand/);
+    await expect(loadInstall({ fetch: missingPackage.fetchImpl, origin }, { source: "manifest: emporion\n" })).rejects.toThrow(
+      /not replaced with another brand/,
+    );
 
     const missingMark = routes({
-      [configUrl]: { status: 200, body: "manifest: emporion\n" },
       [`${origin}${packageManifestPath}`]: { status: 200, body: packageManifest },
     });
-    await expect(loadInstall({ fetch: missingMark.fetchImpl, origin })).rejects.toThrow(
+    await expect(loadInstall({ fetch: missingMark.fetchImpl, origin }, { source: "manifest: emporion\n" })).rejects.toThrow(
       /Theme asset failed to load \(404\): themes\/emporion\/mark\.svg/,
     );
 
     const htmlMark = routes({
-      [configUrl]: { status: 200, body: "manifest: emporion\n" },
       [`${origin}${packageManifestPath}`]: { status: 200, body: packageManifest },
       [`${origin}${packageDir}/mark.svg`]: { status: 200, type: "text/html", body: "<!doctype html><html></html>" },
     });
-    await expect(loadInstall({ fetch: htmlMark.fetchImpl, origin })).rejects.toThrow(
+    await expect(loadInstall({ fetch: htmlMark.fetchImpl, origin }, { source: "manifest: emporion\n" })).rejects.toThrow(
       /Theme asset not found: themes\/emporion\/mark\.svg/,
     );
   });
 
   it("fails when a missing manifest comes back as the app shell", async () => {
-    const { fetchImpl } = routes({
-      [configUrl]: { status: 200, body: "manifest: themes/missing/manifest.yaml\n" },
+    const { fetchImpl, calls } = routes({
+      ...packageAssets(),
       [`${origin}themes/missing/manifest.yaml`]: {
         status: 200,
         type: "text/html",
         body: "<!doctype html><html></html>",
       },
     });
-    await expect(loadInstall({ fetch: fetchImpl, origin })).rejects.toThrow(/Manifest not found: themes\/missing\/manifest.yaml/);
-    await expect(loadInstall({ fetch: fetchImpl, origin })).rejects.toThrow(/not replaced with another package/);
+    await expect(
+      loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: themes/missing/manifest.yaml\n" }),
+    ).rejects.toThrow(/Manifest not found: themes\/missing\/manifest.yaml/);
+    await expect(
+      loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: themes/missing/manifest.yaml\n" }),
+    ).rejects.toThrow(/not replaced with another package/);
+    expect(calls).not.toContain(`${origin}${packageManifestPath}`);
   });
 
-  it("fails when the config points at a missing manifest", async () => {
-    const { fetchImpl } = routes({
-      [configUrl]: { status: 200, body: "manifest: themes/missing/manifest.yaml\n" },
-    });
-    await expect(loadInstall({ fetch: fetchImpl, origin })).rejects.toThrow(/Manifest not found: themes\/missing\/manifest.yaml/);
-    await expect(loadInstall({ fetch: fetchImpl, origin })).rejects.toThrow(/not replaced with another package/);
+  it("fails when the config points at a missing manifest and does not substitute emporion", async () => {
+    const { fetchImpl, calls } = routes(packageAssets());
+    await expect(
+      loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: themes/missing/manifest.yaml\n" }),
+    ).rejects.toThrow(/Manifest not found: themes\/missing\/manifest.yaml/);
+    await expect(
+      loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: themes/missing/manifest.yaml\n" }),
+    ).rejects.toThrow(/not replaced with another package/);
+    expect(calls).not.toContain(`${origin}${packageManifestPath}`);
   });
 
   it("fails on a bad config, a bad manifest, and a missing theme asset", async () => {
-    const badConfig = routes({
-      [configUrl]: { status: 200, body: "manifest: ../secret.yaml\n" },
-    });
-    await expect(loadInstall({ fetch: badConfig.fetchImpl, origin })).rejects.toThrow(/failed validation|must be/);
+    const outside = routes(packageAssets());
+    await expect(loadInstall({ fetch: outside.fetchImpl, origin }, { path: "../secret.yaml" })).rejects.toThrow(
+      /failed validation|filesystem path/,
+    );
+    await expect(loadInstall({ fetch: outside.fetchImpl, origin }, { path: "/etc/web-slider.config.yaml" })).rejects.toThrow(
+      /failed validation|filesystem path/,
+    );
+    await expect(loadInstall({ fetch: outside.fetchImpl, origin }, { source: "manifest: ../secret.yaml\n" })).rejects.toThrow(
+      /failed validation|must be/,
+    );
+    expect(outside.calls).toEqual([]);
 
     const badManifest = routes({
-      [configUrl]: { status: 200, body: "manifest: themes/northwind/manifest.yaml\n" },
       [northwindUrl]: { status: 200, body: "brand: other\ntheme:\n  animation: spin\n" },
     });
-    await expect(loadInstall({ fetch: badManifest.fetchImpl, origin })).rejects.toThrow(/Manifest failed validation/);
+    await expect(
+      loadInstall({ fetch: badManifest.fetchImpl, origin }, { source: "manifest: examples/northwind/manifest.yaml\n" }),
+    ).rejects.toThrow(/Manifest failed validation/);
 
     const missingAsset = routes({
-      [configUrl]: { status: 200, body: "manifest: themes/northwind/manifest.yaml\n" },
       [northwindUrl]: {
         status: 200,
         body: `
@@ -275,9 +350,9 @@ brand:
 `,
       },
     });
-    await expect(loadInstall({ fetch: missingAsset.fetchImpl, origin })).rejects.toThrow(
-      /Theme asset failed to load \(404\): themes\/northwind\/brand\/mark.svg/,
-    );
+    await expect(
+      loadInstall({ fetch: missingAsset.fetchImpl, origin }, { source: "manifest: examples/northwind/manifest.yaml\n" }),
+    ).rejects.toThrow(/Theme asset failed to load \(404\): examples\/northwind\/brand\/mark.svg/);
   });
 
   it("ignores a stale theme cache and rejects a cache that disagrees with the manifest", async () => {
@@ -293,7 +368,7 @@ brand:
         body: canonicalJson({ ...resolved, sourceHash: "a".repeat(64) }),
       },
     });
-    const install = await loadInstall({ fetch: stale.fetchImpl, origin });
+    const install = await loadInstall({ fetch: stale.fetchImpl, origin }, { path: configPath });
     expect(install.manifest.theme.background).toBe("#14181f");
 
     const divergent = routes({
@@ -309,7 +384,9 @@ brand:
         }),
       },
     });
-    await expect(loadInstall({ fetch: divergent.fetchImpl, origin })).rejects.toThrow(/does not match the manifest/);
+    await expect(loadInstall({ fetch: divergent.fetchImpl, origin }, { path: configPath })).rejects.toThrow(
+      /does not match the manifest/,
+    );
 
     const invalid = routes({
       [configUrl]: { status: 200, body: shippedConfig },
@@ -317,6 +394,8 @@ brand:
       ...packageAssets(),
       [cacheUrl]: { status: 200, type: "application/json", body: "{" },
     });
-    await expect(loadInstall({ fetch: invalid.fetchImpl, origin })).rejects.toThrow(/Theme cache is invalid/);
+    await expect(loadInstall({ fetch: invalid.fetchImpl, origin }, { path: configPath })).rejects.toThrow(
+      /Theme cache is invalid/,
+    );
   });
 });
