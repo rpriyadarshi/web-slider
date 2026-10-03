@@ -669,6 +669,56 @@ button.primary {
 
 .empty-note { color: var(--muted); margin: 12px 14px; }
 
+.decision-tools {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.widget-catalog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 8px 0;
+}
+
+.widget-catalog button {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.insert-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 6;
+  width: 196px;
+  max-height: min(70vh, 420px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+.insert-menu button {
+  text-align: left;
+  border-radius: 8px;
+}
+
+.insert-label {
+  margin: 8px 4px 2px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .widget-row {
   display: flex;
   flex-wrap: wrap;

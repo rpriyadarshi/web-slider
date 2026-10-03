@@ -4,6 +4,7 @@ import { ConfigScreen } from "./layout/ConfigScreen";
 import { ErrorScreen } from "./layout/ErrorScreen";
 import { Shell } from "./layout/Shell";
 import { StartScreen } from "./layout/StartScreen";
+import { blankDeckSource } from "./model/blank";
 import { replaceListItem, replaceSlideTitle } from "./model/edit";
 import { injectedConfigPath, loadInstall, presentTalk, resolveBootConfig, type Install } from "./model/install";
 import { parseDeck } from "./model/parse";
@@ -396,6 +397,9 @@ export function App() {
           install={install}
           onOpenFile={openFile}
           requestOpen={() => inputRef.current?.click()}
+          onBlank={() => {
+            void openPrepared(blankDeckSource(), new Map());
+          }}
           onExample={() => {
             void (async () => {
               try {

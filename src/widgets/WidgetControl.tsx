@@ -1,3 +1,4 @@
+import { WIDGET_KINDS, WIDGET_LABEL } from "../model/insert";
 import { bindProbe, type ProbePath } from "../model/probe";
 import type { Widget } from "../model/schema";
 import type { WidgetAnswer } from "../model/session";
@@ -10,6 +11,9 @@ export function WidgetList({
   onAnswer,
   probe = null,
   onProbe,
+  onAdd,
+  onRemove,
+  canRemove = false,
 }: {
   slideId: string;
   slideIndex?: number;
@@ -18,22 +22,40 @@ export function WidgetList({
   onAnswer: (widgetId: string, answer: WidgetAnswer | undefined) => void;
   probe?: ProbePath | null;
   onProbe?: (path: ProbePath) => void;
+  onAdd?: (type: Widget["type"]) => void;
+  onRemove?: () => void;
+  canRemove?: boolean;
 }) {
-  if (widgets.length === 0) {
-    return <p className="empty-note">No decisions on this slide.</p>;
-  }
   return (
-    <div className="widget-row">
-      {widgets.map((widget, index) => (
-        <div key={widget.id} {...bindProbe(["slides", slideIndex, "widgets", index], probe, onProbe)}>
-          <WidgetControl
-            slideId={slideId}
-            widget={widget}
-            answer={answers?.[widget.id]}
-            onAnswer={(answer) => onAnswer(widget.id, answer)}
-          />
+    <div className="decision-tools">
+      {onAdd ? (
+        <div className="widget-catalog" role="group" aria-label="Widgets">
+          {WIDGET_KINDS.map((type) => (
+            <button key={type} type="button" onClick={() => onAdd(type)}>
+              {WIDGET_LABEL[type]}
+            </button>
+          ))}
+          <button type="button" disabled={!canRemove} onClick={onRemove}>
+            Remove
+          </button>
         </div>
-      ))}
+      ) : null}
+      {widgets.length === 0 ? (
+        onAdd ? null : <p className="empty-note">No decisions on this slide.</p>
+      ) : (
+        <div className="widget-row">
+          {widgets.map((widget, index) => (
+            <div key={widget.id} {...bindProbe(["slides", slideIndex, "widgets", index], probe, onProbe)}>
+              <WidgetControl
+                slideId={slideId}
+                widget={widget}
+                answer={answers?.[widget.id]}
+                onAnswer={(answer) => onAnswer(widget.id, answer)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

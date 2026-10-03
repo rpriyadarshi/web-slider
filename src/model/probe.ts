@@ -81,6 +81,53 @@ export function slideIndexInProbe(path: ProbePath | null): number | null {
   return path[1];
 }
 
+export function selectionTarget(source: string, path: ProbePath): ProbePath {
+  const widgetAt = path.indexOf("widgets");
+  if (widgetAt >= 0 && typeof path[widgetAt + 1] === "number") {
+    return path.slice(0, widgetAt + 2);
+  }
+  if (path[0] === "slides" && typeof path[1] === "number" && path[2] === "title") {
+    return ["slides", path[1], "title"];
+  }
+  for (const place of ["blocks", "side"] as const) {
+    const at = path.indexOf(place);
+    if (at < 0 || typeof path[at + 1] !== "number") continue;
+    const blockPath = path.slice(0, at + 2);
+    if (path.length > blockPath.length) return path;
+    if (nodeField(source, blockPath, "type") === "paragraph") return [...blockPath, "text"];
+    return blockPath;
+  }
+  return path;
+}
+
+export function caretSelection(source: string, offset: number): { path: ProbePath; start: number; end: number } | null {
+  const path = probeAt(source, offset);
+  if (!path) return null;
+  const target = selectionTarget(source, path);
+  const range = locateProbe(source, target);
+  if (!range) return null;
+  return { path: target, start: range.start, end: range.end };
+}
+
+export function removableNode(path: ProbePath | null): ProbePath | null {
+  if (!path || path[0] !== "slides" || typeof path[1] !== "number") return null;
+  const widgetAt = path.indexOf("widgets");
+  if (widgetAt >= 0 && typeof path[widgetAt + 1] === "number") return path.slice(0, widgetAt + 2);
+  for (const place of ["blocks", "side"] as const) {
+    const at = path.indexOf(place);
+    if (at >= 0 && typeof path[at + 1] === "number") return path.slice(0, at + 2);
+  }
+  return null;
+}
+
+function nodeField(source: string, path: ProbePath, key: string): unknown {
+  const doc = parseDocument(source);
+  if (doc.errors.length > 0) return undefined;
+  const node = doc.getIn(path);
+  if (!node || typeof node !== "object" || Array.isArray(node)) return undefined;
+  return (node as Record<string, unknown>)[key];
+}
+
 function nodeRange(value: unknown): [number, number, number] | null {
   if (!value || typeof value !== "object" || !("range" in value)) return null;
   const range = value.range;

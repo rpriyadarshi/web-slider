@@ -4,7 +4,10 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorState, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BLOCK_KINDS, BLOCK_LABEL, WIDGET_KINDS, WIDGET_LABEL } from "../model/insert";
+import { caretSelection } from "../model/probe";
+import type { Block, Widget } from "../model/schema";
 import { Icon, IconButton, IconMark } from "./IconButton";
 
 const yamlHighlight = HighlightStyle.define([
@@ -78,6 +81,13 @@ export function YamlPane({
   onCaret,
   onPin,
   onHide,
+  onInsertSlide,
+  onInsertBlock,
+  onInsertWidget,
+  onRemove,
+  canRemove,
+  onRemoveSlide,
+  canRemoveSlide,
   className,
 }: {
   value: string;
@@ -91,12 +101,22 @@ export function YamlPane({
   onCaret: (offset: number, jump: boolean) => void;
   onPin: () => void;
   onHide: () => void;
+  onInsertSlide: () => void;
+  onInsertBlock: (place: "blocks" | "side", type: Block["type"]) => void;
+  onInsertWidget: (type: Widget["type"]) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+  onRemoveSlide: () => void;
+  canRemoveSlide: boolean;
   className: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const applying = useRef(false);
+  const selectGen = useRef(0);
+  const [menuOpen, setMenuOpen] = useState(false);
   const onChangeRef = useRef(onChange);
   const onCaretRef = useRef(onCaret);
   onChangeRef.current = onChange;
@@ -129,11 +149,23 @@ export function YamlPane({
               const head = update.state.selection.main.head;
               const pointer = update.transactions.some((transaction) => transaction.isUserEvent("select.pointer"));
               onCaretRef.current(head, pointer);
+              const gen = ++selectGen.current;
               queueMicrotask(() => {
+                if (selectGen.current !== gen) return;
                 const editor = viewRef.current;
                 if (!editor) return;
-                const current = editor.state.doc.lineAt(Math.min(head, editor.state.doc.length));
-                editor.dispatch({ effects: setProbeMark.of({ from: current.from, to: current.to }) });
+                const doc = editor.state.doc.toString();
+                const caret = Math.min(head, doc.length);
+                const range = caretSelection(doc, caret);
+                const mark = range ? { from: range.start, to: range.end } : null;
+                const expand = pointer && editor.state.selection.main.empty && range;
+                applying.current = true;
+                editor.dispatch({
+                  selection: expand ? { anchor: range.start, head: range.end } : undefined,
+                  effects: setProbeMark.of(mark),
+                  scrollIntoView: Boolean(expand),
+                });
+                applying.current = false;
               });
             }
           }),
@@ -163,6 +195,21 @@ export function YamlPane({
   }, [sessionMark]);
 
   useEffect(() => {
+    if (!menuOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
+      setMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", onPointer);
+    return () => window.removeEventListener("pointerdown", onPointer);
+  }, [menuOpen]);
+
+  function choose(action: () => void) {
+    setMenuOpen(false);
+    action();
+  }
+
+  useEffect(() => {
     const view = viewRef.current;
     if (!view || !selection) return;
     const end = Math.min(selection.end, view.state.doc.length);
@@ -181,6 +228,48 @@ export function YamlPane({
       <div className="panel-head">
         <IconMark label="YAML" name="yaml" />
         <div className="panel-actions">
+          <div className="menu-anchor" ref={menuRef}>
+            <IconButton label="Insert" pressed={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+              <Icon name="insert" />
+            </IconButton>
+            {menuOpen ? (
+              <div className="insert-menu" role="menu" aria-label="Insert">
+                <button type="button" role="menuitem" onClick={() => choose(onInsertSlide)}>
+                  Slide
+                </button>
+                <p className="insert-label">Blocks</p>
+                {BLOCK_KINDS.map((type) => (
+                  <button key={`blocks-${type}`} type="button" role="menuitem" onClick={() => choose(() => onInsertBlock("blocks", type))}>
+                    {BLOCK_LABEL[type]}
+                  </button>
+                ))}
+                <p className="insert-label">Side</p>
+                {BLOCK_KINDS.map((type) => (
+                  <button key={`side-${type}`} type="button" role="menuitem" onClick={() => choose(() => onInsertBlock("side", type))}>
+                    {BLOCK_LABEL[type]}
+                  </button>
+                ))}
+                <p className="insert-label">Widgets</p>
+                {WIDGET_KINDS.map((type) => (
+                  <button key={type} type="button" role="menuitem" onClick={() => choose(() => onInsertWidget(type))}>
+                    {WIDGET_LABEL[type]}
+                  </button>
+                ))}
+                <button type="button" role="menuitem" disabled={!canRemove} onClick={() => choose(onRemove)}>
+                  Remove
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!canRemoveSlide}
+                  title={canRemoveSlide ? "Remove slide" : "The last slide cannot be removed."}
+                  onClick={() => choose(onRemoveSlide)}
+                >
+                  Remove slide
+                </button>
+              </div>
+            ) : null}
+          </div>
           <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
             <Icon name="pin" />
           </IconButton>

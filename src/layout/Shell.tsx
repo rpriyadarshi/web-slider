@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls, type ChromeMode } from "../brand/kit";
 import { bytesToBlob, downloadBlob, downloadText } from "../export/download";
 import { deckToYaml } from "../export/yaml";
-import type { Deck } from "../model/schema";
-import { resolveTheme } from "../model/schema";
+import { editParsed, insertBlock, insertSlide, insertWidget, removeParsed } from "../model/insert";
+import { caretSelection, locateProbe, removableNode, selectionTarget, slideIndexInProbe, type ProbePath } from "../model/probe";
+import { resolveTheme, type Block, type Deck, type Widget } from "../model/schema";
 import { clampPane, formatSessionBlock, type DeckSession, type PaneSize, type WidgetAnswer } from "../model/session";
-import { locateProbe, probeAt, slideIndexInProbe, type ProbePath } from "../model/probe";
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
 import { startCaptions } from "../present/captions";
 import { SlideView } from "../slides/SlideView";
@@ -91,10 +91,21 @@ export function Shell({
   const sessionText = formatSessionBlock(slide.id, session.notes[slide.id] ?? "", session.answers[slide.id]);
 
   function selectProbe(path: ProbePath) {
+    const focused = selectionTarget(yamlDraft, path);
     setSessionLit(false);
-    setProbe(path);
-    const range = locateProbe(yamlDraft, path);
+    setProbe(focused);
+    const range = locateProbe(yamlDraft, focused);
     if (!range) return;
+    probeToken.current += 1;
+    setProbeSelection({ start: range.start, end: range.end, token: probeToken.current });
+  }
+
+  function selectInserted(source: string, path: ProbePath) {
+    const focused = selectionTarget(source, path);
+    const range = locateProbe(source, focused);
+    if (!range) throw new Error("The inserted node is not in the YAML.");
+    setSessionLit(false);
+    setProbe(focused);
     probeToken.current += 1;
     setProbeSelection({ start: range.start, end: range.end, token: probeToken.current });
   }
@@ -107,13 +118,74 @@ export function Shell({
 
   function caretProbe(offset: number, jump: boolean) {
     setSessionLit(false);
-    const path = probeAt(yamlDraft, offset);
-    setProbe(path);
-    if (!jump) return;
-    const index = slideIndexInProbe(path);
+    const selected = caretSelection(yamlDraft, offset);
+    setProbe(selected?.path ?? null);
+    if (!jump || !selected) return;
+    const index = slideIndexInProbe(selected.path);
     if (index != null && index !== session.slideIndex && deck.slides[index]) {
       onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
     }
+  }
+
+  function structureSlideIndex(): number {
+    const fromCaret = slideIndexInProbe(probe);
+    if (fromCaret != null && deck.slides[fromCaret]) return fromCaret;
+    return session.slideIndex;
+  }
+
+  function applyInsert(change: (source: string) => { yaml: string; path: ProbePath }) {
+    const result = editParsed(yamlDraft, yamlError !== null, change);
+    if (!result) return;
+    selectInserted(result.yaml, result.path);
+    setYamlDraft(result.yaml);
+    onYaml?.(result.yaml);
+  }
+
+  function applyRemoval(path: ProbePath) {
+    const next = removeParsed(yamlDraft, yamlError !== null, path);
+    if (next === null) return;
+    setYamlDraft(next);
+    onYaml?.(next);
+    setProbe(null);
+    setProbeSelection(null);
+  }
+
+  function insertSlideAfterCaret() {
+    const after = structureSlideIndex();
+    applyInsert((source) => insertSlide(source, after));
+  }
+
+  function insertBlockOnSlide(place: "blocks" | "side", type: Block["type"]) {
+    const index = structureSlideIndex();
+    applyInsert((source) => insertBlock(source, index, place, type));
+  }
+
+  function insertWidgetOnSlide(type: Widget["type"]) {
+    const index = structureSlideIndex();
+    applyInsert((source) => insertWidget(source, index, type));
+  }
+
+  function removeSelected() {
+    const target = removableNode(probe);
+    if (!target) return;
+    applyRemoval(target);
+  }
+
+  function removeCurrentSlide() {
+    if (yamlError || deck.slides.length <= 1) return;
+    const index = structureSlideIndex();
+    const next = removeParsed(yamlDraft, false, ["slides", index]);
+    if (next === null) return;
+    setYamlDraft(next);
+    onYaml?.(next);
+    setProbe(null);
+    setProbeSelection(null);
+    onSession((current) => {
+      const viewed = current.slideIndex === index;
+      const slideIndex =
+        current.slideIndex > index ? current.slideIndex - 1 : viewed && index >= deck.slides.length - 1 ? index - 1 : current.slideIndex;
+      return { ...current, slideIndex, revealed: viewed ? 0 : current.revealed };
+    });
   }
   useEffect(() => {
     setYamlDraft(sourceYaml);
@@ -324,6 +396,8 @@ export function Shell({
   }
 
   const menuOpen = themeOpen || exportOpen;
+  const canRemove = !yamlError && removableNode(probe) !== null;
+  const canRemoveSlide = !yamlError && deck.slides.length > 1;
   const presenter = (
     <BottomBar
       feedback={embed}
@@ -349,6 +423,9 @@ export function Shell({
       onDecisions={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "decisionsWidth", delta) }))}
       onNotesWidth={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "notesWidth", delta) }))}
       onHeight={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "bottomHeight", -delta) }))}
+      onAddWidget={embed ? undefined : insertWidgetOnSlide}
+      onRemove={embed ? undefined : removeSelected}
+      canRemove={canRemove}
       nextPreview={
         embed ? undefined : nextSlide ? (
               <SlideView deck={deck} slide={nextSlide} revealed={0} assets={assets} />
@@ -729,6 +806,13 @@ export function Shell({
             }}
             onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: true } }))}
             onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
+            onInsertSlide={insertSlideAfterCaret}
+            onInsertBlock={insertBlockOnSlide}
+            onInsertWidget={insertWidgetOnSlide}
+            onRemove={removeSelected}
+            canRemove={canRemove}
+            onRemoveSlide={removeCurrentSlide}
+            canRemoveSlide={canRemoveSlide}
           />
         ) : null}
         <SlideView
@@ -768,6 +852,13 @@ export function Shell({
           }}
           onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: false } }))}
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
+          onInsertSlide={insertSlideAfterCaret}
+          onInsertBlock={insertBlockOnSlide}
+          onInsertWidget={insertWidgetOnSlide}
+          onRemove={removeSelected}
+          canRemove={canRemove}
+          onRemoveSlide={removeCurrentSlide}
+          canRemoveSlide={canRemoveSlide}
         />
       ) : null}
 

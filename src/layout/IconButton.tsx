@@ -21,6 +21,7 @@ export type IconName =
   | "light"
   | "dark"
   | "pin"
+  | "insert"
   | "restart"
   | "audience"
   | "laser"
@@ -151,6 +152,12 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M9 4h6l-1 6 3 3H7l3-3z" />
       <path d="M12 13v7" />
+    </>
+  ),
+  insert: (
+    <>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
     </>
   ),
   restart: (

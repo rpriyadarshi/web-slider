@@ -6,11 +6,13 @@ export function StartScreen({
   install,
   onOpenFile,
   requestOpen,
+  onBlank,
   onExample,
 }: {
   install: Install;
   onOpenFile: (file: File) => void;
   requestOpen: () => void;
+  onBlank: () => void;
   onExample: () => void;
 }) {
   const [dragging, setDragging] = useState(false);
@@ -42,6 +44,9 @@ export function StartScreen({
         <div className="start-actions">
           <button type="button" className="primary" onClick={requestOpen}>
             Open YAML
+          </button>
+          <button type="button" onClick={onBlank}>
+            Blank deck
           </button>
           <button type="button" onClick={onExample}>
             Load example
