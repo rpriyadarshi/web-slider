@@ -5,6 +5,8 @@ import { deckToYaml } from "../export/yaml";
 import type { Deck } from "../model/schema";
 import { resolveTheme } from "../model/schema";
 import type { DeckSession, WidgetAnswer } from "../model/session";
+import { locateProbe, probeAt, slideIndexInProbe, type ProbePath } from "../model/probe";
+import { writeYamlIn } from "../model/yamlLive";
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
 import { startCaptions } from "../present/captions";
 import { SlideView } from "../slides/SlideView";
@@ -13,6 +15,7 @@ import { Icon, IconButton } from "./IconButton";
 import { Overview } from "./Overview";
 import { SidePanel } from "./SidePanel";
 import { Toc } from "./Toc";
+import { YamlPane } from "./YamlPane";
 
 export function Shell({
   deck,
@@ -26,6 +29,10 @@ export function Shell({
   exportDeck,
   packageFiles,
   sourceYaml = "",
+  yamlError = null,
+  onYaml,
+  onEditTitle,
+  onEditItem,
 }: {
   deck: Deck;
   session: DeckSession;
@@ -38,6 +45,10 @@ export function Shell({
   exportDeck?: Deck;
   packageFiles?: Map<string, Uint8Array>;
   sourceYaml?: string;
+  yamlError?: string | null;
+  onYaml?: (yaml: string) => void;
+  onEditTitle?: (title: string) => void;
+  onEditItem?: (blockIndex: number, itemIndex: number, text: string) => void;
 }) {
   const portable = exportDeck ?? deck;
   const slide = deck.slides[session.slideIndex];
@@ -69,6 +80,31 @@ export function Shell({
   laserRef.current = laser;
   captionRef.current = caption;
   const digits = useRef("");
+  const [yamlDraft, setYamlDraft] = useState(sourceYaml);
+  const [probe, setProbe] = useState<ProbePath | null>(null);
+  const [probeSelection, setProbeSelection] = useState<{ start: number; end: number; token: number } | null>(null);
+  const probeToken = useRef(0);
+
+  function selectProbe(path: ProbePath) {
+    setProbe(path);
+    const range = locateProbe(yamlDraft, path);
+    if (!range) return;
+    probeToken.current += 1;
+    setProbeSelection({ start: range.start, end: range.end, token: probeToken.current });
+  }
+
+  function caretProbe(offset: number, jump: boolean) {
+    const path = probeAt(yamlDraft, offset);
+    setProbe(path);
+    if (!jump) return;
+    const index = slideIndexInProbe(path);
+    if (index != null && index !== session.slideIndex && deck.slides[index]) {
+      onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
+    }
+  }
+  useEffect(() => {
+    setYamlDraft(sourceYaml);
+  }, [sourceYaml]);
   const { elapsed, restart } = useElapsed();
   const clock = useClock();
   const palette = resolveChrome(deck.theme, mode, brand);
@@ -169,11 +205,14 @@ export function Shell({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (isTypingTarget(event.target)) return;
         if (overview) setOverview(false);
         else if (themeOpen) setThemeOpen(false);
         else if (exportOpen) setExportOpen(false);
         else if (session.ui.side && !session.ui.sidePinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }));
+        } else if (session.ui.yaml && !session.ui.yamlPinned) {
+          onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }));
         } else if (session.ui.toc && !session.ui.tocPinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, toc: false } }));
         } else {
@@ -259,11 +298,27 @@ export function Shell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [blank, deck, embed, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, themeOpen]);
+  }, [blank, deck, embed, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, session.ui.yaml, session.ui.yamlPinned, themeOpen]);
 
   function jump(index: number) {
     onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
     setOverview(false);
+  }
+
+  function publishField(path: ProbePath, value: unknown) {
+    if (embed || yamlError || !onYaml) return;
+    try {
+      const next = writeYamlIn(yamlDraft, path, value);
+      setYamlDraft(next);
+      onYaml(next);
+      const range = locateProbe(next, path);
+      if (!range) return;
+      probeToken.current += 1;
+      setProbe(path);
+      setProbeSelection({ start: range.start, end: range.end, token: probeToken.current });
+    } catch {
+      return;
+    }
   }
 
   function setAnswer(widgetId: string, answer: WidgetAnswer | undefined) {
@@ -273,6 +328,10 @@ export function Shell({
       else existing[widgetId] = answer;
       return { ...current, answers: { ...current.answers, [slide.id]: existing } };
     });
+    const widgetIndex = (slide.widgets ?? []).findIndex((widget) => widget.id === widgetId);
+    if (widgetIndex < 0) return;
+    const stored = answer === undefined || (Array.isArray(answer) && answer.length === 0) ? undefined : answer;
+    publishField(["slides", session.slideIndex, "widgets", widgetIndex, "answer"], stored);
   }
 
   function setMode(next: ChromeMode) {
@@ -300,6 +359,7 @@ export function Shell({
       data-theme={mode}
       data-toc-pin={session.ui.toc && session.ui.tocPinned ? "open" : "closed"}
       data-side-pin={session.ui.side && session.ui.sidePinned ? "open" : "closed"}
+      data-yaml-pin={session.ui.yaml && session.ui.yamlPinned ? "open" : "closed"}
       data-bottom={session.ui.bottom ? "open" : "closed"}
       style={{
         ["--ground" as string]: palette.ground,
@@ -387,6 +447,13 @@ export function Shell({
           </IconButton>
           <IconButton label={fullscreen ? "Exit" : "Full screen"} onClick={() => void toggleFullscreen()}>
             <Icon name={fullscreen ? "exit" : "fullscreen"} />
+          </IconButton>
+          <IconButton
+            label="YAML"
+            pressed={session.ui.yaml}
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: !current.ui.yaml } }))}
+          >
+            <Icon name="yaml" />
           </IconButton>
           <IconButton label="Open" onClick={requestOpen}>
             <Icon name="open" />
@@ -583,7 +650,26 @@ export function Shell({
             onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }))}
           />
         ) : null}
-        {!embed && ((session.ui.toc && !session.ui.tocPinned) || (session.ui.side && !session.ui.sidePinned)) ? (
+        {!embed && session.ui.yaml && !session.ui.yamlPinned ? (
+          <YamlPane
+            className="pane floating right"
+            value={yamlDraft}
+            error={yamlError}
+            pinned={false}
+            selection={probeSelection}
+            onCaret={caretProbe}
+            onChange={(value) => {
+              setYamlDraft(value);
+              onYaml?.(value);
+            }}
+            onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: true } }))}
+            onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
+          />
+        ) : null}
+        {!embed &&
+        ((session.ui.toc && !session.ui.tocPinned) ||
+          (session.ui.side && !session.ui.sidePinned) ||
+          (session.ui.yaml && !session.ui.yamlPinned)) ? (
           <button
             type="button"
             className="stage-scrim"
@@ -595,6 +681,7 @@ export function Shell({
                   ...current.ui,
                   toc: current.ui.tocPinned ? current.ui.toc : false,
                   side: current.ui.sidePinned ? current.ui.side : false,
+                  yaml: current.ui.yamlPinned ? current.ui.yaml : false,
                 },
               }))
             }
@@ -622,8 +709,30 @@ export function Shell({
           laser={laser}
           caption={caption}
           onLaserMove={laserOn ? setLaserPoint : undefined}
+          onEditTitle={embed || yamlError ? undefined : onEditTitle}
+          onEditItem={embed || yamlError ? undefined : onEditItem}
+          slideIndex={session.slideIndex}
+          probe={probe}
+          onProbe={embed ? undefined : selectProbe}
         />
       </main>
+
+      {!embed && session.ui.yaml && session.ui.yamlPinned ? (
+        <YamlPane
+          className="pane docked yaml-pane"
+          value={yamlDraft}
+          error={yamlError}
+          pinned
+          selection={probeSelection}
+          onCaret={caretProbe}
+          onChange={(value) => {
+            setYamlDraft(value);
+            onYaml?.(value);
+          }}
+          onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: false } }))}
+          onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
+        />
+      ) : null}
 
       {!embed && session.ui.side && session.ui.sidePinned ? (
         <SidePanel
@@ -645,12 +754,16 @@ export function Shell({
           script={slide.notes}
           notes={session.notes[slide.id] ?? ""}
           onAnswer={setAnswer}
-          onNotes={(value) =>
+          slideIndex={session.slideIndex}
+          probe={probe}
+          onProbe={embed ? undefined : selectProbe}
+          onNotes={(value) => {
             onSession((current) => ({
               ...current,
               notes: { ...current.notes, [slide.id]: value },
-            }))
-          }
+            }));
+            publishField(["slides", session.slideIndex, "takenNotes"], value);
+          }}
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: false } }))}
           nextPreview={
             embed ? undefined : nextSlide ? (

@@ -4,10 +4,11 @@ import { Audience } from "./layout/Audience";
 import { ErrorScreen } from "./layout/ErrorScreen";
 import { Shell } from "./layout/Shell";
 import { StartScreen } from "./layout/StartScreen";
+import { replaceListItem, replaceSlideTitle } from "./model/edit";
 import { parseDeck } from "./model/parse";
 import type { Deck } from "./model/schema";
 import { serializeDeck } from "./model/serialize";
-import { normalizeSession, sessionFromDeck, type DeckSession } from "./model/session";
+import { clampRevealed, normalizeSession, sessionFromDeck, type DeckSession } from "./model/session";
 import { importPptx } from "./import/pptx";
 import { bindPackageAssets, deckWithAssetUrls, packageAssetRefs, readDeckPackage } from "./package/deckPackage";
 import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
@@ -29,6 +30,8 @@ export function App() {
   const [storageBroken, setStorageBroken] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [persistError, setPersistError] = useState<string | null>(null);
+  const [yamlError, setYamlError] = useState<string | null>(null);
+  const yamlGen = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const deckRef = useRef<Deck | null>(null);
   const openRef = useRef<(source: string, files: Map<string, Uint8Array>, baseUrl?: string) => Promise<void>>(
@@ -52,12 +55,51 @@ export function App() {
       setCanReturn(false);
       setStorageBroken(false);
       setPersistError(null);
+      setYamlError(null);
     } catch (caught) {
       setError(messageOf(caught));
       setCanReturn(deckRef.current !== null);
     }
   }
   openRef.current = openPrepared;
+
+  function onYaml(text: string) {
+    const gen = ++yamlGen.current;
+    void (async () => {
+      try {
+        const parsed = parseDeck(text);
+        const refs = packageAssetRefs(parsed);
+        const urls = refs.every((ref) => assetUrls.has(ref)) ? assetUrls : await bindPackageAssets(refs, packageFiles);
+        if (yamlGen.current !== gen) return;
+        setAssetUrls(urls);
+        setSourceDeck(parsed);
+        setDeck(deckWithAssetUrls(parsed, urls));
+        setDeckYaml(text);
+        setYamlError(null);
+        setSession((current) => {
+          if (!current) return current;
+          const slideIndex = Math.min(current.slideIndex, parsed.slides.length - 1);
+          const slide = parsed.slides[slideIndex];
+          if (!slide) return current;
+          return { ...current, slideIndex, revealed: clampRevealed(slide, current.revealed) };
+        });
+      } catch (caught) {
+        if (yamlGen.current !== gen) return;
+        setYamlError(messageOf(caught));
+      }
+    })();
+  }
+
+  function commitEdit(mutate: (current: Deck) => Deck) {
+    if (!sourceDeck || !session) return;
+    try {
+      const yaml = serializeDeck(mutate(sourceDeck), session);
+      parseDeck(yaml);
+      onYaml(yaml);
+    } catch (caught) {
+      setYamlError(messageOf(caught));
+    }
+  }
 
   useEffect(() => {
     if (embed) {
@@ -266,6 +308,14 @@ export function App() {
         onOpenFile={openFile}
         requestOpen={() => inputRef.current?.click()}
         persistError={persistError}
+        yamlError={yamlError}
+        onYaml={onYaml}
+        onEditTitle={(title) =>
+          commitEdit((current) => replaceSlideTitle(current, current.slides[session.slideIndex]?.id ?? "", title))
+        }
+        onEditItem={(blockIndex, itemIndex, text) =>
+          commitEdit((current) => replaceListItem(current, current.slides[session.slideIndex]?.id ?? "", blockIndex, itemIndex, text))
+        }
       />
     </>
   );

@@ -4,6 +4,8 @@ You write a presentation as YAML for Web Slider. The file is the whole deck: col
 
 Laser, captions, the blank screen, and the audience window are presenter controls. They are not YAML.
 
+The presenter also has a YAML pane beside the slide. That pane is the deck file, not a second design surface. A free-form canvas is out of scope: if a change cannot be written as legal YAML, the editor does not offer it. The AI path and the pane edit the same file. Clicking a part of the slide, including a widget, selects the matching YAML node, and the caret in the YAML marks the matching part of the slide. Notes taken during the talk are written into the file as `takenNotes` on that slide. A recorded widget answer is written as `answer`.
+
 ## Output
 
 Prefer one self-contained `.yaml` file. Put marks and images inline as `data:` URIs or `https://` URLs.

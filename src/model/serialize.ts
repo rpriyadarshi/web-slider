@@ -44,6 +44,7 @@ export function serializeDeck(deck: Deck, session: DeckSession): string {
     aspect: deck.aspect,
     brand: deck.brand,
     theme: deck.theme,
+    fonts: deck.fonts,
     slides,
   });
 

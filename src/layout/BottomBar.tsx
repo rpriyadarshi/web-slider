@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { bindProbe, type ProbePath } from "../model/probe";
 import type { Widget } from "../model/schema";
 import type { WidgetAnswer } from "../model/session";
 import { WidgetList } from "../widgets/WidgetControl";
@@ -15,6 +16,9 @@ export function BottomBar({
   onHide,
   feedback = false,
   nextPreview,
+  slideIndex = 0,
+  probe = null,
+  onProbe,
 }: {
   slideId: string;
   widgets: Widget[];
@@ -26,6 +30,9 @@ export function BottomBar({
   onHide: () => void;
   feedback?: boolean;
   nextPreview?: ReactNode;
+  slideIndex?: number;
+  probe?: ProbePath | null;
+  onProbe?: (path: ProbePath) => void;
 }) {
   return (
     <footer className="bottom">
@@ -33,7 +40,15 @@ export function BottomBar({
         <div className="panel-head">
           <IconMark label="Decisions" name="examples" />
         </div>
-        <WidgetList slideId={slideId} widgets={widgets} answers={answers} onAnswer={onAnswer} />
+        <WidgetList
+          slideId={slideId}
+          slideIndex={slideIndex}
+          widgets={widgets}
+          answers={answers}
+          onAnswer={onAnswer}
+          probe={probe}
+          onProbe={onProbe}
+        />
       </section>
       <section className="notes-col" aria-label="Notes">
         <div className="panel-head">
@@ -49,12 +64,15 @@ export function BottomBar({
         <div className="notes-grid">
           <div className="script">
             <h3>Script</h3>
-            <p>{script?.trim() ? script : "No script for this slide."}</p>
+            <p {...bindProbe(["slides", slideIndex, "notes"], probe, onProbe)}>
+              {script?.trim() ? script : "No script for this slide."}
+            </p>
           </div>
           <label className="taken">
             {feedback ? "Feedback" : "Taken notes"}
             <textarea
               value={notes}
+              onFocus={() => onProbe?.(["slides", slideIndex, "takenNotes"])}
               onChange={(event) => onNotes(event.target.value)}
               placeholder={feedback ? "Tell the presenter what you think" : "Notes you take during the talk"}
             />

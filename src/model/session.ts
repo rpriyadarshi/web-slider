@@ -12,14 +12,16 @@ export type DeckSession = {
     toc: boolean;
     side: boolean;
     bottom: boolean;
+    yaml: boolean;
     tocPinned: boolean;
     sidePinned: boolean;
+    yamlPinned: boolean;
     theme: "light" | "dark";
   };
 };
 
 export function emptyChrome(): DeckSession["ui"] {
-  return { toc: true, side: false, bottom: true, tocPinned: false, sidePinned: false, theme: "dark" };
+  return { toc: true, side: false, bottom: true, yaml: true, tocPinned: false, sidePinned: false, yamlPinned: true, theme: "dark" };
 }
 
 export function sessionFromDeck(deck: Deck): DeckSession {
@@ -93,8 +95,10 @@ export function normalizeSession(deck: Deck, input: unknown): DeckSession {
       toc: ui.toc,
       side: ui.side,
       bottom: ui.bottom,
+      yaml: ui.yaml === true,
       tocPinned: ui.tocPinned === true,
       sidePinned: ui.sidePinned === true,
+      yamlPinned: ui.yamlPinned !== false,
       theme,
     },
   };

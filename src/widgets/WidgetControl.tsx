@@ -1,30 +1,38 @@
+import { bindProbe, type ProbePath } from "../model/probe";
 import type { Widget } from "../model/schema";
 import type { WidgetAnswer } from "../model/session";
 
 export function WidgetList({
   slideId,
+  slideIndex = 0,
   widgets,
   answers,
   onAnswer,
+  probe = null,
+  onProbe,
 }: {
   slideId: string;
+  slideIndex?: number;
   widgets: Widget[];
   answers: Record<string, WidgetAnswer> | undefined;
   onAnswer: (widgetId: string, answer: WidgetAnswer | undefined) => void;
+  probe?: ProbePath | null;
+  onProbe?: (path: ProbePath) => void;
 }) {
   if (widgets.length === 0) {
     return <p className="empty-note">No decisions on this slide.</p>;
   }
   return (
     <div className="widget-row">
-      {widgets.map((widget) => (
-        <WidgetControl
-          key={widget.id}
-          slideId={slideId}
-          widget={widget}
-          answer={answers?.[widget.id]}
-          onAnswer={(answer) => onAnswer(widget.id, answer)}
-        />
+      {widgets.map((widget, index) => (
+        <div key={widget.id} {...bindProbe(["slides", slideIndex, "widgets", index], probe, onProbe)}>
+          <WidgetControl
+            slideId={slideId}
+            widget={widget}
+            answer={answers?.[widget.id]}
+            onAnswer={(answer) => onAnswer(widget.id, answer)}
+          />
+        </div>
       ))}
     </div>
   );

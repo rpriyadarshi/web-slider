@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { highlightCode } from "../highlight";
+import { bindProbe, type ProbePath } from "../model/probe";
 import type { Block } from "../model/schema";
 import { isRevealed } from "../model/steps";
 
@@ -8,18 +9,41 @@ export function Blocks({
   revealed,
   dark,
   onOpenSlide,
+  onEditItem,
+  skip,
+  slideIndex = 0,
+  probe = null,
+  onProbe,
 }: {
   blocks: Block[] | undefined;
   revealed: number;
   dark: boolean;
   onOpenSlide?: (slideId: string) => void;
+  onEditItem?: (blockIndex: number, itemIndex: number, text: string) => void;
+  skip?: Block;
+  slideIndex?: number;
+  probe?: ProbePath | null;
+  onProbe?: (path: ProbePath) => void;
 }) {
-  const visible = (blocks ?? []).filter((block) => isRevealed(block.step, revealed));
+  const visible = (blocks ?? []).flatMap((block, blockIndex) =>
+    block !== skip && isRevealed(block.step, revealed) ? [{ block, blockIndex }] : [],
+  );
   if (visible.length === 0) return null;
   return (
     <div className="blocks">
-      {visible.map((block, index) => (
-        <BlockView key={index} block={block} revealed={revealed} dark={dark} onOpenSlide={onOpenSlide} />
+      {visible.map(({ block, blockIndex }) => (
+        <BlockView
+          key={blockIndex}
+          block={block}
+          blockIndex={blockIndex}
+          revealed={revealed}
+          dark={dark}
+          onOpenSlide={onOpenSlide}
+          onEditItem={onEditItem}
+          slideIndex={slideIndex}
+          probe={probe}
+          onProbe={onProbe}
+        />
       ))}
     </div>
   );
@@ -27,31 +51,56 @@ export function Blocks({
 
 function BlockView({
   block,
+  blockIndex,
   revealed,
   dark,
   onOpenSlide,
+  onEditItem,
+  slideIndex,
+  probe,
+  onProbe,
 }: {
   block: Block;
+  blockIndex: number;
   revealed: number;
   dark: boolean;
   onOpenSlide?: (slideId: string) => void;
+  onEditItem?: (blockIndex: number, itemIndex: number, text: string) => void;
+  slideIndex: number;
+  probe: ProbePath | null;
+  onProbe?: (path: ProbePath) => void;
 }) {
-  if (block.type === "paragraph") return <p className="block paragraph">{block.text}</p>;
+  const blockPath: ProbePath = ["slides", slideIndex, "blocks", blockIndex];
+  if (block.type === "paragraph") {
+    return (
+      <p className="block paragraph" {...bindProbe(blockPath, probe, onProbe)}>
+        {block.text}
+      </p>
+    );
+  }
   if (block.type === "bullets" || block.type === "numbered") {
     const items = block.items.filter((item) => isRevealed(item.step, revealed));
     if (items.length === 0) return null;
     const List = block.type === "numbered" ? "ol" : "ul";
     return (
-      <List className={block.type === "numbered" ? "block numbered" : "block bullets"}>
-        {items.map((item, index) => (
-          <li key={`${item.text}-${index}`}>{item.text}</li>
-        ))}
+      <List className={block.type === "numbered" ? "block numbered" : "block bullets"} {...bindProbe(blockPath, probe, onProbe)}>
+        {block.items.map((item, itemIndex) =>
+          isRevealed(item.step, revealed) ? (
+            <li key={`${item.text}-${itemIndex}`} {...bindProbe([...blockPath, "items", itemIndex], probe, onProbe)}>
+              <EditableText
+                text={item.text}
+                onSelect={onProbe ? () => onProbe([...blockPath, "items", itemIndex]) : undefined}
+                onCommit={onEditItem ? (value) => onEditItem(blockIndex, itemIndex, value) : undefined}
+              />
+            </li>
+          ) : null,
+        )}
       </List>
     );
   }
   if (block.type === "table") {
     return (
-      <table className="block data-table">
+      <table className="block data-table" {...bindProbe(blockPath, probe, onProbe)}>
         <thead>
           <tr>
             {block.headers.map((header) => (
@@ -72,47 +121,64 @@ function BlockView({
     );
   }
   if (block.type === "link") {
-    if (block.slide) {
-      return (
-        <button type="button" className="block slide-link" onClick={() => onOpenSlide?.(block.slide!)}>
-          {block.text}
-        </button>
-      );
-    }
     return (
-      <a className="block slide-link" href={block.href} target="_blank" rel="noreferrer">
-        {block.text}
-      </a>
+      <div {...bindProbe(blockPath, probe, onProbe)}>
+        {block.slide ? (
+          <button type="button" className="block slide-link" onClick={() => onOpenSlide?.(block.slide!)}>
+            {block.text}
+          </button>
+        ) : (
+          <a className="block slide-link" href={block.href} target="_blank" rel="noreferrer">
+            {block.text}
+          </a>
+        )}
+      </div>
     );
   }
   if (block.type === "quote") {
     return (
-      <blockquote className="block quote">
+      <blockquote className="block quote" {...bindProbe(blockPath, probe, onProbe)}>
         <p>{block.text}</p>
         {block.attribution ? <footer>{block.attribution}</footer> : null}
       </blockquote>
     );
   }
-  if (block.type === "callout") return <aside className="block callout">{block.text}</aside>;
-  if (block.type === "divider") return <hr className="block divider" />;
+  if (block.type === "callout") {
+    return (
+      <aside className="block callout" {...bindProbe(blockPath, probe, onProbe)}>
+        {block.text}
+      </aside>
+    );
+  }
+  if (block.type === "divider") return <hr className="block divider" {...bindProbe(blockPath, probe, onProbe)} />;
   if (block.type === "video") {
     return (
-      <figure className="block figure">
+      <figure className="block figure" {...bindProbe(blockPath, probe, onProbe)}>
         <video controls src={block.src} title={block.title} />
         {block.title ? <figcaption>{block.title}</figcaption> : null}
       </figure>
     );
   }
-  if (block.type === "chart") return <ChartBlock kind={block.kind} labels={block.labels} values={block.values} />;
+  if (block.type === "chart") {
+    return (
+      <div {...bindProbe(blockPath, probe, onProbe)}>
+        <ChartBlock kind={block.kind} labels={block.labels} values={block.values} />
+      </div>
+    );
+  }
   if (block.type === "image") {
     return (
-      <figure className="block figure">
+      <figure className="block figure" {...bindProbe(blockPath, probe, onProbe)}>
         <img src={block.src} alt={block.alt ?? ""} />
         {block.alt ? <figcaption>{block.alt}</figcaption> : null}
       </figure>
     );
   }
-  return <CodeBlock code={block.code} language={block.language} dark={dark} />;
+  return (
+    <div {...bindProbe(blockPath, probe, onProbe)}>
+      <CodeBlock code={block.code} language={block.language} dark={dark} />
+    </div>
+  );
 }
 
 function ChartBlock({ kind, labels, values }: { kind: "bar" | "column"; labels: string[]; values: number[] }) {
@@ -159,6 +225,61 @@ function ChartBlock({ kind, labels, values }: { kind: "bar" | "column"; labels: 
         </text>
       ))}
     </svg>
+  );
+}
+
+export function EditableText({
+  text,
+  onCommit,
+  onSelect,
+  className,
+}: {
+  text: string;
+  onCommit?: (text: string) => void;
+  onSelect?: () => void;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(text);
+  useEffect(() => setDraft(text), [text]);
+  if (!onCommit) return <span className={className}>{text}</span>;
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className={className ? `text-edit ${className}` : "text-edit"}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect?.();
+        }}
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          setEditing(true);
+        }}
+      >
+        {text}
+      </button>
+    );
+  }
+  return (
+    <input
+      className="text-edit"
+      value={draft}
+      aria-label="Edit text"
+      autoFocus
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        setEditing(false);
+        if (draft.trim() && draft.trim() !== text) onCommit(draft);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.key === "Escape") {
+          setDraft(text);
+          setEditing(false);
+        }
+      }}
+    />
   );
 }
 

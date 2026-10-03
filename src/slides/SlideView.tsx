@@ -3,7 +3,8 @@ import type { Deck, Slide } from "../model/schema";
 import { resolveTheme } from "../model/schema";
 import { isRevealed, visibleIndexes, visibleNumber } from "../model/steps";
 import { isDarkHex } from "../highlight";
-import { Blocks } from "./Blocks";
+import { bindProbe, type ProbePath } from "../model/probe";
+import { Blocks, EditableText } from "./Blocks";
 
 export function SlideView({
   deck,
@@ -13,6 +14,11 @@ export function SlideView({
   laser,
   caption,
   onLaserMove,
+  onEditTitle,
+  onEditItem,
+  slideIndex = 0,
+  probe = null,
+  onProbe,
 }: {
   deck: Deck;
   slide: Slide;
@@ -21,12 +27,16 @@ export function SlideView({
   laser?: { x: number; y: number } | null;
   caption?: string;
   onLaserMove?: (point: { x: number; y: number }) => void;
+  onEditTitle?: (title: string) => void;
+  onEditItem?: (blockIndex: number, itemIndex: number, text: string) => void;
+  slideIndex?: number;
+  probe?: ProbePath | null;
+  onProbe?: (path: ProbePath) => void;
 }) {
   const theme = resolveTheme(deck.theme, slide.theme);
   const brand = resolveBrand(deck.brand);
   const quoteCandidate = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
   const quote = quoteCandidate && isRevealed(quoteCandidate.step, revealed) ? quoteCandidate : undefined;
-  const blocks = (slide.blocks ?? []).filter((block) => block !== quote);
   const dark = isDarkHex(theme.background);
 
   return (
@@ -73,23 +83,54 @@ export function SlideView({
       }}
     >
       <div className="slide-copy" key={slide.id}>
-        <h1 className="slide-title">{slide.title}</h1>
-        {slide.subtitle ? <p className="slide-sub">{slide.subtitle}</p> : null}
-        {slide.layout === "title" && deck.author ? <p className="slide-author">{deck.author}</p> : null}
+        <h1 className="slide-title" {...bindProbe(["slides", slideIndex, "title"], probe, onProbe)}>
+          <EditableText
+            text={slide.title}
+            onSelect={onProbe ? () => onProbe(["slides", slideIndex, "title"]) : undefined}
+            onCommit={onEditTitle}
+          />
+        </h1>
+        {slide.subtitle ? (
+          <p className="slide-sub" {...bindProbe(["slides", slideIndex, "subtitle"], probe, onProbe)}>
+            {slide.subtitle}
+          </p>
+        ) : null}
+        {slide.layout === "title" && deck.author ? (
+          <p className="slide-author" {...bindProbe(["author"], probe, onProbe)}>
+            {deck.author}
+          </p>
+        ) : null}
         {quote && quote.type === "quote" ? (
-          <blockquote className="pull-quote">
+          <blockquote
+            className="pull-quote"
+            {...bindProbe(["slides", slideIndex, "blocks", slide.blocks?.indexOf(quote) ?? 0], probe, onProbe)}
+          >
             <p>{quote.text}</p>
             {quote.attribution ? <footer>{quote.attribution}</footer> : null}
           </blockquote>
         ) : null}
-        <Blocks blocks={blocks} revealed={revealed} dark={dark} onOpenSlide={onOpenSlide} />
+        <Blocks
+          blocks={slide.blocks}
+          skip={quote}
+          revealed={revealed}
+          dark={dark}
+          onOpenSlide={onOpenSlide}
+          onEditItem={onEditItem}
+          slideIndex={slideIndex}
+          probe={probe}
+          onProbe={onProbe}
+        />
       </div>
       {caption ? <p className="captions">{caption}</p> : null}
       {laser ? <span className="laser" style={{ left: `${laser.x * 100}%`, top: `${laser.y * 100}%` }} /> : null}
       <footer className="slide-footer">
         <span className="slide-brand">
-          {brand ? <BrandLockup brand={brand} mode={dark ? "dark" : "light"} /> : null}
-          {deck.footer ? <span>{deck.footer}</span> : null}
+          {brand ? (
+            <span {...bindProbe(["brand"], probe, onProbe)}>
+              <BrandLockup brand={brand} mode={dark ? "dark" : "light"} />
+            </span>
+          ) : null}
+          {deck.footer ? <span {...bindProbe(["footer"], probe, onProbe)}>{deck.footer}</span> : null}
         </span>
         {deck.showSlideNumber === false ? null : (
           <span>

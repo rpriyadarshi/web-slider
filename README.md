@@ -115,6 +115,12 @@ Use these on `blocks` and `side`. A `step` hides the block, or a list item, unti
 
 Widgets are `radio`, `checkbox`, `select`, `text`, and `scale` (1–5). `radio`, `checkbox`, and `select` need at least two `options`. In an embedded deck the bottom row is the feedback form.
 
+## Editor
+
+The YAML pane beside the slide is the deck file. This is a structured editor for that file, not a free-form canvas. There is one document.
+
+Typing in the pane updates the slide when the YAML parses. When it does not parse, the error stays in the pane and the last valid slide stays on screen. Click a title, list item, block, widget, footer, or the lockup to select that node in the YAML, the way Chrome's element inspector selects a node. Move the caret in the YAML and the matching part of the slide is marked; if the caret is in another slide, the view jumps there. Double-click a title or list item to edit it, which writes the text back into the same YAML. Notes taken during the talk, and widget answers, are written into that YAML as `takenNotes` and `answer` while you record them. A click rewrites the pane through the serializer, so comments in the pane are dropped at that moment, the same as a download. Download writes that YAML, with the widget answers and the notes taken during the talk merged in. There is no second save format.
+
 ## Presenting
 
 Arrow keys, space, and page up or down move through builds and then slides, skipping hidden slides. Type a visible slide number and press Enter to jump. Home and End jump to the ends. `O` opens the overview. `F` toggles full screen.
