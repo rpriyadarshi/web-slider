@@ -6,15 +6,21 @@ import { Icon, IconButton, IconMark } from "./IconButton";
 export function SidePanel({
   blocks,
   theme,
+  pinned,
+  onPin,
   onHide,
+  className,
 }: {
   blocks: Block[] | undefined;
   theme: ResolvedTheme;
+  pinned: boolean;
+  onPin: () => void;
   onHide: () => void;
+  className: string;
 }) {
   return (
     <aside
-      className="side-popup"
+      className={className}
       aria-label="Examples"
       style={{
         ["--slide-surface" as string]: theme.surface,
@@ -29,9 +35,14 @@ export function SidePanel({
     >
       <div className="panel-head">
         <IconMark label="Examples" name="examples" />
-        <IconButton label="Hide" onClick={onHide}>
-          <Icon name="hide" />
-        </IconButton>
+        <div className="panel-actions">
+          <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
+            <Icon name="pin" />
+          </IconButton>
+          <IconButton label="Hide" onClick={onHide}>
+            <Icon name="hide" />
+          </IconButton>
+        </div>
       </div>
       <div className="side-body">
         {blocks && blocks.length > 0 ? (

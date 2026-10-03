@@ -47,7 +47,9 @@ slides:
         options: [Yes, No]
 ```
 
-`brand: emporion` uses the Emporion Court mark and wordmark on the presenter chrome. A custom brand is a mapping with `name`, `wordmark`, `accent`, `highlight`, and `mark` (`https` or `data` URI).
+`brand: emporion` uses the built-in Court mark. A custom brand is a mapping with `name`, `wordmark`, optional `tail`, `accent`, `highlight`, and `mark` (`https`, a `data` URI, or a path inside a zip package). `theme.chrome` is `light` or `dark`. `chromeLight` and `chromeDark` set the shell colors `ground`, `paper`, `text`, `muted`, and `line`. Built-in fonts are Inter, Source Serif 4, and JetBrains Mono. Any other family needs a `fonts` entry whose files are data URIs or paths in the package.
+
+A `.zip` package has `deck.yaml` at the root and the files the deck names. Open the zip in the presenter, or download one from the package icon in Export.
 
 Layouts are `title`, `section`, `content`, and `quote`. Blocks are `paragraph`, `bullets`, `quote`, `code`, `image`, `callout`, and `divider`. A `step` on a block or bullet stays hidden until you advance to it. Images must be `https` URLs or `data:` URIs, and exports accept PNG and JPEG only.
 
@@ -56,6 +58,29 @@ Widgets are `radio`, `checkbox`, `select`, `text`, and `scale` (1–5). Answers 
 ## Presenting
 
 Arrow keys, space, and page up or down move through builds and then slides. Home and End jump to the ends. `O` opens the overview. `F` toggles full screen. Chrome controls are icons; the name is the tooltip. A theme icon switches the shell between light and dark. Export and examples open from icons and close with Escape. The outline and the notes band collapse. The slide does not.
+
+## Embed
+
+Host the built site, then on the customer page:
+
+```html
+<div id="deck"></div>
+<script src="https://your-slider.example/embed.js"></script>
+<script>
+  WebSlider.embed("#deck", {
+    src: "/presentations/launch.yaml",
+    onFeedback(report) {
+      console.log(report.deckId, report.slideId, report.answers, report.notes);
+    },
+  });
+</script>
+```
+
+`src` may be a `.yaml` file or a `.zip` package. The iframe shows the slides and the bottom feedback row. Widget answers and notes are posted to the host as `web-slider:feedback`. A page can also iframe `/?embed=1&deck=` with an absolute deck URL, or post `{ type: "web-slider:load", yaml }` into the frame.
+
+## Generate a deck
+
+Give an AI assistant [prompts/generate-deck.md](prompts/generate-deck.md). It is the contract for a YAML deck or a zip package, including the feedback widgets.
 
 ## Exports
 

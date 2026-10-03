@@ -12,6 +12,7 @@ export function BottomBar({
   onAnswer,
   onNotes,
   onHide,
+  feedback = false,
 }: {
   slideId: string;
   widgets: Widget[];
@@ -21,21 +22,26 @@ export function BottomBar({
   onAnswer: (widgetId: string, answer: WidgetAnswer | undefined) => void;
   onNotes: (value: string) => void;
   onHide: () => void;
+  feedback?: boolean;
 }) {
   return (
     <footer className="bottom">
       <section className="decisions" aria-label="Decisions">
         <div className="panel-head">
           <IconMark label="Decisions" name="examples" />
-          <IconButton label="Hide" onClick={onHide}>
-            <Icon name="hide" />
-          </IconButton>
         </div>
         <WidgetList slideId={slideId} widgets={widgets} answers={answers} onAnswer={onAnswer} />
       </section>
       <section className="notes-col" aria-label="Notes">
         <div className="panel-head">
-          <IconMark label="Notes" name="notes" />
+          <IconMark label={feedback ? "Feedback" : "Notes"} name="notes" />
+          {feedback ? null : (
+            <div className="panel-actions">
+              <IconButton label="Hide" onClick={onHide}>
+                <Icon name="hide" />
+              </IconButton>
+            </div>
+          )}
         </div>
         <div className="notes-grid">
           <div className="script">
@@ -43,11 +49,11 @@ export function BottomBar({
             <p>{script?.trim() ? script : "No script for this slide."}</p>
           </div>
           <label className="taken">
-            Taken notes
+            {feedback ? "Feedback" : "Taken notes"}
             <textarea
               value={notes}
               onChange={(event) => onNotes(event.target.value)}
-              placeholder="Notes you take during the talk"
+              placeholder={feedback ? "Tell the presenter what you think" : "Notes you take during the talk"}
             />
           </label>
         </div>

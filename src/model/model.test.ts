@@ -55,7 +55,9 @@ describe("parseDeck", () => {
     expect(deck.slides.map((slide) => slide.layout)).toEqual(["title", "section", "content", "quote", "content"]);
     expect(deck.slides.some((slide) => slide.widgets?.some((widget) => widget.type === "scale"))).toBe(true);
     expect(deck.slides.some((slide) => slide.side?.some((block) => block.type === "code"))).toBe(true);
-    expect(deck.brand).toBe("emporion");
+    expect(deck.brand).toMatchObject({ wordmark: "EMPORION", tail: "AI", accent: "#3DB892" });
+    expect(deck.theme?.chrome).toBe("dark");
+    expect(deck.theme?.chromeDark?.ground).toBe("#121212");
     const again = parseDeck(serializeDeck(deck, sessionFromDeck(deck)));
     expect(again).toEqual(deck);
   });
@@ -74,9 +76,9 @@ slides:
     layout: content
     blocks:
       - type: image
-        src: ./local.png
+        src: ../local.png
 `),
-    ).toThrow(/https URL or a data URI/);
+    ).toThrow(/package path|cannot be read/);
     expect(() =>
       parseDeck(`
 id: a

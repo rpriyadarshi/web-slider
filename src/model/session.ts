@@ -12,12 +12,14 @@ export type DeckSession = {
     toc: boolean;
     side: boolean;
     bottom: boolean;
+    tocPinned: boolean;
+    sidePinned: boolean;
     theme: "light" | "dark";
   };
 };
 
 export function emptyChrome(): DeckSession["ui"] {
-  return { toc: true, side: false, bottom: true, theme: "dark" };
+  return { toc: true, side: false, bottom: true, tocPinned: false, sidePinned: false, theme: "dark" };
 }
 
 export function sessionFromDeck(deck: Deck): DeckSession {
@@ -39,7 +41,7 @@ export function sessionFromDeck(deck: Deck): DeckSession {
     revealed: 0,
     answers,
     notes,
-    ui: emptyChrome(),
+    ui: { ...emptyChrome(), theme: deck.theme?.chrome ?? "dark" },
   };
 }
 
@@ -87,7 +89,14 @@ export function normalizeSession(deck: Deck, input: unknown): DeckSession {
     revealed: clampRevealed(deck.slides[slideIndex], revealed),
     answers: input.answers as DeckSession["answers"],
     notes: input.notes as DeckSession["notes"],
-    ui: { toc: ui.toc, side: ui.side, bottom: ui.bottom, theme },
+    ui: {
+      toc: ui.toc,
+      side: ui.side,
+      bottom: ui.bottom,
+      tocPinned: ui.tocPinned === true,
+      sidePinned: ui.sidePinned === true,
+      theme,
+    },
   };
 }
 

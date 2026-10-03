@@ -52,12 +52,39 @@ export function resolveBrand(brand: BrandInput | undefined): ResolvedBrand | nul
   return {
     id: "custom",
     wordmark: brand.wordmark,
+    tail: brand.tail,
     accent: brand.accent,
     highlight: brand.highlight,
     markLight: brand.mark,
-    markDark: brand.mark,
+    markDark: brand.markDark ?? brand.mark,
   };
 }
+
+export function resolveChrome(
+  theme: { accent?: string; highlight?: string; chromeLight?: ChromeColors; chromeDark?: ChromeColors } | undefined,
+  mode: ChromeMode,
+  brand: ResolvedBrand | null,
+) {
+  const base = CHROME[mode];
+  const override = mode === "light" ? theme?.chromeLight : theme?.chromeDark;
+  return {
+    ground: override?.ground ?? base.ground,
+    paper: override?.paper ?? base.paper,
+    text: override?.text ?? base.text,
+    muted: override?.muted ?? base.muted,
+    line: override?.line ?? base.line,
+    accent: brand?.accent ?? theme?.accent ?? CHROME.emerald,
+    highlight: brand?.highlight ?? theme?.highlight ?? CHROME.citrine,
+  };
+}
+
+type ChromeColors = {
+  ground?: string;
+  paper?: string;
+  text?: string;
+  muted?: string;
+  line?: string;
+};
 
 export function BrandLockup({ brand, mode }: { brand: ResolvedBrand; mode: ChromeMode }) {
   const mark = mode === "dark" ? brand.markDark : brand.markLight;

@@ -4,21 +4,32 @@ import { Icon, IconButton, IconMark } from "./IconButton";
 export function Toc({
   slides,
   current,
+  pinned,
   onJump,
+  onPin,
   onHide,
+  className,
 }: {
   slides: Slide[];
   current: number;
+  pinned: boolean;
   onJump: (index: number) => void;
+  onPin: () => void;
   onHide: () => void;
+  className: string;
 }) {
   return (
-    <nav className="toc" aria-label="Slides">
+    <nav className={className} aria-label="Slides">
       <div className="panel-head">
         <IconMark label="Outline" name="outline" />
-        <IconButton label="Hide" onClick={onHide}>
-          <Icon name="hide" />
-        </IconButton>
+        <div className="panel-actions">
+          <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
+            <Icon name="pin" />
+          </IconButton>
+          <IconButton label="Hide" onClick={onHide}>
+            <Icon name="hide" />
+          </IconButton>
+        </div>
       </div>
       <ol>
         {slides.map((slide, index) => (

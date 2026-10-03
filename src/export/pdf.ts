@@ -1,10 +1,11 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
-import type { Block, Deck, FontName, ResolvedTheme, Slide } from "../model/schema";
+import type { Block, Deck, ResolvedTheme, Slide } from "../model/schema";
 import { resolveTheme } from "../model/schema";
 import type { DeckSession } from "../model/session";
 import { widgetToText } from "../model/text";
 import type { FontFiles } from "../theme/fonts";
+import type { FontName } from "../model/schema";
 import { fitBox, loadRaster } from "./images";
 
 const PAGE_W = 960;
@@ -12,7 +13,7 @@ const PAGE_H = 540;
 const MARGIN = 40;
 const SCALES = [1, 0.86, 0.74];
 
-type EmbeddedFonts = Record<FontName, { regular: PDFFont; semibold: PDFFont }>;
+type EmbeddedFonts = Record<string, { regular: PDFFont; semibold: PDFFont }>;
 
 export async function buildPdf(deck: Deck, session: DeckSession, files: FontFiles): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
@@ -20,7 +21,7 @@ export async function buildPdf(deck: Deck, session: DeckSession, files: FontFile
   pdf.setTitle(deck.title);
   if (deck.author) pdf.setAuthor(deck.author);
 
-  const embedded = {} as EmbeddedFonts;
+  const embedded: EmbeddedFonts = {};
   for (const name of Object.keys(files) as FontName[]) {
     embedded[name] = {
       regular: await pdf.embedFont(files[name].regular, { subset: true }),
@@ -47,6 +48,14 @@ export async function buildPdf(deck: Deck, session: DeckSession, files: FontFile
   return pdf.save();
 }
 
+function fontFace(fonts: EmbeddedFonts, name: string): { regular: PDFFont; semibold: PDFFont } {
+  const face = fonts[name];
+  if (!face) {
+    throw new Error(`Font "${name}" is not available for PDF export. Add it under fonts in the deck, or use Inter, Source Serif 4, or JetBrains Mono.`);
+  }
+  return face;
+}
+
 async function paintSlide(
   pdf: PDFDocument,
   page: PDFPage,
@@ -67,8 +76,8 @@ async function paintSlide(
   };
   page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: colors.background });
 
-  const heading = fonts[theme.fontHeading].semibold;
-  const body = fonts[theme.fontBody].regular;
+  const heading = fontFace(fonts, theme.fontHeading).semibold;
+  const body = fontFace(fonts, theme.fontBody).regular;
   const cursor = new Cursor(page, MARGIN, PAGE_H - MARGIN, PAGE_W - MARGIN * 2, 36);
   const centered = slide.layout !== "content" || theme.align === "center";
 
@@ -137,9 +146,9 @@ async function drawBlocks(
   scale: number,
   centered: boolean,
 ): Promise<void> {
-  const body = fonts[theme.fontBody].regular;
-  const mono = fonts[theme.fontMono].regular;
-  const heading = fonts[theme.fontHeading].semibold;
+  const body = fontFace(fonts, theme.fontBody).regular;
+  const mono = fontFace(fonts, theme.fontMono).regular;
+  const heading = fontFace(fonts, theme.fontHeading).semibold;
   for (const block of blocks) {
     if (cursor.failed) return;
     if (block.type === "paragraph") {

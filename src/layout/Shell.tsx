@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrandLockup, CHROME, EMPORION_FAVICON, resolveBrand, type ChromeMode } from "../brand/kit";
+import { BrandLockup, EMPORION_FAVICON, resolveBrand, resolveChrome, type ChromeMode } from "../brand/kit";
 import { bytesToBlob, downloadBlob, downloadText } from "../export/download";
 import { deckToYaml } from "../export/yaml";
 import type { Deck } from "../model/schema";
@@ -20,6 +20,10 @@ export function Shell({
   onOpenFile,
   requestOpen,
   persistError,
+  assets,
+  embed = false,
+  exportDeck,
+  packageFiles,
 }: {
   deck: Deck;
   session: DeckSession;
@@ -27,10 +31,20 @@ export function Shell({
   requestOpen: () => void;
   onOpenFile: (file: File) => void;
   persistError: string | null;
+  assets?: Map<string, string>;
+  embed?: boolean;
+  exportDeck?: Deck;
+  packageFiles?: Map<string, Uint8Array>;
 }) {
+  const portable = exportDeck ?? deck;
   const slide = deck.slides[session.slideIndex];
   const theme = resolveTheme(deck.theme, slide.theme);
-  const brand = resolveBrand(deck.brand);
+  const rawBrand = resolveBrand(deck.brand);
+  const brand = rawBrand && {
+    ...rawBrand,
+    markLight: assets?.get(rawBrand.markLight) ?? rawBrand.markLight,
+    markDark: assets?.get(rawBrand.markDark) ?? rawBrand.markDark,
+  };
   const mode = session.ui.theme;
   const [overview, setOverview] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
@@ -39,9 +53,28 @@ export function Shell({
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const elapsed = useElapsed();
-  const palette = CHROME[mode];
-  const accent = brand?.accent ?? CHROME.emerald;
-  const highlight = brand?.highlight ?? CHROME.citrine;
+  const palette = resolveChrome(deck.theme, mode, brand);
+
+  useEffect(() => {
+    if (!deck.fonts) return;
+    const rules = Object.entries(deck.fonts)
+      .map(([name, face]) => {
+        const regular = assets?.get(face.regular) ?? (face.regular.startsWith("data:") || face.regular.startsWith("https://") ? face.regular : "");
+        if (!regular) return "";
+        const semiRef = face.semibold;
+        const semibold = semiRef
+          ? (assets?.get(semiRef) ?? (semiRef.startsWith("data:") || semiRef.startsWith("https://") ? semiRef : regular))
+          : regular;
+        return `@font-face{font-family:"${name}";src:url("${regular}") format("truetype");font-weight:400;font-display:swap;}@font-face{font-family:"${name}";src:url("${semibold}") format("truetype");font-weight:600;font-display:swap;}`;
+      })
+      .join("");
+    if (!rules) return;
+    const style = document.createElement("style");
+    style.dataset.deckFonts = deck.id;
+    style.textContent = rules;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, [assets, deck.fonts, deck.id]);
 
   useEffect(() => {
     const onChange = () => setFullscreen(document.fullscreenElement !== null);
@@ -68,8 +101,10 @@ export function Shell({
         if (overview) setOverview(false);
         else if (themeOpen) setThemeOpen(false);
         else if (exportOpen) setExportOpen(false);
-        else if (session.ui.side) {
+        else if (session.ui.side && !session.ui.sidePinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }));
+        } else if (session.ui.toc && !session.ui.tocPinned) {
+          onSession((current) => ({ ...current, ui: { ...current.ui, toc: false } }));
         } else {
           return;
         }
@@ -98,7 +133,7 @@ export function Shell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [deck, exportOpen, onSession, overview, session.ui.side, themeOpen]);
+  }, [deck, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, themeOpen]);
 
   function jump(index: number) {
     onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
@@ -135,9 +170,10 @@ export function Shell({
 
   return (
     <div
-      className="shell"
+      className={embed ? "shell embed" : "shell"}
       data-theme={mode}
-      data-toc={session.ui.toc ? "open" : "closed"}
+      data-toc-pin={session.ui.toc && session.ui.tocPinned ? "open" : "closed"}
+      data-side-pin={session.ui.side && session.ui.sidePinned ? "open" : "closed"}
       data-bottom={session.ui.bottom ? "open" : "closed"}
       style={{
         ["--ground" as string]: palette.ground,
@@ -145,8 +181,8 @@ export function Shell({
         ["--text" as string]: palette.text,
         ["--muted" as string]: palette.muted,
         ["--line" as string]: palette.line,
-        ["--accent" as string]: accent,
-        ["--highlight" as string]: highlight,
+        ["--accent" as string]: palette.accent,
+        ["--highlight" as string]: palette.highlight,
       }}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
@@ -177,7 +213,7 @@ export function Shell({
             <Icon name="next" />
           </IconButton>
         </div>
-        <div className="toolbar-actions">
+        <div className="toolbar-actions" hidden={embed}>
           <p className="timer" aria-label="Elapsed time" title="Elapsed time">
             {formatElapsed(elapsed)}
           </p>
@@ -231,7 +267,7 @@ export function Shell({
                   disabled={exporting !== null}
                   onClick={() =>
                     void runExport("yaml", async () =>
-                      downloadText(deckToYaml(deck, session), `${deck.id}.yaml`, "application/yaml"),
+                      downloadText(deckToYaml(portable, session), `${portable.id}.yaml`, "application/yaml"),
                     )
                   }
                 >
@@ -279,6 +315,19 @@ export function Shell({
                 >
                   <Icon name="powerpoint" />
                 </IconButton>
+                <IconButton
+                  label="Package"
+                  disabled={exporting !== null}
+                  onClick={() =>
+                    void runExport("package", async () => {
+                      const { writeDeckPackage } = await import("../package/deckPackage");
+                      const blob = await writeDeckPackage(deckToYaml(portable, session), packageFiles ?? new Map());
+                      downloadBlob(blob, `${portable.id}.zip`);
+                    })
+                  }
+                >
+                  <Icon name="package" />
+                </IconButton>
                 <p className="font-limit">
                   PDF embeds the deck fonts. Word and PowerPoint name them and will substitute if they are not installed.
                 </p>
@@ -303,17 +352,20 @@ export function Shell({
         />
       ) : null}
 
-      {session.ui.toc ? (
+      {!embed && session.ui.toc && session.ui.tocPinned ? (
         <Toc
+          className="pane docked"
           slides={deck.slides}
           current={session.slideIndex}
+          pinned
           onJump={jump}
+          onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, tocPinned: false } }))}
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, toc: false } }))}
         />
       ) : null}
 
       <main className="stage">
-        {!session.ui.toc ? (
+        {!embed && !session.ui.toc ? (
           <IconButton
             className="reopen left"
             label="Outline"
@@ -322,7 +374,18 @@ export function Shell({
             <Icon name="outline" />
           </IconButton>
         ) : null}
-        {!session.ui.side ? (
+        {!embed && session.ui.toc && !session.ui.tocPinned ? (
+          <Toc
+            className="pane floating left"
+            slides={deck.slides}
+            current={session.slideIndex}
+            pinned={false}
+            onJump={jump}
+            onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, tocPinned: true } }))}
+            onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, toc: false } }))}
+          />
+        ) : null}
+        {!embed && !session.ui.side ? (
           <button
             type="button"
             className="reopen right icon-button"
@@ -332,17 +395,35 @@ export function Shell({
           >
             <Icon name="examples" />
           </button>
-        ) : (
-          <>
-            <button type="button" className="stage-scrim" aria-label="Hide" onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }))} />
-            <SidePanel
-              blocks={slide.side}
-              theme={theme}
-              onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }))}
-            />
-          </>
-        )}
-        {!session.ui.bottom ? (
+        ) : null}
+        {!embed && session.ui.side && !session.ui.sidePinned ? (
+          <SidePanel
+            className="pane floating right"
+            blocks={slide.side}
+            theme={theme}
+            pinned={false}
+            onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, sidePinned: true } }))}
+            onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }))}
+          />
+        ) : null}
+        {!embed && ((session.ui.toc && !session.ui.tocPinned) || (session.ui.side && !session.ui.sidePinned)) ? (
+          <button
+            type="button"
+            className="stage-scrim"
+            aria-label="Hide"
+            onClick={() =>
+              onSession((current) => ({
+                ...current,
+                ui: {
+                  ...current.ui,
+                  toc: current.ui.tocPinned ? current.ui.toc : false,
+                  side: current.ui.sidePinned ? current.ui.side : false,
+                },
+              }))
+            }
+          />
+        ) : null}
+        {!embed && !session.ui.bottom ? (
           <button
             type="button"
             className="reopen bottom icon-button"
@@ -356,8 +437,20 @@ export function Shell({
         <SlideView deck={deck} slide={slide} revealed={session.revealed} />
       </main>
 
-      {session.ui.bottom ? (
+      {!embed && session.ui.side && session.ui.sidePinned ? (
+        <SidePanel
+          className="pane docked"
+          blocks={slide.side}
+          theme={theme}
+          pinned
+          onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, sidePinned: false } }))}
+          onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }))}
+        />
+      ) : null}
+
+      {embed || session.ui.bottom ? (
         <BottomBar
+          feedback={embed}
           slideId={slide.id}
           widgets={slide.widgets ?? []}
           answers={session.answers[slide.id]}

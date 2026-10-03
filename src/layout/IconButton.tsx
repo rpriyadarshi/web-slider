@@ -17,8 +17,10 @@ export type IconName =
   | "pdf"
   | "word"
   | "powerpoint"
+  | "package"
   | "light"
-  | "dark";
+  | "dark"
+  | "pin";
 
 export function Icon({ name }: { name: IconName }) {
   return (
@@ -127,6 +129,13 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M12 17v3M9 20h6" />
     </>
   ),
+  package: (
+    <>
+      <path d="M4 8l8-4 8 4-8 4z" />
+      <path d="M4 8v8l8 4 8-4V8" />
+      <path d="M12 12v8" />
+    </>
+  ),
   light: (
     <>
       <circle cx="12" cy="12" r="4" />
@@ -134,6 +143,12 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   dark: <path d="M16 13.5A6.5 6.5 0 1 1 10.5 4 5 5 0 0 0 16 13.5z" />,
+  pin: (
+    <>
+      <path d="M9 4h6l-1 6 3 3H7l3-3z" />
+      <path d="M12 13v7" />
+    </>
+  ),
 };
 
 export function IconMark({ label, name }: { label: string; name: IconName }) {

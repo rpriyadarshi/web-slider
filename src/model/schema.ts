@@ -3,6 +3,10 @@ import { z } from "zod";
 export const FONT_NAMES = ["Inter", "Source Serif 4", "JetBrains Mono"] as const;
 export type FontName = (typeof FONT_NAMES)[number];
 
+export function isBuiltInFont(name: string): name is FontName {
+  return (FONT_NAMES as readonly string[]).includes(name);
+}
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "must be a #rrggbb color");
 
 export const colorsSchema = z
@@ -15,25 +19,49 @@ export const colorsSchema = z
   })
   .strict();
 
+export const chromeColorsSchema = z
+  .object({
+    ground: hexColor.optional(),
+    paper: hexColor.optional(),
+    text: hexColor.optional(),
+    muted: hexColor.optional(),
+    line: hexColor.optional(),
+  })
+  .strict();
+
+const fontNameSchema = z
+  .string()
+  .min(1)
+  .max(80)
+  .refine((name) => !/["'<>\n]/.test(name), "font name cannot contain quotes");
+
 export const themeSchema = colorsSchema
   .extend({
-    fontHeading: z.enum(FONT_NAMES).optional(),
-    fontBody: z.enum(FONT_NAMES).optional(),
-    fontMono: z.enum(FONT_NAMES).optional(),
+    fontHeading: fontNameSchema.optional(),
+    fontBody: fontNameSchema.optional(),
+    fontMono: fontNameSchema.optional(),
     align: z.enum(["left", "center"]).optional(),
     headingScale: z.number().positive().max(3).optional(),
     radius: z.number().nonnegative().max(48).optional(),
+    highlight: hexColor.optional(),
+    chrome: z.enum(["light", "dark"]).optional(),
+    chromeLight: chromeColorsSchema.optional(),
+    chromeDark: chromeColorsSchema.optional(),
   })
   .strict();
 
 const stepField = z.number().int().nonnegative().optional();
 
-const imageSrc = z
-  .string()
-  .refine(
-    (src) => src.startsWith("https://") || src.startsWith("data:"),
-    "Image src must be an https URL or a data URI. A file path cannot be read in the browser.",
-  );
+export const assetRefSchema = z.string().refine((src) => isAssetRef(src), {
+  message:
+    "must be an https URL, a data URI, or a package path such as brand/mark.svg. A filesystem path or ../ cannot be read.",
+});
+
+export function isAssetRef(src: string): boolean {
+  if (src.startsWith("https://") || src.startsWith("data:")) return true;
+  if (src.startsWith("/") || src.includes("\\") || src.split("/").includes("..")) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(src);
+}
 
 const bulletItemSchema = z
   .object({
@@ -70,7 +98,7 @@ export const blockSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("image"),
-      src: imageSrc,
+      src: assetRefSchema,
       alt: z.string().min(1).optional(),
       step: stepField,
     })
@@ -147,13 +175,22 @@ export const slideSchema = z
   })
   .strict();
 
+const fontFileSchema = z
+  .object({
+    regular: assetRefSchema,
+    semibold: assetRefSchema.optional(),
+  })
+  .strict();
+
 export const customBrandSchema = z
   .object({
     name: z.string().min(1),
     wordmark: z.string().min(1),
+    tail: z.string().min(1).optional(),
     accent: hexColor,
     highlight: hexColor,
-    mark: imageSrc,
+    mark: assetRefSchema,
+    markDark: assetRefSchema.optional(),
   })
   .strict();
 
@@ -166,10 +203,21 @@ export const deckSchema = z
     author: z.string().min(1).optional(),
     brand: brandSchema.optional(),
     theme: themeSchema.optional(),
+    fonts: z.record(fontNameSchema, fontFileSchema).optional(),
     slides: z.array(slideSchema).min(1),
   })
   .strict()
   .superRefine((deck, ctx) => {
+    for (const name of [deck.theme?.fontHeading, deck.theme?.fontBody, deck.theme?.fontMono]) {
+      if (name && !isBuiltInFont(name) && !deck.fonts?.[name]?.regular) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["fonts", name],
+          message: `font "${name}" needs a fonts entry with a regular file. Built-in faces are ${FONT_NAMES.join(", ")}.`,
+        });
+      }
+    }
+
     const slideIds = new Set<string>();
     deck.slides.forEach((slide, slideIndex) => {
       if (slideIds.has(slide.id)) {
@@ -258,9 +306,9 @@ export type ResolvedTheme = {
   text: string;
   muted: string;
   accent: string;
-  fontHeading: FontName;
-  fontBody: FontName;
-  fontMono: FontName;
+  fontHeading: string;
+  fontBody: string;
+  fontMono: string;
   align: "left" | "center";
   headingScale: number;
   radius: number;

@@ -41,7 +41,7 @@ export function StartScreen({
             if (file) onOpenFile(file);
           }}
         >
-          Drop a .yaml file here
+          Drop a .yaml file or a .zip package here
         </div>
       </section>
     </main>
