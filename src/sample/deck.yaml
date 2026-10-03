@@ -151,6 +151,18 @@ slides:
       - type: link
         text: Back to scope
         slide: scope
+  - id: evidence
+    layout: content
+    title: What the room can see
+    notes: The chart is the count. Play the walkthrough only if someone asks.
+    blocks:
+      - type: chart
+        kind: column
+        labels: [Friday, Monday]
+        values: [4, 2]
+      - type: video
+        title: Launch walkthrough
+        src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4
   - id: appendix
     hidden: true
     layout: content

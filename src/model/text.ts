@@ -22,6 +22,13 @@ export function blockToText(block: Block): string {
       return [block.headers.join(" | "), ...block.rows.map((row) => row.join(" | "))].join("\n");
     case "link":
       return block.href ? `${block.text} (${block.href})` : block.text;
+    case "video":
+      return block.title ? `[Video] ${block.title} (${block.src})` : `[Video] ${block.src}`;
+    case "chart":
+      return [
+        block.kind === "bar" ? "Bar chart" : "Column chart",
+        ...block.labels.map((label, index) => `${label}: ${block.values[index]}`),
+      ].join("\n");
     case "code":
       return block.code.replace(/\s+$/, "");
     case "image":

@@ -87,6 +87,8 @@ Use these on `blocks` and `side`. `step` hides the block until the presenter adv
 - `numbered`: same item shape as bullets
 - `table`: `headers` (list of strings) and `rows` (list of string lists, one cell per header)
 - `link`: `text`, plus either `href` (`https://...`) or `slide` (an existing slide id)
+- `chart`: `kind` (`bar` or `column`), `labels`, and `values` (one finite number per label, at most 12)
+- `video`: `src` (`https://...` only), optional `title`
 - `quote`: `text`, optional `attribution`
 - `code`: `code`, optional `language` (`yaml`, `typescript`, `javascript`, `python`, `json`, `bash`, `css`, `html`, `markdown`)
 - `image`: `src`, optional `alt`. `src` is `https://`, a `data:` URI, or a package path.

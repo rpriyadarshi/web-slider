@@ -8,6 +8,7 @@ import { parseDeck } from "./model/parse";
 import type { Deck } from "./model/schema";
 import { serializeDeck } from "./model/serialize";
 import { normalizeSession, sessionFromDeck, type DeckSession } from "./model/session";
+import { importPptx } from "./import/pptx";
 import { bindPackageAssets, deckWithAssetUrls, packageAssetRefs, readDeckPackage } from "./package/deckPackage";
 import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
 
@@ -156,6 +157,17 @@ export function App() {
 
   function openFile(file: File) {
     const name = file.name.toLowerCase();
+    if (name.endsWith(".pptx")) {
+      void file
+        .arrayBuffer()
+        .then((buffer) => importPptx(buffer, file.name))
+        .then((yaml) => openPrepared(yaml, new Map()))
+        .catch((caught: unknown) => {
+          setError(messageOf(caught));
+          setCanReturn(deckRef.current !== null);
+        });
+      return;
+    }
     if (name.endsWith(".zip")) {
       void file.arrayBuffer().then(
         (buffer) => readDeckPackage(buffer).then((pack) => openPrepared(pack.yaml, pack.files)),
@@ -193,7 +205,7 @@ export function App() {
       ref={inputRef}
       className="file-input"
       type="file"
-      accept=".yaml,.yml,.zip,text/yaml,application/yaml,application/zip"
+      accept=".yaml,.yml,.zip,.pptx,text/yaml,application/yaml,application/zip,application/vnd.openxmlformats-officedocument.presentationml.presentation"
       onChange={(event) => {
         const file = event.target.files?.[0];
         event.target.value = "";

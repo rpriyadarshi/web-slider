@@ -22,7 +22,9 @@ export type IconName =
   | "dark"
   | "pin"
   | "restart"
-  | "audience";
+  | "audience"
+  | "laser"
+  | "captions";
 
 export function Icon({ name }: { name: IconName }) {
   return (
@@ -161,6 +163,18 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <rect x="3" y="5" width="18" height="12" rx="1.5" />
       <path d="M8 21h8M12 17v4" />
+    </>
+  ),
+  laser: (
+    <>
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+    </>
+  ),
+  captions: (
+    <>
+      <path d="M5 8h14v9H5z" />
+      <path d="M8 12h3M13 12h3M8 15h8" />
     </>
   ),
 };

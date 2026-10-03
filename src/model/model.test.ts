@@ -53,7 +53,16 @@ slides:
 describe("parseDeck", () => {
   it("parses the bundled sample and round-trips it", () => {
     const deck = parseDeck(sample);
-    expect(deck.slides.map((slide) => slide.layout)).toEqual(["title", "section", "content", "quote", "content", "content", "content"]);
+    expect(deck.slides.map((slide) => slide.layout)).toEqual([
+      "title",
+      "section",
+      "content",
+      "quote",
+      "content",
+      "content",
+      "content",
+      "content",
+    ]);
     expect(deck.footer).toBe("Launch Review");
     expect(deck.slides.at(-1)?.hidden).toBe(true);
     expect(deck.slides.some((slide) => slide.widgets?.some((widget) => widget.type === "scale"))).toBe(true);

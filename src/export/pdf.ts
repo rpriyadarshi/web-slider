@@ -176,6 +176,11 @@ async function drawBlocks(
       cursor.text([block.headers.join("  "), ...block.rows.map((row) => row.join("  "))].join("\n"), body, 12 * scale, colors.text, false, 8);
     } else if (block.type === "link") {
       cursor.text(block.href ? `${block.text}  ${block.href}` : block.text, body, 14 * scale, colors.accent, centered, 8);
+    } else if (block.type === "video") {
+      cursor.text(block.title ? `Video: ${block.title}` : "Video", body, 14 * scale, colors.text, centered, 2);
+      cursor.text(block.src, body, 11 * scale, colors.accent, centered, 8);
+    } else if (block.type === "chart") {
+      drawChart(cursor, block, body, colors, scale);
     } else if (block.type === "quote") {
       cursor.text(`“${block.text}”`, heading, 18 * scale, colors.text, centered, 2);
       if (block.attribution) cursor.text(block.attribution, body, 12 * scale, colors.muted, centered, 8);
@@ -216,6 +221,59 @@ async function drawBlocks(
       if (block.alt) cursor.text(block.alt, body, 11 * scale, colors.muted, centered, 6);
     }
   }
+}
+
+function drawChart(
+  cursor: Cursor,
+  block: Extract<Block, { type: "chart" }>,
+  font: PDFFont,
+  colors: Record<"background" | "surface" | "text" | "muted" | "accent", RGB>,
+  scale: number,
+): void {
+  const height = 110 * scale;
+  if (cursor.y - height < cursor.bottom) {
+    cursor.failed = true;
+    return;
+  }
+  const min = Math.min(0, ...block.values);
+  const max = Math.max(0, ...block.values);
+  const span = max - min || 1;
+  const top = cursor.y;
+  const bottom = cursor.y - height;
+  const zero = bottom + ((0 - min) / span) * height;
+  if (block.kind === "column") {
+    const slot = cursor.width / block.values.length;
+    block.values.forEach((value, index) => {
+      const barHeight = (Math.abs(value) / span) * height;
+      const x = cursor.x + index * slot + slot * 0.18;
+      const y = value >= 0 ? zero : zero - barHeight;
+      cursor.page.drawRectangle({
+        x,
+        y,
+        width: slot * 0.64,
+        height: Math.max(barHeight, 0.5),
+        color: colors.accent,
+      });
+    });
+  } else {
+    const slot = height / block.values.length;
+    const plot = cursor.width * 0.68;
+    const origin = cursor.x + cursor.width - plot + ((0 - min) / span) * plot;
+    block.values.forEach((value, index) => {
+      const barWidth = (Math.abs(value) / span) * plot;
+      const y = top - (index + 1) * slot + slot * 0.2;
+      const x = value >= 0 ? origin : origin - barWidth;
+      cursor.page.drawRectangle({
+        x,
+        y,
+        width: Math.max(barWidth, 0.5),
+        height: slot * 0.6,
+        color: colors.accent,
+      });
+    });
+  }
+  cursor.y = bottom - 4;
+  cursor.text(block.labels.join("   "), font, 10 * scale, colors.muted, false, 6);
 }
 
 class Cursor {

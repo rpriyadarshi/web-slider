@@ -8,6 +8,8 @@ export function Audience({ deckId }: { deckId: string }) {
   const [slideIndex, setSlideIndex] = useState(0);
   const [revealed, setRevealed] = useState(0);
   const [blank, setBlank] = useState<null | "black" | "white">(null);
+  const [laser, setLaser] = useState<{ x: number; y: number } | null>(null);
+  const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,7 +21,17 @@ export function Audience({ deckId }: { deckId: string }) {
         slideIndex?: unknown;
         revealed?: unknown;
         blank?: unknown;
+        laser?: unknown;
+        caption?: unknown;
       };
+      if (data?.type === "web-slider:pointer") {
+        setLaser(readPoint(data.laser));
+        return;
+      }
+      if (data?.type === "web-slider:caption") {
+        setCaption(typeof data.caption === "string" ? data.caption : "");
+        return;
+      }
       if (!data || data.type !== "web-slider:show" || typeof data.yaml !== "string") return;
       try {
         const parsed = parseDeck(data.yaml);
@@ -27,6 +39,8 @@ export function Audience({ deckId }: { deckId: string }) {
         setSlideIndex(typeof data.slideIndex === "number" ? data.slideIndex : 0);
         setRevealed(typeof data.revealed === "number" ? data.revealed : 0);
         setBlank(data.blank === "black" || data.blank === "white" ? data.blank : null);
+        setLaser(readPoint(data.laser));
+        setCaption(typeof data.caption === "string" ? data.caption : "");
         setError(null);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "The audience window could not read the deck.");
@@ -48,9 +62,18 @@ export function Audience({ deckId }: { deckId: string }) {
   return (
     <div className="audience">
       <div className="stage">
-        <SlideView deck={deck} slide={slide} revealed={revealed} />
+        <SlideView deck={deck} slide={slide} revealed={revealed} laser={laser} />
       </div>
       {blank ? <div className="audience-blank" style={{ background: blank }} /> : null}
+      {caption ? <p className="captions audience-captions">{caption}</p> : null}
     </div>
   );
+}
+
+function readPoint(value: unknown): { x: number; y: number } | null {
+  if (!value || typeof value !== "object") return null;
+  const point = value as { x?: unknown; y?: unknown };
+  if (typeof point.x !== "number" || typeof point.y !== "number") return null;
+  if (point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) return null;
+  return { x: point.x, y: point.y };
 }

@@ -6,6 +6,7 @@ import type { Deck } from "../model/schema";
 import { resolveTheme } from "../model/schema";
 import type { DeckSession, WidgetAnswer } from "../model/session";
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
+import { startCaptions } from "../present/captions";
 import { SlideView } from "../slides/SlideView";
 import { BottomBar } from "./BottomBar";
 import { Icon, IconButton } from "./IconButton";
@@ -57,6 +58,16 @@ export function Shell({
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [blank, setBlank] = useState<null | "black" | "white">(null);
+  const [laserOn, setLaserOn] = useState(false);
+  const [captionsOn, setCaptionsOn] = useState(false);
+  const [laserPoint, setLaserPoint] = useState<{ x: number; y: number } | null>(null);
+  const [caption, setCaption] = useState("");
+  const [captionError, setCaptionError] = useState<string | null>(null);
+  const laser = laserOn ? laserPoint : null;
+  const laserRef = useRef(laser);
+  const captionRef = useRef(caption);
+  laserRef.current = laser;
+  captionRef.current = caption;
   const digits = useRef("");
   const { elapsed, restart } = useElapsed();
   const clock = useClock();
@@ -112,6 +123,8 @@ export function Shell({
         slideIndex: session.slideIndex,
         revealed: session.revealed,
         blank,
+        laser: laserRef.current,
+        caption: captionRef.current,
       });
     };
     send();
@@ -125,6 +138,23 @@ export function Shell({
       channel.close();
     };
   }, [blank, deck.id, embed, session.revealed, session.slideIndex, sourceYaml]);
+
+  useEffect(() => {
+    if (embed) return;
+    const channel = new BroadcastChannel(`web-slider:${deck.id}`);
+    channel.postMessage({ type: "web-slider:pointer", laser });
+    channel.postMessage({ type: "web-slider:caption", caption });
+    return () => channel.close();
+  }, [caption, deck.id, embed, laser]);
+
+  useEffect(() => {
+    if (!captionsOn) return;
+    return startCaptions(setCaption, (message) => {
+      setCaptionsOn(false);
+      setCaption("");
+      setCaptionError(message);
+    });
+  }, [captionsOn]);
 
   useEffect(() => {
     if (!slide.autoAdvance || blank) return;
@@ -153,7 +183,17 @@ export function Shell({
         return;
       }
       if (isTypingTarget(event.target)) return;
-      if (blank && event.key !== "b" && event.key !== "B" && event.key !== "w" && event.key !== "W") {
+      if (
+        blank &&
+        event.key !== "b" &&
+        event.key !== "B" &&
+        event.key !== "w" &&
+        event.key !== "W" &&
+        event.key !== "l" &&
+        event.key !== "L" &&
+        event.key !== "c" &&
+        event.key !== "C"
+      ) {
         setBlank(null);
         event.preventDefault();
         return;
@@ -165,6 +205,20 @@ export function Shell({
       }
       if (event.key === "w" || event.key === "W") {
         setBlank("white");
+        event.preventDefault();
+        return;
+      }
+      if (!embed && (event.key === "l" || event.key === "L")) {
+        setLaserOn((on) => !on);
+        event.preventDefault();
+        return;
+      }
+      if (!embed && (event.key === "c" || event.key === "C")) {
+        setCaptionError(null);
+        setCaptionsOn((on) => {
+          if (on) setCaption("");
+          return !on;
+        });
         event.preventDefault();
         return;
       }
@@ -205,7 +259,7 @@ export function Shell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [blank, deck, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, themeOpen]);
+  }, [blank, deck, embed, exportOpen, onSession, overview, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, themeOpen]);
 
   function jump(index: number) {
     onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
@@ -300,6 +354,22 @@ export function Shell({
               Audience is {blank}
             </p>
           ) : null}
+          <IconButton label="Laser pointer" pressed={laserOn} onClick={() => setLaserOn((on) => !on)}>
+            <Icon name="laser" />
+          </IconButton>
+          <IconButton
+            label="Captions"
+            pressed={captionsOn}
+            onClick={() => {
+              setCaptionError(null);
+              setCaptionsOn((on) => {
+                if (on) setCaption("");
+                return !on;
+              });
+            }}
+          >
+            <Icon name="captions" />
+          </IconButton>
           <IconButton
             label="Audience window"
             onClick={() => {
@@ -549,6 +619,9 @@ export function Shell({
             const index = deck.slides.findIndex((item) => item.id === slideId);
             if (index >= 0) jump(index);
           }}
+          laser={laser}
+          caption={caption}
+          onLaserMove={laserOn ? setLaserPoint : undefined}
         />
       </main>
 
@@ -593,6 +666,11 @@ export function Shell({
       {persistError ? (
         <p className="banner" role="alert">
           {persistError}
+        </p>
+      ) : null}
+      {captionError ? (
+        <p className="banner" role="alert">
+          {captionError}
         </p>
       ) : null}
       {exportError ? (

@@ -95,6 +95,15 @@ function BlockView({
   }
   if (block.type === "callout") return <aside className="block callout">{block.text}</aside>;
   if (block.type === "divider") return <hr className="block divider" />;
+  if (block.type === "video") {
+    return (
+      <figure className="block figure">
+        <video controls src={block.src} title={block.title} />
+        {block.title ? <figcaption>{block.title}</figcaption> : null}
+      </figure>
+    );
+  }
+  if (block.type === "chart") return <ChartBlock kind={block.kind} labels={block.labels} values={block.values} />;
   if (block.type === "image") {
     return (
       <figure className="block figure">
@@ -104,6 +113,53 @@ function BlockView({
     );
   }
   return <CodeBlock code={block.code} language={block.language} dark={dark} />;
+}
+
+function ChartBlock({ kind, labels, values }: { kind: "bar" | "column"; labels: string[]; values: number[] }) {
+  const min = Math.min(0, ...values);
+  const max = Math.max(0, ...values);
+  const span = max - min || 1;
+  const width = 320;
+  const height = 180;
+  if (kind === "column") {
+    const slot = (width - 24) / values.length;
+    const plotTop = 12;
+    const plotHeight = 128;
+    const zero = plotTop + ((max - 0) / span) * plotHeight;
+    return (
+      <svg className="block chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Column chart">
+        {values.map((value, index) => {
+          const barHeight = (Math.abs(value) / span) * plotHeight;
+          const x = 12 + index * slot + slot * 0.18;
+          const y = value >= 0 ? zero - barHeight : zero;
+          return <rect key={labels[index]} x={x} y={y} width={slot * 0.64} height={Math.max(barHeight, 0)} />;
+        })}
+        {labels.map((label, index) => (
+          <text key={label} x={12 + index * slot + slot / 2} y={height - 8} textAnchor="middle">
+            {label}
+          </text>
+        ))}
+      </svg>
+    );
+  }
+  const slot = (height - 16) / values.length;
+  const plotWidth = 220;
+  const zero = 88 + ((0 - min) / span) * plotWidth;
+  return (
+    <svg className="block chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Bar chart">
+      {values.map((value, index) => {
+        const barWidth = (Math.abs(value) / span) * plotWidth;
+        const y = 8 + index * slot + slot * 0.2;
+        const x = value >= 0 ? zero : zero - barWidth;
+        return <rect key={labels[index]} x={x} y={y} width={Math.max(barWidth, 0)} height={slot * 0.6} />;
+      })}
+      {labels.map((label, index) => (
+        <text key={label} x={4} y={8 + index * slot + slot * 0.62}>
+          {label}
+        </text>
+      ))}
+    </svg>
+  );
 }
 
 function CodeBlock({ code, language, dark }: { code: string; language?: string; dark: boolean }) {

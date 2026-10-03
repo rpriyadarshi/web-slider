@@ -325,6 +325,7 @@ button.primary {
 }
 
 .slide {
+  position: relative;
   width: min(100cqw, calc(100cqh * 16 / 9));
   height: min(100cqh, calc(100cqw * 9 / 16));
   overflow: auto;
@@ -408,6 +409,51 @@ button.primary {
   padding: 6px 8px;
 }
 
+.chart { width: min(100%, 640px); height: auto; }
+.chart rect { fill: var(--slide-accent); }
+.chart text {
+  fill: var(--slide-muted);
+  font-size: 11px;
+  font-family: var(--slide-body), sans-serif;
+}
+.figure video {
+  width: 100%;
+  max-height: 280px;
+  background: var(--slide-surface);
+}
+
+.laser {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--slide-accent);
+  border: 2px solid var(--slide-text);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.captions {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  background: var(--slide-surface);
+  color: var(--slide-text);
+  font-family: var(--slide-body), sans-serif;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.audience-captions {
+  position: fixed;
+  left: 10%;
+  right: 10%;
+  bottom: 7%;
+  z-index: 40;
+  text-align: center;
+}
+
 .slide-link {
   color: var(--slide-accent);
   background: none;
@@ -465,6 +511,8 @@ button.primary {
 }
 
 .next-preview .slide-copy { animation: none; min-height: 0; }
+.next-preview video { max-height: 36px; }
+.next-preview .chart { max-height: 48px; }
 
 .audience { height: 100dvh; background: #000; }
 .audience .stage { height: 100%; grid-column: auto; grid-row: auto; }

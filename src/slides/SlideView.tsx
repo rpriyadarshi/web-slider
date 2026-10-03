@@ -9,11 +9,17 @@ export function SlideView({
   slide,
   revealed,
   onOpenSlide,
+  laser,
+  caption,
+  onLaserMove,
 }: {
   deck: Deck;
   slide: Slide;
   revealed: number;
   onOpenSlide?: (slideId: string) => void;
+  laser?: { x: number; y: number } | null;
+  caption?: string;
+  onLaserMove?: (point: { x: number; y: number }) => void;
 }) {
   const theme = resolveTheme(deck.theme, slide.theme);
   const quoteCandidate = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
@@ -26,6 +32,18 @@ export function SlideView({
       className={`slide layout-${slide.layout}`}
       data-align={slide.layout === "content" ? theme.align : "center"}
       data-aspect={deck.aspect ?? "16:9"}
+      onPointerMove={
+        onLaserMove
+          ? (event) => {
+              const box = event.currentTarget.getBoundingClientRect();
+              if (box.width === 0 || box.height === 0) return;
+              onLaserMove({
+                x: Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)),
+                y: Math.min(1, Math.max(0, (event.clientY - box.top) / box.height)),
+              });
+            }
+          : undefined
+      }
       style={{
         background: theme.background,
         color: theme.text,
@@ -52,6 +70,8 @@ export function SlideView({
         ) : null}
         <Blocks blocks={blocks} revealed={revealed} dark={dark} onOpenSlide={onOpenSlide} />
       </div>
+      {caption ? <p className="captions">{caption}</p> : null}
+      {laser ? <span className="laser" style={{ left: `${laser.x * 100}%`, top: `${laser.y * 100}%` }} /> : null}
       <footer className="slide-footer">
         <span>{deck.footer ?? ""}</span>
         {deck.showSlideNumber === false ? null : (
