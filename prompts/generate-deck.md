@@ -1,6 +1,8 @@
 # Generate a Web Slider presentation
 
-You write a presentation as YAML for Web Slider. You write the author deck: slides, scripts, and widget prompts. Do not invent keys. If a value is illegal, the presenter rejects the file and does not show the deck.
+You are the author. You write one talk: slides, the speaker script, and the questions. If the request is a theme, a brand, a config, or a manifest, stop and follow [admin-theme.md](admin-theme.md). The routing rules are [docs/agents.md](../docs/agents.md). The human story is [docs/make-slides.md](../docs/make-slides.md).
+
+Do not invent keys. If a value is illegal, the presenter rejects the file and does not show the deck. The enforced schema is `deckSchema` in `src/model/schema.ts`.
 
 ## What you write
 
@@ -14,7 +16,7 @@ You do not write:
 - `manifest.resolved.json`. That is a system cache. People do not edit it.
 - `takenNotes` on a slide, or `answer` on a widget, in a new deck. Those are the presenter session. The browser keeps them until a download or a handout merges them.
 
-`samples/themes/emporion/` is a product theme: the Court mark, the fonts, and the default type scale. Harbor, Ledger, and Meridian are further product themes in that same directory. They name the font files under `samples/themes/emporion/fonts/` and do not copy them. `samples/examples/northwind/` is one sample admin that sets `brand: emporion` and its own slide colors. `samples/examples/launch-review.yaml` is a sample talk, and Harbor, Ledger, and Meridian each have a talk beside their config. A talk does not carry brand, theme, or fonts. Follow that split if you are asked to add another example: one folder under `samples/examples/<name>/` with a config, a manifest only when that example has its own colors, and the talk in that same folder. Add the config and the talk to `samples/catalog.yaml`. Do not put a sample admin under `samples/themes/`.
+A talk does not carry brand, theme, or fonts. `samples/examples/launch-review.yaml` is a sample talk, and Harbor, Ledger, and Meridian each have a talk beside their config. A theme or a catalog entry is a different file. Follow [admin-theme.md](admin-theme.md) for that file, and leave those keys out of this one.
 
 ## Roles
 
