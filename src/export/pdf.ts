@@ -1,12 +1,14 @@
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import { resolveBrand } from "../brand/kit";
+import { isDarkHex } from "../highlight";
 import type { Block, Deck, ResolvedTheme, Slide } from "../model/schema";
-import { resolveTheme } from "../model/schema";
+import { resolveTheme, titleSize } from "../model/schema";
 import type { DeckSession } from "../model/session";
 import { widgetToText } from "../model/text";
 import type { FontFiles } from "../theme/fonts";
 import type { FontName } from "../model/schema";
-import { fitBox, loadRaster } from "./images";
+import { fitBox, loadBrandMark, loadRaster } from "./images";
 
 const MARGIN = 40;
 const SCALES = [1, 0.86, 0.74];
@@ -85,7 +87,7 @@ async function paintSlide(
   const cursor = new Cursor(page, MARGIN, pageHeight - MARGIN, pageWidth - MARGIN * 2, 36);
   const centered = slide.layout !== "content" || theme.align === "center";
 
-  cursor.text(slide.title, heading, 32 * scale * theme.headingScale, colors.text, centered, 6);
+  cursor.text(slide.title, heading, titleSize(theme, slide.layout) * scale, colors.text, centered, 6);
   page.drawRectangle({
     x: centered ? pageWidth / 2 - 28 : MARGIN,
     y: cursor.y - 2,
@@ -94,12 +96,12 @@ async function paintSlide(
     color: colors.accent,
   });
   cursor.y -= 14 * scale;
-  if (slide.subtitle) cursor.text(slide.subtitle, body, 16 * scale, colors.muted, centered, 8);
-  if (slide.layout === "title" && deck.author) cursor.text(deck.author, body, 13 * scale, colors.muted, true, 8);
+  if (slide.subtitle) cursor.text(slide.subtitle, body, theme.type.sub * scale, colors.muted, centered, 8);
+  if (slide.layout === "title" && deck.author) cursor.text(deck.author, body, theme.type.author * scale, colors.muted, true, 8);
 
   const quote = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
   if (quote && quote.type === "quote") {
-    cursor.text(`“${quote.text}”`, heading, 26 * scale * theme.headingScale, colors.text, true, 4);
+    cursor.text(`“${quote.text}”`, heading, titleSize(theme, "quote") * scale, colors.text, true, 4);
     if (quote.attribution) cursor.text(quote.attribution, body, 13 * scale, colors.muted, true, 10);
   }
 
@@ -128,22 +130,41 @@ async function paintSlide(
   if (taken) below.text(`Taken notes: ${taken}`, body, 11 * scale, colors.muted, false, 3);
   if (below.failed) return false;
 
+  let footerX = MARGIN;
+  const brand = resolveBrand(deck.brand);
+  if (brand) {
+    const mark = await loadBrandMark(isDarkHex(theme.background) ? brand.markDark : brand.markLight);
+    if (mark) {
+      const image = mark.mime === "image/png" ? await pdf.embedPng(mark.bytes) : await pdf.embedJpg(mark.bytes);
+      const markSize = theme.type.mark * scale;
+      page.drawImage(image, { x: footerX, y: 8, width: markSize, height: markSize });
+      footerX += markSize + 4;
+    }
+    page.drawText(brand.wordmark, { x: footerX, y: 12, size: theme.type.wordmark, font: body, color: colors.text });
+    footerX += body.widthOfTextAtSize(brand.wordmark, theme.type.wordmark);
+    if (brand.tail) {
+      const tail = ` ${brand.tail}`;
+      page.drawText(tail, { x: footerX, y: 12, size: theme.type.wordmark, font: body, color: pdfColor(brand.highlight) });
+      footerX += body.widthOfTextAtSize(tail, theme.type.wordmark);
+    }
+    footerX += 14;
+  }
   if (deck.footer) {
     page.drawText(deck.footer, {
-      x: MARGIN,
-      y: 16,
-      size: 11,
+      x: footerX,
+      y: 12,
+      size: theme.type.footer,
       font: body,
       color: colors.muted,
     });
   }
   if (deck.showSlideNumber !== false) {
     const label = `${index + 1} / ${total}`;
-    const labelWidth = body.widthOfTextAtSize(label, 11);
+    const labelWidth = body.widthOfTextAtSize(label, theme.type.footer);
     page.drawText(label, {
       x: pageWidth - MARGIN - labelWidth,
       y: 16,
-      size: 11,
+      size: theme.type.footer,
       font: body,
       color: colors.muted,
     });
@@ -167,13 +188,13 @@ async function drawBlocks(
   for (const block of blocks) {
     if (cursor.failed) return;
     if (block.type === "paragraph") {
-      cursor.text(block.text, body, 15 * scale, colors.text, centered, 8);
+      cursor.text(block.text, body, theme.type.body * scale, colors.text, centered, 8);
     } else if (block.type === "bullets" || block.type === "numbered") {
       const marker = (item: { text: string }, itemIndex: number) =>
         block.type === "numbered" ? `${itemIndex + 1}.  ${item.text}` : `•  ${item.text}`;
-      cursor.text(block.items.map(marker).join("\n"), body, 15 * scale, colors.text, centered, 8);
+      cursor.text(block.items.map(marker).join("\n"), body, theme.type.body * scale, colors.text, centered, 8);
     } else if (block.type === "table") {
-      cursor.text([block.headers.join("  "), ...block.rows.map((row) => row.join("  "))].join("\n"), body, 12 * scale, colors.text, false, 8);
+      cursor.text([block.headers.join("  "), ...block.rows.map((row) => row.join("  "))].join("\n"), body, theme.type.table * scale, colors.text, false, 8);
     } else if (block.type === "link") {
       cursor.text(block.href ? `${block.text}  ${block.href}` : block.text, body, 14 * scale, colors.accent, centered, 8);
     } else if (block.type === "video") {

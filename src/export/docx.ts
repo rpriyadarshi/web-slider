@@ -12,11 +12,13 @@ import {
   TextRun,
   WidthType,
 } from "docx";
+import { resolveBrand } from "../brand/kit";
+import { isDarkHex } from "../highlight";
 import type { Block, Deck, ResolvedTheme, Slide } from "../model/schema";
-import { resolveTheme } from "../model/schema";
+import { resolveTheme, titleSize } from "../model/schema";
 import type { DeckSession } from "../model/session";
 import { blockToText, widgetToText } from "../model/text";
-import { fitBox, loadRaster } from "./images";
+import { fitBox, loadBrandMark, loadRaster } from "./images";
 
 const PAGE_WIDTH = 12240;
 const PAGE_HEIGHT = 15840;
@@ -48,10 +50,32 @@ async function buildDocument(deck: Deck, session: DeckSession, handout: boolean)
 async function sectionForSlide(deck: Deck, slide: Slide, session: DeckSession, handout: boolean) {
   const theme = resolveTheme(deck.theme, slide.theme);
   const paragraphs: Paragraph[] = [
-    paragraph(slide.title, theme.fontHeading, 36, theme.text, true),
+    paragraph(slide.title, theme.fontHeading, titleSize(theme, slide.layout), theme.text, true),
   ];
   if (slide.subtitle) paragraphs.push(paragraph(slide.subtitle, theme.fontBody, 18, theme.muted, false));
   if (slide.layout === "title" && deck.author) paragraphs.push(paragraph(deck.author, theme.fontBody, 14, theme.muted, false));
+  const brand = resolveBrand(deck.brand);
+  if (brand) {
+    const mark = await loadBrandMark(isDarkHex(theme.background) ? brand.markDark : brand.markLight);
+    paragraphs.push(
+      new Paragraph({
+        spacing: { after: 120 },
+        children: [
+          ...(mark
+            ? [
+                new ImageRun({
+                  type: mark.mime === "image/png" ? "png" : "jpg",
+                  data: mark.bytes,
+                  transformation: { width: theme.type.mark, height: theme.type.mark },
+                }),
+              ]
+            : []),
+          run(mark ? ` ${brand.wordmark}` : brand.wordmark, theme.fontBody, theme.type.wordmark, theme.text, true),
+          ...(brand.tail ? [run(` ${brand.tail}`, theme.fontBody, theme.type.wordmark, brand.highlight, true)] : []),
+        ],
+      }),
+    );
+  }
 
   paragraphs.push(...(await blockParagraphs(slide.blocks ?? [], theme)));
   if (slide.side?.length) {

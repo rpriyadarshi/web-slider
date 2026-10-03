@@ -1,3 +1,4 @@
+import { BrandLockup, resolveBrand } from "../brand/kit";
 import type { Deck, Slide } from "../model/schema";
 import { resolveTheme } from "../model/schema";
 import { isRevealed, visibleIndexes, visibleNumber } from "../model/steps";
@@ -22,6 +23,7 @@ export function SlideView({
   onLaserMove?: (point: { x: number; y: number }) => void;
 }) {
   const theme = resolveTheme(deck.theme, slide.theme);
+  const brand = resolveBrand(deck.brand);
   const quoteCandidate = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
   const quote = quoteCandidate && isRevealed(quoteCandidate.step, revealed) ? quoteCandidate : undefined;
   const blocks = (slide.blocks ?? []).filter((block) => block !== quote);
@@ -56,6 +58,18 @@ export function SlideView({
         ["--slide-mono" as string]: `"${theme.fontMono}"`,
         ["--slide-radius" as string]: `${theme.radius}px`,
         ["--heading-scale" as string]: String(theme.headingScale),
+        ["--type-title" as string]: `${theme.type.title}px`,
+        ["--type-section" as string]: `${theme.type.section}px`,
+        ["--type-slide" as string]: `${theme.type.slide}px`,
+        ["--type-body" as string]: `${theme.type.body}px`,
+        ["--type-sub" as string]: `${theme.type.sub}px`,
+        ["--type-author" as string]: `${theme.type.author}px`,
+        ["--type-table" as string]: `${theme.type.table}px`,
+        ["--type-footer" as string]: `${theme.type.footer}px`,
+        ["--type-wordmark" as string]: `${theme.type.wordmark}px`,
+        ["--type-mark" as string]: `${theme.type.mark}px`,
+        ["--type-caption" as string]: `${theme.type.caption}px`,
+        ...(brand ? { ["--highlight" as string]: brand.highlight } : {}),
       }}
     >
       <div className="slide-copy" key={slide.id}>
@@ -73,7 +87,10 @@ export function SlideView({
       {caption ? <p className="captions">{caption}</p> : null}
       {laser ? <span className="laser" style={{ left: `${laser.x * 100}%`, top: `${laser.y * 100}%` }} /> : null}
       <footer className="slide-footer">
-        <span>{deck.footer ?? ""}</span>
+        <span className="slide-brand">
+          {brand ? <BrandLockup brand={brand} mode={dark ? "dark" : "light"} /> : null}
+          {deck.footer ? <span>{deck.footer}</span> : null}
+        </span>
         {deck.showSlideNumber === false ? null : (
           <span>
             {visibleNumber(deck, deck.slides.indexOf(slide)) ?? ""} / {visibleIndexes(deck).length}

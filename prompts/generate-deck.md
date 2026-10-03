@@ -42,8 +42,20 @@ theme:
   fontBody: Inter
   fontMono: JetBrains Mono
   align: left             # left or center
-  headingScale: 1         # up to 3
+  headingScale: 1         # up to 3, multiplies title, section, and slide
   radius: 16              # up to 48
+  type:                   # sizes in px. Omit a key to keep the default.
+    title: 58
+    section: 52
+    slide: 36
+    body: 22
+    sub: 20
+    author: 16
+    table: 18
+    footer: 14
+    wordmark: 12          # brand wordmark on the slide
+    mark: 22              # brand mark, width and height
+    caption: 18
   chrome: dark            # light or dark presenter shell
   chromeLight:
     ground: "#FAFAFA"

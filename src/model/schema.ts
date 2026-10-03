@@ -43,6 +43,22 @@ export const themeSchema = colorsSchema
     align: z.enum(["left", "center"]).optional(),
     headingScale: z.number().positive().max(3).optional(),
     radius: z.number().nonnegative().max(48).optional(),
+    type: z
+      .object({
+        title: z.number().positive().max(200).optional(),
+        section: z.number().positive().max(200).optional(),
+        slide: z.number().positive().max(160).optional(),
+        body: z.number().positive().max(96).optional(),
+        sub: z.number().positive().max(96).optional(),
+        author: z.number().positive().max(64).optional(),
+        table: z.number().positive().max(64).optional(),
+        footer: z.number().positive().max(64).optional(),
+        wordmark: z.number().positive().max(64).optional(),
+        mark: z.number().positive().max(128).optional(),
+        caption: z.number().positive().max(64).optional(),
+      })
+      .strict()
+      .optional(),
     highlight: hexColor.optional(),
     chrome: z.enum(["light", "dark"]).optional(),
     chromeLight: chromeColorsSchema.optional(),
@@ -377,6 +393,20 @@ export type Slide = z.infer<typeof slideSchema>;
 export type BrandInput = z.infer<typeof brandSchema>;
 export type Deck = z.infer<typeof deckSchema>;
 
+export const DEFAULT_TYPE = {
+  title: 58,
+  section: 52,
+  slide: 36,
+  body: 22,
+  sub: 20,
+  author: 16,
+  table: 18,
+  footer: 14,
+  wordmark: 12,
+  mark: 22,
+  caption: 18,
+} as const;
+
 export const DEFAULT_THEME = {
   background: "#111418",
   surface: "#1c2430",
@@ -389,6 +419,7 @@ export const DEFAULT_THEME = {
   align: "left",
   headingScale: 1,
   radius: 12,
+  type: DEFAULT_TYPE,
 } as const satisfies {
   background: string;
   surface: string;
@@ -401,6 +432,7 @@ export const DEFAULT_THEME = {
   align: "left" | "center";
   headingScale: number;
   radius: number;
+  type: { [Key in keyof typeof DEFAULT_TYPE]: number };
 };
 
 export type ResolvedTheme = {
@@ -415,7 +447,13 @@ export type ResolvedTheme = {
   align: "left" | "center";
   headingScale: number;
   radius: number;
+  type: { [Key in keyof typeof DEFAULT_TYPE]: number };
 };
+
+export function titleSize(theme: ResolvedTheme, layout: "title" | "section" | "content" | "quote"): number {
+  const base = layout === "title" ? theme.type.title : layout === "section" ? theme.type.section : theme.type.slide;
+  return base * theme.headingScale;
+}
 
 function definedFields<T extends Record<string, unknown>>(value: T | undefined): Partial<T> {
   if (!value) return {};
@@ -427,5 +465,6 @@ export function resolveTheme(theme: ThemeInput | undefined, slideColors?: Colors
     ...DEFAULT_THEME,
     ...definedFields(theme),
     ...definedFields(slideColors),
+    type: { ...DEFAULT_TYPE, ...definedFields(theme?.type) },
   };
 }

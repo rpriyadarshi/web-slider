@@ -5,6 +5,37 @@ export type RasterImage = {
   height: number;
 };
 
+export async function loadBrandMark(src: string): Promise<RasterImage | null> {
+  try {
+    return await loadRaster(src);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("Only PNG and JPEG")) throw error;
+  }
+  if (typeof document === "undefined") return null;
+  const bytes = await drawSvgToPng(src);
+  return { bytes, mime: "image/png", width: 128, height: 128 };
+}
+
+async function drawSvgToPng(src: string): Promise<Uint8Array> {
+  const image = new Image();
+  image.src = src;
+  try {
+    await image.decode();
+  } catch {
+    throw new Error("The brand mark could not be drawn.");
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("The brand mark could not be drawn.");
+  context.drawImage(image, 0, 0, 128, 128);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((value) => resolve(value), "image/png"));
+  if (!blob) throw new Error("The brand mark could not be drawn.");
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
 export async function loadRaster(src: string): Promise<RasterImage> {
   const { bytes, mimeHint } = await readImageBytes(src);
   const mime = sniffMime(bytes) ?? mimeFromHint(mimeHint);

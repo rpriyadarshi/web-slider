@@ -23,6 +23,18 @@ theme:
   align: left
   headingScale: 1
   radius: 16
+  type:
+    title: 58
+    section: 52
+    slide: 36
+    body: 22
+    sub: 20
+    author: 16
+    table: 18
+    footer: 14
+    wordmark: 12
+    mark: 22
+    caption: 18
   highlight: "#E4B84A"
   chrome: dark
   chromeLight:

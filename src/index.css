@@ -359,9 +359,9 @@ button.primary {
   margin: 0 0 0.3em;
 }
 
-.layout-title .slide-title { font-size: calc(58px * var(--heading-scale, 1)); }
-.layout-section .slide-title { font-size: calc(52px * var(--heading-scale, 1)); }
-.layout-content .slide-title, .layout-quote .slide-title { font-size: calc(36px * var(--heading-scale, 1)); }
+.layout-title .slide-title { font-size: calc(var(--type-title) * var(--heading-scale, 1)); }
+.layout-section .slide-title { font-size: calc(var(--type-section) * var(--heading-scale, 1)); }
+.layout-content .slide-title, .layout-quote .slide-title { font-size: calc(var(--type-slide) * var(--heading-scale, 1)); }
 
 .slide[data-align="center"] .slide-copy { text-align: center; }
 .slide[data-align="center"] .bullets { display: inline-block; text-align: left; }
@@ -370,10 +370,10 @@ button.primary {
   margin: 0 0 0.6em;
   color: var(--slide-muted);
   font-family: var(--slide-body), sans-serif;
-  font-size: 20px;
+  font-size: var(--type-sub);
 }
 
-.slide-author { font-size: 16px; }
+.slide-author { font-size: var(--type-author); }
 
 .layout-section .slide-title, .layout-title .slide-title, .layout-quote .slide-title {
   position: relative;
@@ -388,7 +388,7 @@ button.primary {
 .blocks { display: grid; gap: 14px; }
 .paragraph, .bullets, .quote p, .callout, .pull-quote p {
   font-family: var(--slide-body), sans-serif;
-  font-size: 22px;
+  font-size: var(--type-body);
   line-height: 1.35;
   margin: 0;
 }
@@ -400,7 +400,7 @@ button.primary {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--slide-body), sans-serif;
-  font-size: 18px;
+  font-size: var(--type-table);
 }
 
 .data-table th, .data-table td {
@@ -413,7 +413,7 @@ button.primary {
 .chart rect { fill: var(--slide-accent); }
 .chart text {
   fill: var(--slide-muted);
-  font-size: 11px;
+  font-size: var(--type-footer);
   font-family: var(--slide-body), sans-serif;
 }
 .figure video {
@@ -441,7 +441,7 @@ button.primary {
   background: var(--slide-surface);
   color: var(--slide-text);
   font-family: var(--slide-body), sans-serif;
-  font-size: 18px;
+  font-size: var(--type-caption);
   line-height: 1.35;
 }
 
@@ -460,7 +460,7 @@ button.primary {
   border: none;
   padding: 0;
   font: inherit;
-  font-size: 22px;
+  font-size: var(--type-body);
   text-decoration: underline;
   width: auto;
 }
@@ -469,11 +469,26 @@ button.primary {
   margin-top: auto;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 16px;
   padding-top: 16px;
   font-family: var(--slide-body), sans-serif;
-  font-size: 14px;
+  font-size: var(--type-footer);
   color: var(--slide-muted);
+}
+
+.slide-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.slide-footer .lockup img { width: var(--type-mark); height: var(--type-mark); }
+.slide-footer .wordmark {
+  font-family: var(--slide-body), sans-serif;
+  font-size: var(--type-wordmark);
+  color: var(--slide-text);
 }
 
 .hidden-slide { opacity: 0.45; }
@@ -528,7 +543,7 @@ button.primary {
 .quote footer, .pull-quote footer, .figure figcaption {
   margin-top: 8px;
   color: var(--slide-muted);
-  font-size: 14px;
+  font-size: var(--type-footer);
   font-family: var(--slide-body), sans-serif;
 }
 
@@ -541,7 +556,7 @@ button.primary {
 
 .pull-quote p {
   font-family: var(--slide-heading), serif;
-  font-size: calc(36px * var(--heading-scale, 1));
+  font-size: calc(var(--type-slide) * var(--heading-scale, 1));
   line-height: 1.2;
 }
 

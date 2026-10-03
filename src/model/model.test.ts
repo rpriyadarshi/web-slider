@@ -68,6 +68,10 @@ describe("parseDeck", () => {
     expect(deck.slides.some((slide) => slide.widgets?.some((widget) => widget.type === "scale"))).toBe(true);
     expect(deck.slides.some((slide) => slide.side?.some((block) => block.type === "code"))).toBe(true);
     expect(deck.brand).toMatchObject({ wordmark: "EMPORION", tail: "AI", accent: "#3DB892" });
+    expect(deck.theme?.type?.mark).toBe(22);
+    expect(deck.theme?.type?.wordmark).toBe(12);
+    expect(resolveTheme(deck.theme).type.title).toBe(58);
+    expect(resolveTheme({ type: { mark: 40 } }).type).toMatchObject({ mark: 40, wordmark: 12, title: 58 });
     expect(deck.theme?.chrome).toBe("dark");
     expect(deck.theme?.chromeDark?.ground).toBe("#121212");
     const again = parseDeck(serializeDeck(deck, sessionFromDeck(deck)));

@@ -47,9 +47,11 @@ slides:
         options: [Yes, No]
 ```
 
-`brand: emporion` uses the built-in Court mark. A custom brand is a mapping with `name`, `wordmark`, optional `tail`, `accent`, `highlight`, and `mark` (`https`, a `data` URI, or a path inside a zip package). `theme.chrome` is `light` or `dark`. `chromeLight` and `chromeDark` set the shell colors `ground`, `paper`, `text`, `muted`, and `line`. Built-in fonts are Inter, Source Serif 4, and JetBrains Mono. Any other family needs a `fonts` entry whose files are data URIs or paths in the package.
+`brand: emporion` uses the built-in Court mark. A custom brand is a mapping with `name`, `wordmark`, optional `tail`, `accent`, `highlight`, and `mark` (`https`, a `data` URI, or a path inside a zip package). The lockup is drawn on every slide, so the audience window and the exports show it, and it also sits in the presenter toolbar. `theme.chrome` is `light` or `dark`. `chromeLight` and `chromeDark` set the shell colors `ground`, `paper`, `text`, `muted`, and `line`. Built-in fonts are Inter, Source Serif 4, and JetBrains Mono. Any other family needs a `fonts` entry whose files are data URIs or paths in the package.
 
 A `.zip` package has `deck.yaml` at the root and the files the deck names. Open the zip in the presenter, or download one from the package icon in Export. Opening a `.pptx` file imports each slide's title, bullets, and speaker notes. Pictures, charts, and animations in that file are left out.
+
+`theme.type` sets the slide type in px: `title`, `section`, `slide`, `body`, `sub`, `author`, `table`, `footer`, `wordmark`, `mark`, and `caption`. Omit a key and the built-in default is used. `headingScale` multiplies `title`, `section`, and `slide`. The same sizes are used on the slide and in the exports.
 
 `footer` is drawn on every slide. `showSlideNumber` defaults to on. `aspect` is `16:9` or `4:3`. A slide with `hidden: true` stays in the outline and overview, dimmed, and is skipped by the arrow keys and by every export. `autoAdvance` is a number of seconds; the slide moves on only after its last build, and not while the audience screen is blank.
 

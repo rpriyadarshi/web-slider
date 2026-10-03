@@ -1,10 +1,12 @@
 import PptxGenJS from "pptxgenjs";
+import { resolveBrand } from "../brand/kit";
+import { isDarkHex } from "../highlight";
 import type { Deck, Slide } from "../model/schema";
-import { resolveTheme } from "../model/schema";
+import { resolveTheme, titleSize } from "../model/schema";
 import type { DeckSession } from "../model/session";
 import { blocksToText, imageBlocks, widgetToText } from "../model/text";
 import { bytesToBlob } from "./download";
-import { fitBox, loadRaster } from "./images";
+import { fitBox, loadBrandMark, loadRaster } from "./images";
 
 const WIDTH = 13.333;
 const HEIGHT = 7.5;
@@ -46,7 +48,7 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
     w: WIDTH - 1,
     h: 0.72,
     fontFace: theme.fontHeading,
-    fontSize: Math.round(30 * theme.headingScale),
+    fontSize: Math.round(titleSize(theme, slide.layout)),
     color: plain(theme.text),
     bold: true,
     margin: 0,
@@ -61,7 +63,7 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
       w: WIDTH - 1,
       h: 0.36,
       fontFace: theme.fontBody,
-      fontSize: 16,
+      fontSize: Math.round(theme.type.sub),
       color: plain(theme.muted),
       margin: 0,
     });
@@ -78,7 +80,7 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
       w: 7.5,
       h: textHeight,
       fontFace: theme.fontBody,
-      fontSize: 16,
+      fontSize: Math.round(theme.type.body),
       color: plain(theme.text),
       valign: "top",
       fit: "shrink",
@@ -103,7 +105,7 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
       w: WIDTH - 1,
       h: textHeight,
       fontFace: theme.fontBody,
-      fontSize: 18,
+      fontSize: Math.round(theme.type.body),
       color: plain(theme.text),
       align: slide.layout === "content" ? theme.align : "center",
       valign: "top",
@@ -150,6 +152,33 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
       fit: "shrink",
       margin: 0,
     });
+  }
+
+  const brand = resolveBrand(deck.brand);
+  if (brand) {
+    const mark = await loadBrandMark(isDarkHex(theme.background) ? brand.markDark : brand.markLight);
+    let x = 0.4;
+    if (mark) {
+      const markInches = theme.type.mark / 96;
+      page.addImage({ data: toPptxData(mark.bytes, mark.mime), x, y: HEIGHT - markInches - 0.08, w: markInches, h: markInches });
+      x += markInches + 0.08;
+    }
+    page.addText(
+      [
+        { text: brand.wordmark, options: { color: plain(theme.text) } },
+        ...(brand.tail ? [{ text: ` ${brand.tail}`, options: { color: plain(brand.highlight) } }] : []),
+      ],
+      {
+        x,
+        y: HEIGHT - 0.4,
+        w: 4,
+        h: 0.28,
+        fontFace: theme.fontBody,
+        fontSize: Math.round(theme.type.wordmark),
+        margin: 0,
+        valign: "middle",
+      },
+    );
   }
 
   const notes = [slide.notes, session.notes[slide.id] ? `Taken notes:\n${session.notes[slide.id]}` : ""]
