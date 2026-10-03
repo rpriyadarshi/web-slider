@@ -1,0 +1,35 @@
+# Package name ledger. A manifest value with no slash loads samples/themes/ledger/manifest.yaml.
+# Built-in faces are named here and stored once under samples/themes/emporion/fonts/.
+brand:
+  name: Ledger
+  wordmark: LEDGER
+  accent: "#1E4D3A"
+  highlight: "#8E3B32"
+  mark: mark.svg
+  markDark: mark-on-dark.svg
+fonts:
+  Inter:
+    regular: samples/themes/emporion/fonts/Inter-Regular.ttf
+    semibold: samples/themes/emporion/fonts/Inter-SemiBold.ttf
+  Source Serif 4:
+    regular: samples/themes/emporion/fonts/SourceSerif4-Regular.ttf
+    semibold: samples/themes/emporion/fonts/SourceSerif4-Semibold.ttf
+  JetBrains Mono:
+    regular: samples/themes/emporion/fonts/JetBrainsMono-Regular.ttf
+    semibold: samples/themes/emporion/fonts/JetBrainsMono-Bold.ttf
+aspect: "16:9"
+showSlideNumber: true
+theme:
+  background: "#F6F3EC"
+  surface: "#FFFCF7"
+  text: "#1C1915"
+  muted: "#6E675F"
+  accent: "#1E4D3A"
+  fontHeading: Source Serif 4
+  fontBody: Inter
+  fontMono: JetBrains Mono
+  align: left
+  headingScale: 1
+  radius: 0
+  highlight: "#8E3B32"
+  chrome: light

@@ -1,0 +1,99 @@
+id: incident-review
+title: Incident Review
+author: Meridian
+footer: Incident Review
+slides:
+  - id: title
+    layout: title
+    title: Review the outage
+    subtitle: What failed, who owns the fix, and when it is done
+    notes: Open with the customer impact, not the timeline.
+    side:
+      - type: callout
+        text: Forty minutes. Checkout was down. One owner.
+  - id: agenda
+    layout: section
+    title: Three questions
+    subtitle: Impact, cause, and the fix
+    notes: Read the three questions, then go to the impact.
+  - id: impact
+    layout: content
+    title: What the customer saw
+    notes: Stay on the count. Do not open the log until someone asks.
+    blocks:
+      - type: paragraph
+        text: Checkout failed for the customers in the chart.
+      - type: bullets
+        items:
+          - text: Payments returned an error from 14:02
+            step: 1
+          - text: The status page was updated at 14:11
+            step: 2
+          - text: Checkout recovered at 14:41
+            step: 3
+      - type: chart
+        kind: column
+        labels: [Errors, Recovered]
+        values: [640, 640]
+    widgets:
+      - id: severity
+        type: select
+        prompt: Severity
+        options:
+          - Sev 1
+          - Sev 2
+          - Sev 3
+  - id: cause
+    layout: content
+    title: The check that failed
+    notes: Read the command, then name the owner of the retry.
+    blocks:
+      - type: paragraph
+        text: The deploy skipped the payment health check.
+      - type: code
+        language: bash
+        code: |
+          curl --fail https://pay.example/health
+          echo $?
+      - type: callout
+        text: A green deploy with a skipped check is still a failed deploy.
+    side:
+      - type: link
+        text: Back to the impact
+        slide: impact
+  - id: fix
+    layout: content
+    title: The fix
+    notes: Do not leave without a date and a name.
+    theme:
+      background: "#241C18"
+      accent: "#E07A3D"
+    blocks:
+      - type: numbered
+        items:
+          - text: Restore the health check
+          - text: Name the owner
+          - text: Set the date
+      - type: video
+        title: Checkout walkthrough
+        src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4
+    widgets:
+      - id: owner
+        type: text
+        prompt: Owner of the fix
+  - id: principle
+    layout: quote
+    title: Principle
+    notes: Pause after the line.
+    blocks:
+      - type: quote
+        text: A skipped check is a decision to ship blind.
+        attribution: Incident chair
+  - id: appendix
+    hidden: true
+    layout: content
+    title: Appendix
+    notes: Kept out of the review. Open it from the outline for the raw log.
+    blocks:
+      - type: paragraph
+        text: The raw log stays out of the review and out of exports.

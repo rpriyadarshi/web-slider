@@ -14,7 +14,7 @@ You do not write:
 - `manifest.resolved.json`. That is a system cache. People do not edit it.
 - `takenNotes` on a slide, or `answer` on a widget, in a new deck. Those are the presenter session. The browser keeps them until a download or a handout merges them.
 
-`samples/themes/emporion/` is the built-in product theme: the Court mark, the fonts, and the default type scale. `samples/examples/northwind/` is one sample admin that sets `brand: emporion` and its own slide colors. `samples/examples/launch-review.yaml` is a sample talk. It does not carry brand, theme, or fonts. Follow that split if you are asked to add another example: one folder under `samples/examples/<name>/` with a config, a manifest only when that example has its own colors, and the talk in that same folder. Do not put a sample admin under `samples/themes/`.
+`samples/themes/emporion/` is a product theme: the Court mark, the fonts, and the default type scale. Harbor, Ledger, and Meridian are further product themes in that same directory. They name the font files under `samples/themes/emporion/fonts/` and do not copy them. `samples/examples/northwind/` is one sample admin that sets `brand: emporion` and its own slide colors. `samples/examples/launch-review.yaml` is a sample talk, and Harbor, Ledger, and Meridian each have a talk beside their config. A talk does not carry brand, theme, or fonts. Follow that split if you are asked to add another example: one folder under `samples/examples/<name>/` with a config, a manifest only when that example has its own colors, and the talk in that same folder. Add the config and the talk to `samples/catalog.yaml`. Do not put a sample admin under `samples/themes/`.
 
 ## Roles
 

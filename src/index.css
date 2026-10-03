@@ -126,6 +126,22 @@ button.primary {
   margin: 22px 0;
 }
 
+.sample-block { margin: 0 0 18px; }
+
+.sample-label {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sample-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .dropzone {
   border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
   border-radius: 18px;

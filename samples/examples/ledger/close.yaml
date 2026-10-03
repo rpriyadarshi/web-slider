@@ -1,0 +1,92 @@
+id: quarterly-close
+title: Quarterly Close
+author: Ledger
+footer: Quarterly Close
+slides:
+  - id: title
+    layout: title
+    title: Close the quarter
+    subtitle: What still moves the number
+    notes: Open with the residual, not the calendar.
+    side:
+      - type: callout
+        text: The books stay open until the residual has an owner.
+  - id: agenda
+    layout: section
+    title: Three items
+    subtitle: Adjustments, the residual, and the sign-off
+    notes: Read the three items, then go to the adjustments.
+  - id: adjustments
+    layout: content
+    title: Adjustments still open
+    notes: Do not relitigate a line that already has a name.
+    blocks:
+      - type: paragraph
+        text: Two lines can still move the reported number.
+      - type: table
+        headers: [Line, Amount, Owner]
+        rows:
+          - [Revenue cutoff, "1.2", Sales ops]
+          - [Accrual, "0.4", Controller]
+      - type: callout
+        text: An unnamed amount is not an adjustment. It is a slip.
+    widgets:
+      - id: cutoff
+        type: radio
+        prompt: Is the cutoff accepted?
+        options:
+          - Accept
+          - Hold
+          - Send back
+  - id: residual
+    layout: content
+    title: The residual
+    subtitle: Name it before you sign
+    notes: The chart is the open amount by book. Ask for the owner of the largest bar.
+    blocks:
+      - type: chart
+        kind: bar
+        labels: [Sales, Services, Tax]
+        values: [1.2, 0.4, 0.1]
+      - type: numbered
+        items:
+          - text: Name the book
+          - text: Name the owner
+          - text: Write the condition to close
+    widgets:
+      - id: confidence
+        type: scale
+        prompt: Confidence the residual is complete
+  - id: signoff
+    layout: content
+    title: Sign-off
+    notes: Leave this slide only after the condition is written.
+    theme:
+      background: "#EFEAE2"
+      accent: "#1E4D3A"
+    blocks:
+      - type: paragraph
+        text: The quarter closes when the controller can read the condition back.
+      - type: link
+        text: Back to the adjustments
+        slide: adjustments
+    widgets:
+      - id: condition
+        type: text
+        prompt: Condition to close
+  - id: principle
+    layout: quote
+    title: Principle
+    notes: Pause after the line.
+    blocks:
+      - type: quote
+        text: A number without an owner is not a close.
+        attribution: Controller
+  - id: appendix
+    hidden: true
+    layout: content
+    title: Appendix
+    notes: Kept out of the review. Open it from the outline for the draft tie-out.
+    blocks:
+      - type: paragraph
+        text: The draft tie-out stays out of the review and out of exports.

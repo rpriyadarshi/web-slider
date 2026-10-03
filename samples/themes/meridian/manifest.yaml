@@ -1,0 +1,35 @@
+# Package name meridian. A manifest value with no slash loads samples/themes/meridian/manifest.yaml.
+# Built-in faces are named here and stored once under samples/themes/emporion/fonts/.
+brand:
+  name: Meridian
+  wordmark: MERIDIAN
+  accent: "#E07A3D"
+  highlight: "#E4B84A"
+  mark: mark.svg
+  markDark: mark-on-dark.svg
+fonts:
+  Inter:
+    regular: samples/themes/emporion/fonts/Inter-Regular.ttf
+    semibold: samples/themes/emporion/fonts/Inter-SemiBold.ttf
+  Source Serif 4:
+    regular: samples/themes/emporion/fonts/SourceSerif4-Regular.ttf
+    semibold: samples/themes/emporion/fonts/SourceSerif4-Semibold.ttf
+  JetBrains Mono:
+    regular: samples/themes/emporion/fonts/JetBrainsMono-Regular.ttf
+    semibold: samples/themes/emporion/fonts/JetBrainsMono-Bold.ttf
+aspect: "16:9"
+showSlideNumber: true
+theme:
+  background: "#161311"
+  surface: "#26211D"
+  text: "#F4EFE8"
+  muted: "#B3A79C"
+  accent: "#E07A3D"
+  fontHeading: Source Serif 4
+  fontBody: Inter
+  fontMono: JetBrains Mono
+  align: left
+  headingScale: 1.08
+  radius: 2
+  highlight: "#E4B84A"
+  chrome: dark

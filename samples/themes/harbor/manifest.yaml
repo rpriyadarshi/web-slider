@@ -1,0 +1,35 @@
+# Package name harbor. A manifest value with no slash loads samples/themes/harbor/manifest.yaml.
+# Built-in faces are named here and stored once under samples/themes/emporion/fonts/.
+brand:
+  name: Harbor
+  wordmark: HARBOR
+  accent: "#1B4F72"
+  highlight: "#B0893E"
+  mark: mark.svg
+  markDark: mark-on-dark.svg
+fonts:
+  Inter:
+    regular: samples/themes/emporion/fonts/Inter-Regular.ttf
+    semibold: samples/themes/emporion/fonts/Inter-SemiBold.ttf
+  Source Serif 4:
+    regular: samples/themes/emporion/fonts/SourceSerif4-Regular.ttf
+    semibold: samples/themes/emporion/fonts/SourceSerif4-Semibold.ttf
+  JetBrains Mono:
+    regular: samples/themes/emporion/fonts/JetBrainsMono-Regular.ttf
+    semibold: samples/themes/emporion/fonts/JetBrainsMono-Bold.ttf
+aspect: "16:9"
+showSlideNumber: true
+theme:
+  background: "#F3F6F8"
+  surface: "#FFFFFF"
+  text: "#142033"
+  muted: "#5A6A7A"
+  accent: "#1B4F72"
+  fontHeading: Source Serif 4
+  fontBody: Inter
+  fontMono: JetBrains Mono
+  align: left
+  headingScale: 1
+  radius: 6
+  highlight: "#B0893E"
+  chrome: light

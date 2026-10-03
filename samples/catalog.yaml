@@ -1,0 +1,30 @@
+# Installs are configs you boot. Examples are talks. A talk carries slides only.
+installs:
+  - id: emporion
+    title: Emporion
+    path: samples/examples/emporion/web-slider.config.yaml
+  - id: northwind
+    title: Northwind
+    path: samples/examples/northwind/web-slider.config.yaml
+  - id: harbor
+    title: Harbor
+    path: samples/examples/harbor/web-slider.config.yaml
+  - id: ledger
+    title: Ledger
+    path: samples/examples/ledger/web-slider.config.yaml
+  - id: meridian
+    title: Meridian
+    path: samples/examples/meridian/web-slider.config.yaml
+examples:
+  - id: launch-review
+    title: Launch Review
+    path: samples/examples/launch-review.yaml
+  - id: harbor-briefing
+    title: Harbor briefing
+    path: samples/examples/harbor/briefing.yaml
+  - id: quarterly-close
+    title: Quarterly close
+    path: samples/examples/ledger/close.yaml
+  - id: incident-review
+    title: Incident review
+    path: samples/examples/meridian/incident.yaml

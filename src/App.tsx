@@ -16,8 +16,6 @@ import { bindPackageAssets, deckWithAssetUrls, packageAssetRefs, readDeckPackage
 import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
 import { applyFontFaces } from "./theme/fonts";
 
-const EXAMPLE_DECK = "samples/examples/launch-review.yaml";
-
 const search = new URLSearchParams(window.location.search);
 const embed = search.get("embed") === "1";
 const audienceId = search.get("audience") === "1" ? search.get("id") : null;
@@ -400,17 +398,17 @@ export function App() {
           onBlank={() => {
             void openPrepared(blankDeckSource(), new Map());
           }}
-          onExample={() => {
+          onExample={(path) => {
             void (async () => {
               try {
-                const response = await fetch(new URL(EXAMPLE_DECK, window.location.origin));
+                const response = await fetch(new URL(path, window.location.origin));
                 if (!response.ok) {
-                  throw new Error(`Example failed to load (${response.status}): ${EXAMPLE_DECK}`);
+                  throw new Error(`Example failed to load (${response.status}): ${path}`);
                 }
                 const text = await response.text();
                 const start = text.trimStart().slice(0, 20).toLowerCase();
                 if (start.startsWith("<!doctype") || start.startsWith("<html")) {
-                  throw new Error(`Example not found: ${EXAMPLE_DECK}. The server returned HTML instead of the deck.`);
+                  throw new Error(`Example not found: ${path}. The server returned HTML instead of the deck.`);
                 }
                 await openPrepared(text, new Map());
               } catch (caught) {

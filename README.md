@@ -19,23 +19,28 @@ npm run dev -- --config samples/examples/northwind/web-slider.config.yaml
 public/
   embed.js
 samples/
+  catalog.yaml                # the installs and talks the boot and start screens list
   themes/
-    emporion/                 # the built-in product theme
-      manifest.yaml
-      mark.svg
-      mark-on-dark.svg
-      favicon.svg
-      fonts/
+    emporion/                 # product theme; also holds the built-in font files
+    harbor/
+    ledger/
+    meridian/
   examples/
+    emporion/                 # config for the Emporion theme, no color overlay
     northwind/                # one sample admin install
       web-slider.config.yaml
       manifest.yaml
-    launch-review.yaml        # the sample talk for that install
+    harbor/                   # config plus the Harbor briefing talk
+    ledger/                   # config plus the quarterly close talk
+    meridian/                 # config plus the incident review talk
+    launch-review.yaml        # the sample talk for the Northwind install
 ```
 
-`samples/themes/` holds product themes. Only Emporion ships. A sample admin does not go there.
+`samples/themes/` holds product themes: Emporion, Harbor, Ledger, and Meridian. A sample admin does not go there. Harbor, Ledger, and Meridian name the font files in `samples/themes/emporion/fonts/` so those faces are stored once.
 
-The shipped talk is `samples/examples/launch-review.yaml`. Load example fetches that path. It is the talk for the Northwind admin, and it carries slides only.
+`samples/catalog.yaml` lists the configs and the talks. The boot screen reads `installs`. The start screen reads `examples`. A missing catalog is shown as an error. It is not replaced with a built-in list.
+
+The Northwind talk is `samples/examples/launch-review.yaml`. It carries slides only. Harbor, Ledger, and Meridian each have their own talk in the same folder as their config.
 
 Each further example is a folder under `samples/examples/<name>/`:
 
@@ -74,7 +79,7 @@ Four roles. The talk file is only one of them.
    ```
 
    A name with no slash, such as `manifest: emporion` or `brand: emporion`, loads `samples/themes/<name>/manifest.yaml`. The same rule applies to any package name. `brand` as a name uses the brand object in that package. When no flag and no query are set, the boot screen asks for a config file or a site path before any theme loads. A missing config is not replaced with a theme package. A path that contains `..` or is an absolute filesystem path fails validation. A missing manifest, a brand cycle, a missing mark or font, or invalid YAML stops the app and shows the error. It does not substitute another brand.
-3. The user opens a deck YAML. Open loads only the talk, on top of the theme already loaded. Load example fetches `samples/examples/launch-review.yaml`.
+3. The user opens a deck YAML. Open loads only the talk, on top of the theme already loaded. The start screen lists the talks in `samples/catalog.yaml` and fetches the one you choose.
 
 YAML is for files a person or an AI writes: the config, the manifest, and the deck. JSON is for artifacts only the system writes: an optional `manifest.resolved.json` cache beside the manifest, and the session. People do not edit those JSON files. This presenter resolves the manifest in memory. If `manifest.resolved.json` is present and its hash matches the manifest, it must agree with that resolution. A stale hash is ignored and the manifest is resolved again. This browser build does not write the cache file.
 

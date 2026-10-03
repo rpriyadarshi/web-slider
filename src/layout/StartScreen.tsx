@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls } from "../brand/kit";
 import type { Install } from "../model/install";
+import { CatalogChoices } from "./CatalogChoices";
 
 export function StartScreen({
   install,
@@ -13,7 +14,7 @@ export function StartScreen({
   onOpenFile: (file: File) => void;
   requestOpen: () => void;
   onBlank: () => void;
-  onExample: () => void;
+  onExample: (path: string) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const brand = withAssetUrls(resolveBrand(install.manifest.brand), install.assetUrls);
@@ -48,10 +49,8 @@ export function StartScreen({
           <button type="button" onClick={onBlank}>
             Blank deck
           </button>
-          <button type="button" onClick={onExample}>
-            Load example
-          </button>
         </div>
+        <CatalogChoices list="examples" label="Examples" onChoose={onExample} />
         <div
           className={dragging ? "dropzone dragover" : "dropzone"}
           onDragOver={(event) => {

@@ -1,0 +1,105 @@
+id: harbor-briefing
+title: Morning Briefing
+author: Harbor
+footer: Morning Briefing
+slides:
+  - id: title
+    layout: title
+    title: The window is 06:40
+    subtitle: Berth, labor, and the one exception
+    notes: Open with the tide window. Do not start with yesterday.
+    side:
+      - type: callout
+        text: Twelve minutes. Three calls. One exception.
+  - id: agenda
+    layout: section
+    title: Three calls
+    subtitle: Berth, labor, and the exception
+    notes: Name the three calls, then go to the berth plan.
+  - id: berth
+    layout: content
+    title: Berth plan
+    notes: Ask who owns the late vessel before you leave the slide.
+    blocks:
+      - type: paragraph
+        text: Two vessels are inside the window. One is not.
+      - type: bullets
+        items:
+          - text: North pier takes the grain ship at 06:40
+            step: 1
+          - text: South pier holds the container ship until 07:10
+            step: 2
+          - text: The tanker waits for a named pilot
+            step: 3
+      - type: callout
+        text: A missing pilot is an open berth.
+        step: 3
+    side:
+      - type: code
+        language: yaml
+        code: |
+          widgets:
+            - id: berth-call
+              type: radio
+              prompt: Is the berth plan set?
+    widgets:
+      - id: berth-call
+        type: radio
+        prompt: Is the berth plan set?
+        options:
+          - Set
+          - Hold the tanker
+          - Stop
+  - id: labor
+    layout: content
+    title: Labor on the window
+    subtitle: Heads counted at 05:30
+    notes: The chart is the count. Do not add a fourth gang without a name.
+    blocks:
+      - type: chart
+        kind: column
+        labels: [North, South, Tanker]
+        values: [18, 14, 6]
+      - type: paragraph
+        text: South pier is two short of the plan.
+    widgets:
+      - id: gang
+        type: scale
+        prompt: Confidence in the labor count
+  - id: exceptions
+    layout: content
+    title: What is still open
+    notes: Point at the row, then use the link if the room goes back to the berth.
+    theme:
+      background: "#E7EEF3"
+      accent: "#1B4F72"
+    blocks:
+      - type: table
+        headers: [Item, Owner]
+        rows:
+          - [Pilot for the tanker, Harbor master]
+          - [Two crane drivers, Stevedore]
+      - type: numbered
+        items:
+          - text: Name the owner
+          - text: Write the condition
+          - text: Confirm 06:40
+      - type: link
+        text: Back to the berth plan
+        slide: berth
+  - id: principle
+    layout: quote
+    title: Principle
+    notes: Pause after the line.
+    blocks:
+      - type: quote
+        text: A window without an owner is a window you missed.
+        attribution: Harbor master
+  - id: appendix
+    hidden: true
+    layout: content
+    title: Appendix
+    notes: Kept out of the briefing. Open it from the outline when someone asks for the draft.
+    blocks:
+      - type: paragraph
+        text: Draft gang sheets stay out of the briefing and out of exports.
