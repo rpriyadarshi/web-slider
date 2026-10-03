@@ -8,10 +8,10 @@ import { buildPdf } from "./pdf";
 import { buildPptx } from "./pptx";
 import { deckToYaml } from "./yaml";
 
-const sample = readFileSync(new URL("../../public/examples/launch-review.yaml", import.meta.url), "utf8");
+const sample = readFileSync(new URL("../../samples/examples/launch-review.yaml", import.meta.url), "utf8");
 
 function fontFiles(): FontFiles {
-  const read = (name: string) => new Uint8Array(readFileSync(new URL(`../../public/themes/emporion/fonts/${name}`, import.meta.url)));
+  const read = (name: string) => new Uint8Array(readFileSync(new URL(`../../samples/themes/emporion/fonts/${name}`, import.meta.url)));
   const pair = (regular: string, semibold: string) => ({ regular: read(regular), semibold: read(semibold) });
   const files = {
     Inter: pair("Inter-Regular.ttf", "Inter-SemiBold.ttf"),

@@ -28,7 +28,7 @@ for (let index = 0; index < rest.length; index += 1) {
     const value = arg === "--config" ? rest[index + 1] : arg.slice("--config=".length);
     if (arg === "--config") index += 1;
     if (!value || value.startsWith("-")) {
-      console.error("--config requires a site-root path, for example examples/northwind/web-slider.config.yaml");
+      console.error("--config requires a site path, for example samples/examples/northwind/web-slider.config.yaml");
       process.exit(1);
     }
     configPath = value;

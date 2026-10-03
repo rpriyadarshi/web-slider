@@ -19,7 +19,7 @@ const manifestPathSchema = z
   .string()
   .min(1)
   .refine((value) => isPackageName(value) || isSiteYamlPath(value), {
-    message: "must be a package name or a site path such as examples/northwind/manifest.yaml",
+    message: "must be a package name or a site path such as samples/examples/northwind/manifest.yaml",
   });
 
 export const configSchema = z
@@ -196,7 +196,7 @@ async function readConfigFile(
   }
   if (!isSiteYamlPath(path)) {
     throw new Error(
-      `Config failed validation:\npath: must be a site path such as examples/northwind/web-slider.config.yaml. A filesystem path or ../ cannot be read.`,
+      `Config failed validation:\npath: must be a site path such as samples/examples/northwind/web-slider.config.yaml. A filesystem path or ../ cannot be read.`,
     );
   }
   const configResponse = await env.fetch(new URL(path, origin));
@@ -309,14 +309,14 @@ function locateFonts(fonts: FontMap | undefined, manifestPath: string): FontMap 
 }
 
 function locateRef(ref: string, manifestPath: string): string {
-  if (ref.startsWith("https://") || ref.startsWith("data:") || ref.startsWith("themes/")) return ref;
+  if (ref.startsWith("https://") || ref.startsWith("data:") || ref.startsWith("samples/")) return ref;
   const slash = manifestPath.lastIndexOf("/");
   const dir = slash === -1 ? "" : manifestPath.slice(0, slash + 1);
   return `${dir}${ref}`;
 }
 
 function packageManifestPath(name: string): string {
-  return `themes/${name}/manifest.yaml`;
+  return `samples/themes/${name}/manifest.yaml`;
 }
 
 function isPackageName(value: string): boolean {
@@ -354,7 +354,7 @@ function missingManifest(path: string): Error {
 
 function missingPackage(path: string): Error {
   return new Error(
-    `Theme package not found: ${path}. A package name loads themes/<name>/manifest.yaml. A missing package is not replaced with another brand.`,
+    `Theme package not found: ${path}. A package name loads samples/themes/<name>/manifest.yaml. A missing package is not replaced with another brand.`,
   );
 }
 

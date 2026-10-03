@@ -1,8 +1,63 @@
-import { readFile } from "node:fs/promises";
+import { createReadStream, existsSync, statSync } from "node:fs";
+import { cp, readFile } from "node:fs/promises";
 import path from "node:path";
+import type { ServerResponse } from "node:http";
+import type { Connect } from "vite";
 import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+
+const samplesRoot = path.resolve("samples");
+
+const sampleTypes: Record<string, string> = {
+  ".yaml": "text/yaml; charset=utf-8",
+  ".yml": "text/yaml; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".ttf": "font/ttf",
+  ".json": "application/json",
+  ".txt": "text/plain; charset=utf-8",
+  ".md": "text/plain; charset=utf-8",
+};
+
+function serveSamples(req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction): void {
+  const pathname = decodeURIComponent((req.url ?? "").split("?")[0] ?? "");
+  if (!pathname.startsWith("/samples/")) {
+    next();
+    return;
+  }
+  const relative = pathname.slice("/samples/".length);
+  if (relative === "" || relative.split("/").includes("..")) {
+    next();
+    return;
+  }
+  const file = path.resolve(samplesRoot, relative);
+  if (!file.startsWith(`${samplesRoot}${path.sep}`) || !existsSync(file) || !statSync(file).isFile()) {
+    next();
+    return;
+  }
+  const type = sampleTypes[path.extname(file).toLowerCase()];
+  if (!type) {
+    next();
+    return;
+  }
+  res.setHeader("Content-Type", type);
+  createReadStream(file).pipe(res);
+}
+
+function samplesPlugin(): Plugin {
+  return {
+    name: "web-slider-samples",
+    configureServer(server) {
+      server.middlewares.use(serveSamples);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(serveSamples);
+    },
+    async writeBundle() {
+      await cp(samplesRoot, path.resolve("dist/samples"), { recursive: true });
+    },
+  };
+}
 
 const sliderConfig = process.env.SLIDER_CONFIG?.trim() ?? "";
 
@@ -53,7 +108,7 @@ function sliderConfigPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [sliderConfigPlugin(), react()],
+  plugins: [samplesPlugin(), sliderConfigPlugin(), react()],
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],

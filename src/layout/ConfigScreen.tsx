@@ -29,7 +29,7 @@ export function ConfigScreen({
         {error ? <pre className="error-body">{error}</pre> : null}
         <p className="lede">
           No theme is loaded until a config is supplied. Open or drop a .yaml config file, or enter a site path such as
-          examples/northwind/web-slider.config.yaml.
+          samples/examples/northwind/web-slider.config.yaml.
         </p>
         <div className="start-actions">
           <button type="button" className="primary" onClick={() => inputRef.current?.click()}>
@@ -51,7 +51,7 @@ export function ConfigScreen({
               id="config-path"
               name="config"
               value={path}
-              placeholder="examples/northwind/web-slider.config.yaml"
+              placeholder="samples/examples/northwind/web-slider.config.yaml"
               autoComplete="off"
               spellCheck={false}
               onChange={(event) => setPath(event.target.value)}

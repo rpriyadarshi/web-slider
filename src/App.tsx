@@ -15,7 +15,7 @@ import { bindPackageAssets, deckWithAssetUrls, packageAssetRefs, readDeckPackage
 import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
 import { applyFontFaces } from "./theme/fonts";
 
-const EXAMPLE_DECK = "examples/launch-review.yaml";
+const EXAMPLE_DECK = "samples/examples/launch-review.yaml";
 
 const search = new URLSearchParams(window.location.search);
 const embed = search.get("embed") === "1";

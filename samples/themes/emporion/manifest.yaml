@@ -1,4 +1,4 @@
-# Package name emporion. A manifest value with no slash loads themes/<name>/manifest.yaml.
+# Package name emporion. A manifest value with no slash loads samples/themes/<name>/manifest.yaml.
 # This file declares the brand. Another manifest may set brand to this package name.
 # Marks and fonts are paths beside this file.
 brand:
