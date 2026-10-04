@@ -6,9 +6,12 @@ import { serializeDeck } from "./serialize";
 import { sessionFromDeck } from "./session";
 import {
   canonicalJson,
+  diskManifestPath,
+  diskResolvedCachePath,
   injectedConfigPath,
   isDiskConfigPath,
   loadInstall,
+  localFileUrl,
   parseManifest,
   presentTalk,
   resolveBootConfig,
@@ -193,6 +196,9 @@ describe("theme package", () => {
     const install = await loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: emporion\n" });
     expect(install.manifestPath).toBe(packageManifestPath);
     expect(install.manifest.brand).toEqual(resolvedBrand);
+    expect(install.manifest.theme.background).toBe("#FAFAFA");
+    expect(install.manifest.theme.accent).toBe("#3DB892");
+    expect(install.manifest.theme.chrome).toBe("light");
     expect(calls).toContain(`${origin}${packageManifestPath}`);
     expect(calls).toContain(`${origin}${packageDir}/mark.svg`);
     expect(calls).toContain(`${origin}${packageDir}/fonts/JetBrainsMono-Bold.ttf`);
@@ -402,4 +408,91 @@ brand:
       /Theme cache is invalid/,
     );
   });
+
+  it("loads the manifest beside a config file on disk and does not use a shipped theme", async () => {
+    const file = "/var/talks/acme/web-slider.config.yaml";
+    const manifestPath = "/var/talks/acme/manifest.yaml";
+    const markPath = "/var/talks/acme/mark.svg";
+    const cachePath = "/var/talks/acme/manifest.resolved.json";
+    expect(diskManifestPath(file, "manifest.yaml")).toBe(manifestPath);
+    expect(diskManifestPath(file, "emporion")).toBeNull();
+    expect(diskManifestPath(file, "../secret.yaml")).toBeNull();
+    expect(diskManifestPath(file, "/etc/manifest.yaml")).toBeNull();
+    expect(diskManifestPath(file, "samples/themes/emporion/manifest.yaml")).toBeNull();
+    expect(diskResolvedCachePath(manifestPath)).toBe(cachePath);
+    expect(diskResolvedCachePath(packageManifestPath)).toBeNull();
+    const { fetchImpl, calls } = routes(acmeRoutes(acmeManifest));
+    const install = await loadInstall({ fetch: fetchImpl, origin }, { source: "manifest: manifest.yaml\n", configPath: file });
+    expect(install.manifestPath).toBe(manifestPath);
+    expect(install.manifest.brand).toMatchObject({ name: "Acme", mark: markPath });
+    expect(calls).toContain(localFileUrl(origin, manifestPath));
+    expect(calls).toContain(localFileUrl(origin, cachePath));
+    expect(calls.some((url) => url.includes("samples/themes/"))).toBe(false);
+  });
+
+  it("still loads a package name when the config file is on disk", async () => {
+    const { fetchImpl, calls } = routes(packageAssets());
+    const install = await loadInstall(
+      { fetch: fetchImpl, origin },
+      { source: "manifest: emporion\n", configPath: "/var/talks/acme/web-slider.config.yaml" },
+    );
+    expect(install.manifestPath).toBe(packageManifestPath);
+    expect(calls).toContain(`${origin}${packageManifestPath}`);
+    expect(calls.some((url) => url.includes("/__slider/local-file"))).toBe(false);
+  });
+
+  it("checks manifest.resolved.json beside a disk manifest", async () => {
+    const file = "/var/talks/acme/web-slider.config.yaml";
+    const cachePath = "/var/talks/acme/manifest.resolved.json";
+    const hash = await sourceHash(acmeManifest);
+    const resolved = resolveManifest(parseManifest(acmeManifest), hash);
+    const cacheUrl = localFileUrl(origin, cachePath);
+    const stale = routes({
+      ...acmeRoutes(acmeManifest),
+      [cacheUrl]: {
+        status: 200,
+        type: "application/json",
+        body: canonicalJson({ ...resolved, sourceHash: "a".repeat(64) }),
+      },
+    });
+    const install = await loadInstall({ fetch: stale.fetchImpl, origin }, { source: "manifest: manifest.yaml\n", configPath: file });
+    expect(install.manifest.brand).toMatchObject({ name: "Acme" });
+
+    const divergent = routes({
+      ...acmeRoutes(acmeManifest),
+      [cacheUrl]: {
+        status: 200,
+        type: "application/json",
+        body: canonicalJson({
+          ...resolved,
+          theme: { ...resolved.theme, background: "#000000" },
+        }),
+      },
+    });
+    await expect(
+      loadInstall({ fetch: divergent.fetchImpl, origin }, { source: "manifest: manifest.yaml\n", configPath: file }),
+    ).rejects.toThrow(new RegExp(`does not match the manifest: ${cachePath}`));
+  });
 });
+
+const acmeManifest = `
+brand:
+  name: Acme
+  wordmark: ACME
+  accent: "#112233"
+  highlight: "#445566"
+  mark: mark.svg
+fonts:
+  Inter:
+    regular: fonts/Inter-Regular.ttf
+    semibold: fonts/Inter-SemiBold.ttf
+`;
+
+function acmeRoutes(manifest: string): Record<string, { status: number; body: string; type?: string }> {
+  return {
+    [localFileUrl(origin, "/var/talks/acme/manifest.yaml")]: { status: 200, body: manifest },
+    [localFileUrl(origin, "/var/talks/acme/mark.svg")]: { status: 200, type: "image/svg+xml", body: "<svg></svg>" },
+    [localFileUrl(origin, "/var/talks/acme/fonts/Inter-Regular.ttf")]: { status: 200, type: "font/ttf", body: "ttf" },
+    [localFileUrl(origin, "/var/talks/acme/fonts/Inter-SemiBold.ttf")]: { status: 200, type: "font/ttf", body: "ttf" },
+  };
+}

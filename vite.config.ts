@@ -6,6 +6,7 @@ import type { Connect } from "vite";
 import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+import { diskContentType, diskKind, openDiskFile } from "./src/dev/localFile";
 
 const samplesRoot = path.resolve("samples");
 
@@ -46,24 +47,19 @@ function serveSamples(req: Connect.IncomingMessage, res: ServerResponse, next: C
 
 function serveLocalConfig(req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction): void {
   const url = new URL(req.url ?? "", "http://localhost");
-  if (url.pathname !== "/__slider/local-config") {
+  const kind = diskKind(url.pathname);
+  if (!kind) {
     next();
     return;
   }
-  const filePath = url.searchParams.get("path") ?? "";
-  if (!filePath.startsWith("/") || filePath.split("/").includes("..") || !/\.ya?ml$/.test(filePath)) {
-    res.statusCode = 400;
-    res.end("Config path must be a .yaml file on disk.");
+  const opened = openDiskFile(kind, url.searchParams.get("path") ?? "");
+  if (!opened.ok) {
+    res.statusCode = opened.status;
+    res.end(opened.message);
     return;
   }
-  const resolved = path.resolve(filePath);
-  if (!existsSync(resolved) || !statSync(resolved).isFile()) {
-    res.statusCode = 404;
-    res.end(`Config not found: ${resolved}`);
-    return;
-  }
-  res.setHeader("Content-Type", "text/yaml; charset=utf-8");
-  createReadStream(resolved).pipe(res);
+  res.setHeader("Content-Type", diskContentType(opened.path));
+  createReadStream(opened.path).pipe(res);
 }
 
 function localConfigPlugin(): Plugin {

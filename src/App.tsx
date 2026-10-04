@@ -44,7 +44,7 @@ async function loadNamedConfig(path: string): Promise<Install> {
     if (!response.ok) {
       throw new Error(text || `Config not found: ${path}`);
     }
-    return loadInstall(browserEnv(), { source: text });
+    return loadInstall(browserEnv(), { source: text, configPath: path });
   }
   return loadInstall(browserEnv(), { path });
 }

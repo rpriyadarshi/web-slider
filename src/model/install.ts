@@ -164,7 +164,34 @@ export function localConfigUrl(origin: string, diskPath: string): string {
   return url.href;
 }
 
-export type ConfigRequest = { path: string; source?: never } | { source: string; path?: never };
+export function localFileUrl(origin: string, diskPath: string): string {
+  const base = origin.endsWith("/") ? origin : `${origin}/`;
+  const url = new URL("/__slider/local-file", base);
+  url.searchParams.set("path", diskPath);
+  return url.href;
+}
+
+/** Manifest named by a config file on disk, resolved beside that config. A package name returns null. */
+export function diskManifestPath(configPath: string, manifest: string): string | null {
+  if (!isDiskConfigPath(configPath)) return null;
+  if (manifest.startsWith("samples/") || manifest.startsWith("/") || manifest.includes("\\") || manifest.split("/").includes("..")) {
+    return null;
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9_./-]*\.ya?ml$/.test(manifest)) return null;
+  const slash = configPath.lastIndexOf("/");
+  return `${configPath.slice(0, slash + 1)}${manifest}`;
+}
+
+/** `manifest.resolved.json` beside a manifest that lives on disk. A site path returns null. */
+export function diskResolvedCachePath(manifestPath: string): string | null {
+  if (!isDiskConfigPath(manifestPath)) return null;
+  const slash = manifestPath.lastIndexOf("/");
+  return `${manifestPath.slice(0, slash + 1)}manifest.resolved.json`;
+}
+
+export type ConfigRequest =
+  | { path: string; source?: never; configPath?: never }
+  | { source: string; path?: never; configPath?: string };
 
 /** Command-line config, then the `config` query, then the boot screen asks. */
 export function resolveBootConfig(input: { cli?: string | null; query?: string | null }): BootConfig {
@@ -191,6 +218,13 @@ export async function loadInstall(
     "source" in request && typeof request.source === "string"
       ? parseConfig(request.source)
       : await readConfigFile(env, origin, "path" in request && typeof request.path === "string" ? request.path : "");
+  const beside =
+    "configPath" in request && typeof request.configPath === "string"
+      ? diskManifestPath(request.configPath, config.manifest)
+      : null;
+  if (beside) {
+    return loadManifestAt(env, origin, beside, missingManifest);
+  }
   if (isPackageName(config.manifest)) {
     return loadManifestAt(env, origin, packageManifestPath(config.manifest), missingPackage);
   }
@@ -233,7 +267,7 @@ async function loadManifestAt(
   manifestPath: string,
   missing: (path: string) => Error,
 ): Promise<Install> {
-  const manifestUrl = new URL(manifestPath, origin);
+  const manifestUrl = manifestFetchUrl(origin, manifestPath);
   const loaded = await readManifestFile(env, origin, manifestPath, missing);
   const hash = await sourceHash(loaded.yaml);
   const followed = await followBrand(env, origin, loaded.manifest.brand, manifestPath, loaded.manifest.fonts, [manifestPath]);
@@ -246,7 +280,7 @@ async function loadManifestAt(
     },
     hash,
   );
-  await checkResolvedCache(env.fetch, manifestUrl, hash, resolved);
+  await checkResolvedCache(env.fetch, origin, manifestPath, manifestUrl, hash, resolved);
   return finish(resolved, manifestPath, env.fetch, origin);
 }
 
@@ -256,7 +290,7 @@ async function readManifestFile(
   manifestPath: string,
   missing: (path: string) => Error,
 ): Promise<{ yaml: string; manifest: Manifest }> {
-  const manifestUrl = new URL(manifestPath, origin);
+  const manifestUrl = manifestFetchUrl(origin, manifestPath);
   const manifestResponse = await env.fetch(manifestUrl);
   if (manifestResponse.status === 404) throw missing(manifestPath);
   if (!manifestResponse.ok) {
@@ -376,6 +410,15 @@ async function readBody(response: Response): Promise<{ text: string; html: boole
   return { text, html: type.includes("text/html") || text.trimStart().startsWith("<") };
 }
 
+function manifestFetchUrl(origin: string, manifestPath: string): URL {
+  if (isDiskConfigPath(manifestPath)) return new URL(localFileUrl(origin, manifestPath));
+  return new URL(manifestPath, origin);
+}
+
+function isDiskAssetPath(value: string): boolean {
+  return value.startsWith("/") && !value.includes("\\") && !value.split("/").includes("..") && /\.(svg|ttf|otf|woff2?)$/i.test(value);
+}
+
 function isSiteYamlPath(value: string): boolean {
   if (value.startsWith("/") || value.includes("\\") || value.includes("://") || value.split("/").includes("..")) return false;
   return /^[A-Za-z0-9][A-Za-z0-9_./-]*\.ya?ml$/.test(value);
@@ -404,18 +447,27 @@ function sortValue(value: unknown): unknown {
   return value;
 }
 
+function resolvedCacheRequest(origin: string, manifestPath: string, manifestUrl: URL): { url: URL; label: string } {
+  const beside = diskResolvedCachePath(manifestPath);
+  if (beside) return { url: new URL(localFileUrl(origin, beside)), label: beside };
+  const url = new URL(manifestUrl.href);
+  url.pathname = url.pathname.replace(/[^/]+$/, "manifest.resolved.json");
+  return { url, label: url.pathname };
+}
+
 async function checkResolvedCache(
   fetchImpl: typeof fetch,
+  origin: string,
+  manifestPath: string,
   manifestUrl: URL,
   hash: string,
   resolved: ResolvedManifest,
 ): Promise<void> {
-  const cacheUrl = new URL(manifestUrl.href);
-  cacheUrl.pathname = cacheUrl.pathname.replace(/[^/]+$/, "manifest.resolved.json");
-  const response = await fetchImpl(cacheUrl);
+  const cache = resolvedCacheRequest(origin, manifestPath, manifestUrl);
+  const response = await fetchImpl(cache.url);
   if (response.status === 404 || response.status === 204) return;
   if (!response.ok) {
-    throw new Error(`Theme cache failed to load (${response.status}): ${cacheUrl.pathname}`);
+    throw new Error(`Theme cache failed to load (${response.status}): ${cache.label}`);
   }
   const type = response.headers.get("content-type") ?? "";
   if (type.includes("text/html")) return;
@@ -425,23 +477,23 @@ async function checkResolvedCache(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Theme cache is invalid: ${cacheUrl.pathname}. It is a system file, not a file to edit. Remove it.\n${message}`,
+      `Theme cache is invalid: ${cache.label}. It is a system file, not a file to edit. Remove it.\n${message}`,
     );
   }
-  let cache: ResolvedManifest;
+  let stored: ResolvedManifest;
   try {
-    cache = resolvedManifestSchema.parse(parsed);
+    stored = resolvedManifestSchema.parse(parsed);
   } catch (error) {
     if (error instanceof ZodError) {
       const details = error.issues.map((issue) => `${issue.path.join(".") || "(cache)"}: ${issue.message}`).join("\n");
-      throw new Error(`Theme cache failed validation: ${cacheUrl.pathname}. It is a system file, not a file to edit. Remove it.\n${details}`);
+      throw new Error(`Theme cache failed validation: ${cache.label}. It is a system file, not a file to edit. Remove it.\n${details}`);
     }
     throw error;
   }
-  if (cache.sourceHash !== hash) return;
-  if (canonicalJson(cache) !== canonicalJson(resolved)) {
+  if (stored.sourceHash !== hash) return;
+  if (canonicalJson(stored) !== canonicalJson(resolved)) {
     throw new Error(
-      `Theme cache does not match the manifest: ${cacheUrl.pathname}. The manifest is the source. Remove the cache; do not edit it.`,
+      `Theme cache does not match the manifest: ${cache.label}. The manifest is the source. Remove the cache; do not edit it.`,
     );
   }
 }
@@ -469,7 +521,7 @@ async function bindManifestAssets(
   if (refs.length === 0) return urls;
   const root = origin.endsWith("/") ? origin : `${origin}/`;
   for (const ref of refs) {
-    const assetUrl = new URL(ref, root);
+    const assetUrl = isDiskAssetPath(ref) ? new URL(localFileUrl(origin, ref)) : new URL(ref, root);
     const response = await fetchImpl(assetUrl);
     if (!response.ok) {
       throw new Error(`Theme asset failed to load (${response.status}): ${ref}`);
