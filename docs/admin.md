@@ -50,7 +50,7 @@ The sample file for that line is `samples/examples/harbor/web-slider.config.yaml
 
 **Recolor a product brand for one install.** This is an admin overlay, not a new product theme. Northwind is the sample. Its config points at its own manifest, and that manifest says `brand: emporion` and then sets Northwind's slide colors. The lockup stays the Emporion mark and wordmark. The folder is `samples/examples/northwind/`. Product themes stay in `samples/themes/`. A sample admin does not go there.
 
-Harbor, Ledger, and Meridian name the font files in `samples/themes/emporion/fonts/` so those faces are stored once. An overlay that sets `brand: emporion` inherits that font map and does not repeat it.
+Harbor, Ledger, and Meridian are shipped product themes. They name the font files in `samples/themes/emporion/fonts/` so those faces are stored once inside this repository. An overlay that sets `brand: emporion` inherits that font map. A deck that lives in another workspace does not use either shortcut. Its theme, marks, and font files sit beside the talk.
 
 ## Where your files live
 

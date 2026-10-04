@@ -8,7 +8,7 @@ A talk reaches the screen in three steps, and three people own them. Read the ch
 
 1. **The admin dresses the room.** Brand, colors, type, and fonts. That is a config and a manifest, loaded before any slide opens. [docs/admin.md](docs/admin.md).
 2. **The author writes the talk.** Slides, the script, and the questions. One YAML file, on top of the theme already loaded. Then they present, and the notes they take stay in the browser until a download. [docs/make-slides.md](docs/make-slides.md).
-3. **An agent writes only the file for the seat it was given.** A talk follows one contract. A theme follows another. Mixing them is how a deck gets rejected. [docs/agents.md](docs/agents.md).
+3. **An agent writes only the file for the seat it was given, and only in the workspace that asked.** A customer deck does not go in `samples/`. [AGENTS.md](AGENTS.md).
 
 The system is the fourth seat: the schema, the layouts, and the presenter. Customers do not edit it. The deck schema is `src/model/schema.ts`. The config and manifest schema is `src/model/install.ts`. If a chapter and the schema disagree, the schema is what the app runs.
 

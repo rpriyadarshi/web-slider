@@ -1,6 +1,10 @@
 # Write a Web Slider theme
 
-You are the admin. You dress the room: the brand, the colors, the type, and the fonts. You do not write the slides. If the request is a talk, stop and follow [generate-deck.md](generate-deck.md). The routing rules are [docs/agents.md](../docs/agents.md). The human story is [docs/admin.md](../docs/admin.md).
+You are the admin. You dress the room: the brand, the colors, the type, and the fonts. You do not write the slides. If the request is a talk, stop and follow [generate-deck.md](generate-deck.md).
+
+Write the theme in the directory the user named, beside the talk, with its own `manifest.yaml`, its own mark files, and its own font files. You do not set `brand` to a package shipped in this repository. You do not point `fonts` into `samples/themes/`. That alias is not a theme. If they did not name a directory, ask. Do not guess another workspace's directories. [AGENTS.md](../AGENTS.md) is the rule.
+
+The folders under `samples/themes/` and `samples/examples/` below are the shipped product samples. You add another one only when the user explicitly told you to change Web Slider's shipped samples. The routing for that case is [docs/agents.md](../docs/agents.md). The human story is [docs/admin.md](../docs/admin.md).
 
 The presenter rejects a manifest it cannot validate. Do not invent keys. The enforced schema is `manifestSchema` and `configSchema` in `src/model/install.ts`, and the theme and brand fields in `src/model/schema.ts`.
 
@@ -24,10 +28,10 @@ That file is `samples/examples/<name>/web-slider.config.yaml`. It is the path pa
 
 You do not write:
 
-- The talk, except the catalog path that points at a talk someone else writes.
+- The talk, except the catalog path that points at a talk someone else writes, and only when that talk is a shipped sample.
 - `embed.js` or anything under `public/`.
 - `manifest.resolved.json`.
-- A copy of the font binaries. The faces Inter, Source Serif 4, and JetBrains Mono already live in `samples/themes/emporion/fonts/`.
+- A font path into `samples/themes/` for a theme that lives outside this repository. Put the face files beside that theme. Only a theme shipped in this repository shares the font files that already live here.
 
 ## Config
 
@@ -101,9 +105,11 @@ fonts:
     semibold: samples/themes/emporion/fonts/JetBrainsMono-Bold.ttf
 ```
 
-A product theme whose `brand` is an object must name these three families, or PDF export cannot load them. Point `regular` and `semibold` at the Emporion files above.
+A product theme shipped in this repository whose `brand` is an object must name these three families, or PDF export cannot load them. The shipped themes point `regular` and `semibold` at the files above.
 
-An admin overlay that sets `brand: emporion` inherits Emporion's font map. It does not repeat the font files.
+A theme written for another workspace does not use those paths. Its `fonts` entries are files beside its own manifest.
+
+An admin overlay shipped here that sets `brand` to the theme package inherits that package's font map. That is Northwind. It is not the way to theme a deck outside this repository.
 
 Any other family name needs a `fonts` entry with a `regular` file on the manifest that names the family. `semibold` is optional. Put that file beside the manifest, or name a site path that already exists. Do not copy a file that already has a site path.
 
@@ -129,7 +135,7 @@ Before you finish, confirm:
 - The config has only `manifest`.
 - A product theme lives under `samples/themes/<name>/` and its brand is an object with a mark file that exists.
 - An admin overlay lives under `samples/examples/<name>/`, sets `brand` to a package name, and is not a second copy of that package's mark.
-- You did not copy font binaries. Built-in faces point at `samples/themes/emporion/fonts/`.
+- A theme outside this repository has its own font files. It does not point into `samples/themes/`. A theme shipped in this repository may.
 - Every color is `#rrggbb`. Every asset path is `https`, `data`, or a relative path with no `..` and no leading `/`.
 - A new family has a `fonts` entry with a `regular` file.
 - `samples/catalog.yaml` has an `installs` entry for the config, and an `examples` entry only for a talk that exists.

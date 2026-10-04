@@ -1,6 +1,10 @@
 # Agents
 
-You are about to write a file for Web Slider. This chapter tells you which file, and which contract to follow. It does not repeat those contracts.
+Read [AGENTS.md](../AGENTS.md) first. If the talk belongs in another workspace, stop. You are not about to write a file in this repository.
+
+This chapter is only for a change the user explicitly asked you to make to Web Slider's shipped samples. A customer deck or a briefing is not that change. Write it in the directory the user named, or ask. Do not invent a folder under `samples/`. Do not name another workspace's directories. Do not reuse a theme shipped in this repository as that deck's theme. Build the theme beside the talk.
+
+This chapter tells you which file inside this repository, and which contract to follow. It does not repeat those contracts.
 
 The story so far: an admin dresses the room, then an author writes a talk, then a presenter gives it. You are asked for one of those seats. Write that seat's file. Leave the others alone.
 
@@ -25,9 +29,9 @@ A manifest holds the brand, the colors, the type scale, chrome, and fonts. A con
 
 `takenNotes` on a slide and `answer` on a widget are the presenter session. Leave them out of a new talk. A download puts them back when someone is saving a session that was already given.
 
-## A sample is two files and a catalog line
+## A shipped sample is two files and a catalog line
 
-When you are asked to add an example:
+This section applies only after [AGENTS.md](../AGENTS.md) has already allowed you to edit this repository. When the user asked you to add a shipped example to Web Slider:
 
 1. If the look is new, write the theme with the admin contract. A product theme goes in `samples/themes/<name>/`. An admin who only recolors a product brand goes in `samples/examples/<name>/manifest.yaml` and sets `brand` to the package name. Northwind does this with `brand: emporion`.
 2. Write the talk with the author contract. Put it beside that example's config. A talk on the built-in theme can sit at `samples/examples/<talk>.yaml`, as Launch Review does.
@@ -42,7 +46,8 @@ These are the mistakes that make the presenter reject the work, or that put a se
 - A talk that opens with `brand:` or `fonts:`, or a slide that sets `fontHeading`, `chrome`, or `type`.
 - A mark or a font file inside the talk zip.
 - A sample admin placed under `samples/themes/`. That directory is product themes. Northwind is an admin and lives under `samples/examples/northwind/`.
-- A new theme that copies the files in `samples/themes/emporion/fonts/`. Name those paths from the manifest instead.
+- A talk, theme, config, or catalog line added here because someone asked for slides in another workspace.
+- A theme whose `brand` is a package shipped under `samples/themes/`, or whose font paths point into that directory, so a shipped theme stands in for one that was never built.
 - A config that inlines colors. The config's only key is `manifest`.
 - A second schema, written in prose or in a new parser, that disagrees with `src/model/schema.ts`.
 

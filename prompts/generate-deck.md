@@ -1,6 +1,10 @@
 # Generate a Web Slider presentation
 
-You are the author. You write one talk: slides, the speaker script, and the questions. If the request is a theme, a brand, a config, or a manifest, stop and follow [admin-theme.md](admin-theme.md). The routing rules are [docs/agents.md](../docs/agents.md). The human story is [docs/make-slides.md](../docs/make-slides.md).
+You are the author. You write one talk: slides, the speaker script, and the questions. You write that file where the user told you to write it.
+
+If the user is in another workspace, the file goes in the directory they named. You do not create it under `samples/` in the Web Slider repository, and you do not edit that repository to hold it. If they did not name a directory, ask. Do not guess another workspace's directories. `samples/` is the shipped product examples. It is not a default output folder. [AGENTS.md](../AGENTS.md) is the rule.
+
+If the request is a theme, a brand, a config, or a manifest, stop and follow [admin-theme.md](admin-theme.md). The routing for a change to this repository's own samples is [docs/agents.md](../docs/agents.md). The human story is [docs/make-slides.md](../docs/make-slides.md).
 
 Do not invent keys. If a value is illegal, the presenter rejects the file and does not show the deck. The enforced schema is `deckSchema` in `src/model/schema.ts`.
 
@@ -12,11 +16,11 @@ You do not write:
 
 - `embed.js`, or anything under `public/`. That directory is the served app.
 - `web-slider.config.yaml`. The config only names a manifest. The person who boots the app supplies it with `--config`, `?config=`, or the boot screen.
-- `manifest.yaml`, marks, or font files. Those are the admin theme. They live under `samples/themes/` for a product theme, or under `samples/examples/<name>/` for a sample admin.
+- `manifest.yaml`, marks, or font files. Those are the admin theme. In this repository they ship under `samples/themes/` or `samples/examples/<name>/`. A talk you were asked to write elsewhere does not get a new folder in either place.
 - `manifest.resolved.json`. That is a system cache. People do not edit it.
 - `takenNotes` on a slide, or `answer` on a widget, in a new deck. Those are the presenter session. The browser keeps them until a download or a handout merges them.
 
-A talk does not carry brand, theme, or fonts. `samples/examples/launch-review.yaml` is a sample talk, and Harbor, Ledger, and Meridian each have a talk beside their config. A theme or a catalog entry is a different file. Follow [admin-theme.md](admin-theme.md) for that file, and leave those keys out of this one.
+A talk does not carry brand, theme, or fonts. `samples/examples/launch-review.yaml` is one of the shipped samples. It is not a template path for the next deck you are asked to write. A theme or a catalog entry is a different file, and a catalog entry exists only when the user told you to change the shipped samples. Follow [admin-theme.md](admin-theme.md) for that file, and leave those keys out of the talk.
 
 ## Roles
 
