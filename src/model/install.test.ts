@@ -7,6 +7,7 @@ import { sessionFromDeck } from "./session";
 import {
   canonicalJson,
   injectedConfigPath,
+  isDiskConfigPath,
   loadInstall,
   parseManifest,
   presentTalk,
@@ -80,6 +81,11 @@ describe("theme package", () => {
     });
     expect(resolveBootConfig({ cli: injectedConfigPath("", "  "), query: "" })).toEqual({ status: "config-required" });
     expect(resolveBootConfig({ cli: "  ", query: null })).toEqual({ status: "config-required" });
+    expect(isDiskConfigPath("/home/rohit/src/emporion_ai/Go-To-Market/Customers/socionext/web-slider.config.yaml")).toBe(
+      true,
+    );
+    expect(isDiskConfigPath("samples/examples/emporion/web-slider.config.yaml")).toBe(false);
+    expect(isDiskConfigPath("/tmp/../etc/passwd")).toBe(false);
     const { fetchImpl, calls } = routes(packageAssets());
     await expect(loadInstall({ fetch: fetchImpl, origin }, { path: "   " })).rejects.toThrow(/Config required/);
     expect(calls).toEqual([]);

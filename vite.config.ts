@@ -44,6 +44,40 @@ function serveSamples(req: Connect.IncomingMessage, res: ServerResponse, next: C
   createReadStream(file).pipe(res);
 }
 
+function serveLocalConfig(req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction): void {
+  const url = new URL(req.url ?? "", "http://localhost");
+  if (url.pathname !== "/__slider/local-config") {
+    next();
+    return;
+  }
+  const filePath = url.searchParams.get("path") ?? "";
+  if (!filePath.startsWith("/") || filePath.split("/").includes("..") || !/\.ya?ml$/.test(filePath)) {
+    res.statusCode = 400;
+    res.end("Config path must be a .yaml file on disk.");
+    return;
+  }
+  const resolved = path.resolve(filePath);
+  if (!existsSync(resolved) || !statSync(resolved).isFile()) {
+    res.statusCode = 404;
+    res.end(`Config not found: ${resolved}`);
+    return;
+  }
+  res.setHeader("Content-Type", "text/yaml; charset=utf-8");
+  createReadStream(resolved).pipe(res);
+}
+
+function localConfigPlugin(): Plugin {
+  return {
+    name: "web-slider-local-config",
+    configureServer(server) {
+      server.middlewares.use(serveLocalConfig);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(serveLocalConfig);
+    },
+  };
+}
+
 function samplesPlugin(): Plugin {
   return {
     name: "web-slider-samples",
@@ -108,7 +142,7 @@ function sliderConfigPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [samplesPlugin(), sliderConfigPlugin(), react()],
+  plugins: [localConfigPlugin(), samplesPlugin(), sliderConfigPlugin(), react()],
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],

@@ -26,9 +26,6 @@ export function BottomBar({
   onDecisions,
   onNotesWidth,
   onHeight,
-  onAddWidget,
-  onRemove,
-  canRemove,
 }: {
   slideId: string;
   widgets: Widget[];
@@ -49,9 +46,6 @@ export function BottomBar({
   onDecisions?: (delta: number) => void;
   onNotesWidth?: (delta: number) => void;
   onHeight?: (delta: number) => void;
-  onAddWidget?: (type: Widget["type"]) => void;
-  onRemove?: () => void;
-  canRemove?: boolean;
 }) {
   return (
     <footer className={feedback ? "bottom feedback" : pinned ? "bottom" : "bottom pane floating bottom-float"}>
@@ -75,9 +69,6 @@ export function BottomBar({
           onAnswer={onAnswer}
           probe={probe}
           onProbe={onProbe}
-          onAdd={onAddWidget}
-          onRemove={onRemove}
-          canRemove={canRemove}
         />
       </section>
       {onDecisions ? <Splitter className="col" axis="x" label="Resize decisions" onDelta={onDecisions} /> : null}

@@ -6,7 +6,7 @@ import { Shell } from "./layout/Shell";
 import { StartScreen } from "./layout/StartScreen";
 import { blankDeckSource } from "./model/blank";
 import { replaceListItem, replaceSlideTitle } from "./model/edit";
-import { injectedConfigPath, loadInstall, presentTalk, resolveBootConfig, type Install } from "./model/install";
+import { injectedConfigPath, isDiskConfigPath, loadInstall, localConfigUrl, presentTalk, resolveBootConfig, type Install } from "./model/install";
 import { parseDeck } from "./model/parse";
 import type { Deck } from "./model/schema";
 import { serializeDeck } from "./model/serialize";
@@ -35,6 +35,18 @@ function browserEnv() {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => window.fetch(input, init),
     origin: window.location.origin,
   };
+}
+
+async function loadNamedConfig(path: string): Promise<Install> {
+  if (isDiskConfigPath(path)) {
+    const response = await fetch(localConfigUrl(window.location.origin, path));
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(text || `Config not found: ${path}`);
+    }
+    return loadInstall(browserEnv(), { source: text });
+  }
+  return loadInstall(browserEnv(), { path });
 }
 
 export function App() {
@@ -144,7 +156,7 @@ export function App() {
   useEffect(() => {
     if (bootRequest.status !== "path") return;
     let cancel = false;
-    void loadInstall(browserEnv(), { path: bootRequest.path })
+    void loadNamedConfig(bootRequest.path)
       .then((loaded) => {
         if (cancel) return;
         installRef.current = loaded;
@@ -163,7 +175,7 @@ export function App() {
   async function loadConfigPath(path: string) {
     setBootPhase({ kind: "loading" });
     try {
-      const loaded = await loadInstall(browserEnv(), { path });
+      const loaded = await loadNamedConfig(path);
       installRef.current = loaded;
       setInstall(loaded);
       setBootPhase({ kind: "ready" });

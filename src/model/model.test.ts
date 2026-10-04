@@ -176,6 +176,18 @@ describe("session panes", () => {
     expect(restored.ui.decisionsWidth).toBe(PANE.decisionsWidth);
     expect(restored.ui.notesWidth).toBe(PANE.notesWidth);
   });
+
+  it("widens notes that are still at the old default", () => {
+    const deck = parseDeck(validDeck);
+    const restored = normalizeSession(deck, {
+      slideIndex: 0,
+      revealed: 0,
+      answers: {},
+      notes: {},
+      ui: { toc: true, side: false, bottom: true, theme: "dark", notesWidth: 320 },
+    });
+    expect(restored.ui.notesWidth).toBe(PANE.notesWidth);
+  });
 });
 
 describe("session merge", () => {

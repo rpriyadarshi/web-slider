@@ -22,8 +22,13 @@ fonts:
 aspect: "16:9"
 showSlideNumber: true
 theme:
+  background: "#FAFAFA"
+  surface: "#FFFFFF"
+  text: "#1F1F1F"
+  muted: "#5E5E5E"
+  accent: "#3DB892"
   highlight: "#E4B84A"
-  chrome: dark
+  chrome: light
   chromeLight:
     ground: "#FAFAFA"
     paper: "#FFFFFF"

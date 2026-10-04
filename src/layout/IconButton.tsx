@@ -22,6 +22,9 @@ export type IconName =
   | "dark"
   | "pin"
   | "insert"
+  | "undo"
+  | "redo"
+  | "find"
   | "restart"
   | "audience"
   | "laser"
@@ -158,6 +161,24 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
+    </>
+  ),
+  undo: (
+    <>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H12" />
+    </>
+  ),
+  redo: (
+    <>
+      <path d="m15 14 5-5-5-5" />
+      <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H12" />
+    </>
+  ),
+  find: (
+    <>
+      <circle cx="11" cy="11" r="6" />
+      <line x1="15.5" y1="15.5" x2="20" y2="20" />
     </>
   ),
   restart: (

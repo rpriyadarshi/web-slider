@@ -62,7 +62,7 @@ The plus icon in the YAML pane inserts into the file:
 - **Remove**, for the block or widget the caret is in.
 - **Remove slide**, except when it is the only slide.
 
-Typing updates the slide when the YAML parses. When it does not parse, the error stays in the pane and the last valid slide stays on screen.
+Typing updates the slide when the YAML parses. When it does not parse, the error stays in the pane and the last valid slide stays on screen. Undo and redo are the curved arrows in the pane, and Ctrl+Z and Ctrl+Shift+Z (Ctrl+Y redoes as well). Tab indents. Ctrl+F finds and replaces in the file.
 
 Click a title, list item, block, widget, or footer to select that part of the file. Clicking a widget selects the whole widget. Move the caret in the YAML and the matching part of the slide is marked. If the caret is in another slide, the view jumps there. Double-click a title or list item to edit it. That writes the text back into the YAML, and comments in the pane are dropped at that moment.
 

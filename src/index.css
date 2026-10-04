@@ -306,7 +306,7 @@ button.primary {
   overflow: hidden;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
-  grid-template-columns: minmax(220px, var(--decisions-col, 480px)) 6px minmax(200px, var(--notes-col, 320px)) 6px minmax(140px, 0.7fr);
+  grid-template-columns: minmax(220px, var(--decisions-col, 480px)) 6px minmax(max(280px, var(--notes-col, 560px)), 1fr) 6px minmax(200px, 340px);
 }
 
 .bottom-actions {
@@ -593,17 +593,18 @@ button.primary {
 
 .next-fit {
   position: absolute;
-  left: 50%;
+  right: 0;
   top: 50%;
   width: 960px;
   height: 540px;
   container-type: size;
-  transform: translate(-50%, -50%) scale(min(calc(100cqw / 960px), calc(100cqh / 540px)));
+  transform-origin: right center;
+  transform: translateY(-50%) scale(min(calc(100cqw / 960px), calc(100cqh / 540px)));
 }
 
 .next-preview:has(.slide[data-aspect="4:3"]) .next-fit {
   height: 720px;
-  transform: translate(-50%, -50%) scale(min(calc(100cqw / 960px), calc(100cqh / 720px)));
+  transform: translateY(-50%) scale(min(calc(100cqw / 960px), calc(100cqh / 720px)));
 }
 
 .next-preview .slide { box-shadow: none; }
@@ -690,18 +691,6 @@ button.primary {
   flex-direction: column;
   min-height: 0;
   overflow: auto;
-}
-
-.widget-catalog {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px 8px 0;
-}
-
-.widget-catalog button {
-  font-size: 12px;
-  padding: 4px 10px;
 }
 
 .insert-menu {

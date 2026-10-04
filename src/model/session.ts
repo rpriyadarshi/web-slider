@@ -10,7 +10,7 @@ export const PANE = {
   sideWidth: 344,
   bottomHeight: 210,
   decisionsWidth: 480,
-  notesWidth: 320,
+  notesWidth: 560,
 } as const;
 
 export type PaneSize = keyof typeof PANE;
@@ -157,7 +157,7 @@ export function normalizeSession(deck: Deck, input: unknown): DeckSession {
       sideWidth: paneSize(ui.sideWidth, "sideWidth"),
       bottomHeight: paneSize(ui.bottomHeight, "bottomHeight"),
       decisionsWidth: paneSize(ui.decisionsWidth, "decisionsWidth"),
-      notesWidth: paneSize(ui.notesWidth, "notesWidth"),
+      notesWidth: notesPane(ui.notesWidth),
     },
   };
 }
@@ -165,6 +165,12 @@ export function normalizeSession(deck: Deck, input: unknown): DeckSession {
 function paneSize(value: unknown, key: PaneSize): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return PANE[key];
   return clampPane(key, value);
+}
+
+function notesPane(value: unknown): number {
+  const size = paneSize(value, "notesWidth");
+  if (size === 320) return PANE.notesWidth;
+  return size;
 }
 
 export function clampRevealed(slide: Deck["slides"][number], revealed: number): number {

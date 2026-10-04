@@ -1,8 +1,9 @@
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentWithTab, redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
 import { yaml } from "@codemirror/lang-yaml";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { EditorState, StateEffect, StateField } from "@codemirror/state";
-import { Decoration, EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { bracketMatching, foldKeymap, HighlightStyle, indentOnInput, syntaxHighlighting } from "@codemirror/language";
+import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
+import { EditorState, Prec, StateEffect, StateField, Transaction } from "@codemirror/state";
+import { Decoration, drawSelection, dropCursor, EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { useEffect, useRef, useState } from "react";
 import { BLOCK_KINDS, BLOCK_LABEL, WIDGET_KINDS, WIDGET_LABEL } from "../model/insert";
@@ -67,6 +68,18 @@ const yamlTheme = EditorView.theme({
     borderRight: "1px solid var(--line)",
   },
   ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "transparent" },
+  ".cm-panel.cm-search": {
+    backgroundColor: "var(--paper)",
+    color: "var(--text)",
+    borderBottom: "1px solid var(--line)",
+  },
+  ".cm-panel.cm-search input, .cm-panel.cm-search button, .cm-panel.cm-search label": {
+    color: "var(--text)",
+  },
+  ".cm-panel.cm-search input": {
+    backgroundColor: "var(--ground)",
+    border: "1px solid var(--line)",
+  },
 });
 
 export function YamlPane({
@@ -115,8 +128,11 @@ export function YamlPane({
   const menuRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const applying = useRef(false);
+  const localEcho = useRef(false);
   const selectGen = useRef(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const onChangeRef = useRef(onChange);
   const onCaretRef = useRef(onCaret);
   onChangeRef.current = onChange;
@@ -132,15 +148,29 @@ export function YamlPane({
         extensions: [
           lineNumbers(),
           history(),
+          drawSelection(),
+          dropCursor(),
+          bracketMatching(),
+          indentOnInput(),
           yaml(),
           syntaxHighlighting(yamlHighlight),
+          search({ top: true }),
+          highlightSelectionMatches(),
           yamlTheme,
           probeMark,
           EditorState.tabSize.of(2),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
+          Prec.high(keymap.of([...historyKeymap, ...searchKeymap])),
+          keymap.of([...defaultKeymap, ...foldKeymap, indentWithTab]),
           EditorView.updateListener.of((update) => {
+            const nextUndo = undoDepth(update.state) > 0;
+            const nextRedo = redoDepth(update.state) > 0;
+            setCanUndo((current) => (current === nextUndo ? current : nextUndo));
+            setCanRedo((current) => (current === nextRedo ? current : nextRedo));
             if (applying.current) return;
-            if (update.docChanged) onChangeRef.current(update.state.doc.toString());
+            if (update.docChanged) {
+              localEcho.current = true;
+              onChangeRef.current(update.state.doc.toString());
+            }
             if (update.selectionSet) {
               const userEdit = update.transactions.some(
                 (transaction) => transaction.isUserEvent("select") || transaction.isUserEvent("input"),
@@ -163,6 +193,7 @@ export function YamlPane({
                 editor.dispatch({
                   selection: expand ? { anchor: range.start, head: range.end } : undefined,
                   effects: setProbeMark.of(mark),
+                  annotations: Transaction.addToHistory.of(false),
                   scrollIntoView: Boolean(expand),
                 });
                 applying.current = false;
@@ -182,6 +213,10 @@ export function YamlPane({
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
+    if (localEcho.current) {
+      localEcho.current = false;
+      return;
+    }
     const current = view.state.doc.toString();
     if (current === value) return;
     applying.current = true;
@@ -218,6 +253,7 @@ export function YamlPane({
     view.dispatch({
       selection: { anchor: start, head: end },
       effects: setProbeMark.of(end > start ? { from: start, to: end } : null),
+      annotations: Transaction.addToHistory.of(false),
       scrollIntoView: true,
     });
     applying.current = false;
@@ -228,6 +264,15 @@ export function YamlPane({
       <div className="panel-head">
         <IconMark label="YAML" name="yaml" />
         <div className="panel-actions">
+          <IconButton label="Undo" disabled={!canUndo} onClick={() => { const view = viewRef.current; if (view) undo(view); }}>
+            <Icon name="undo" />
+          </IconButton>
+          <IconButton label="Redo" disabled={!canRedo} onClick={() => { const view = viewRef.current; if (view) redo(view); }}>
+            <Icon name="redo" />
+          </IconButton>
+          <IconButton label="Find" onClick={() => { const view = viewRef.current; if (view) openSearchPanel(view); }}>
+            <Icon name="find" />
+          </IconButton>
           <div className="menu-anchor" ref={menuRef}>
             <IconButton label="Insert" pressed={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
               <Icon name="insert" />

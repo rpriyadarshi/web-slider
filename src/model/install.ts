@@ -152,6 +152,18 @@ export function canonicalJson(value: unknown): string {
 
 export type BootConfig = { status: "config-required" } | { status: "path"; path: string };
 
+/** A config the dev server can read. The browser never fetches this path as a site URL. */
+export function isDiskConfigPath(value: string): boolean {
+  return value.startsWith("/") && !value.includes("\\") && !value.split("/").includes("..") && /\.ya?ml$/.test(value);
+}
+
+export function localConfigUrl(origin: string, diskPath: string): string {
+  const base = origin.endsWith("/") ? origin : `${origin}/`;
+  const url = new URL("/__slider/local-config", base);
+  url.searchParams.set("path", diskPath);
+  return url.href;
+}
+
 export type ConfigRequest = { path: string; source?: never } | { source: string; path?: never };
 
 /** Command-line config, then the `config` query, then the boot screen asks. */

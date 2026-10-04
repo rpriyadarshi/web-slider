@@ -28,7 +28,7 @@ The app will not guess a theme.
    `?config=samples/examples/northwind/web-slider.config.yaml` is the same kind of path. With no flag and no query, the boot screen lists the installs in `samples/catalog.yaml` and also accepts a site path or a dropped config file.
 3. Someone opens a talk. Open loads only that talk, on top of the theme already loaded.
 
-A missing config is not replaced with a theme package. A missing manifest, a brand cycle, a missing mark or font, or invalid YAML stops the app and shows the error. It does not substitute another brand. A path that contains `..` or is an absolute filesystem path fails validation.
+A missing config is not replaced with a theme package. A missing manifest, a brand cycle, a missing mark or font, or invalid YAML stops the app and shows the error. It does not substitute another brand. A site path that contains `..` fails validation. An absolute file path is not a site URL. The dev server reads that file and passes its text. The catalog is not involved.
 
 The config is only this:
 

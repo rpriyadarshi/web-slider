@@ -423,9 +423,6 @@ export function Shell({
       onDecisions={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "decisionsWidth", delta) }))}
       onNotesWidth={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "notesWidth", delta) }))}
       onHeight={embed ? undefined : (delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "bottomHeight", -delta) }))}
-      onAddWidget={embed ? undefined : insertWidgetOnSlide}
-      onRemove={embed ? undefined : removeSelected}
-      canRemove={canRemove}
       nextPreview={
         embed ? undefined : nextSlide ? (
               <SlideView deck={deck} slide={nextSlide} revealed={0} assets={assets} />
