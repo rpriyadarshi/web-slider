@@ -42,8 +42,9 @@ export function StartScreen({
         <p className="eyebrow">Web Slider</p>
         <h1>Present from a YAML deck.</h1>
         <p className="lede">
-          This install loads {install.manifestPath}. Icons along the edge open the outline, examples, theme, and
-          exports. Decisions and the notes you take during the talk stay in this browser until you download them.
+          This install loads {install.manifestPath}. The toolbar opens the outline, examples, the YAML file, presenter
+          notes, the theme, export, and help. Decisions and the notes you take during the talk stay in this browser
+          until you download them.
         </p>
         <div className="start-actions">
           <button type="button" className="primary" onClick={requestOpen}>
@@ -73,7 +74,7 @@ export function StartScreen({
             if (file) onOpenFile(file);
           }}
         >
-          Drop a .yaml file or a .zip package here
+          Drop a .yaml file, a .zip package, or a .pptx file here
         </div>
       </section>
     </main>

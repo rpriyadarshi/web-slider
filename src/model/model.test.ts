@@ -172,6 +172,9 @@ describe("session panes", () => {
       ui: { toc: true, side: false, bottom: true, theme: "dark" },
     });
     expect(restored.ui.tocWidth).toBe(PANE.tocWidth);
+    expect(restored.ui.help).toBe(false);
+    expect(restored.ui.helpPinned).toBe(true);
+    expect(restored.ui.helpWidth).toBe(PANE.helpWidth);
     expect(restored.ui.bottomHeight).toBe(PANE.bottomHeight);
     expect(restored.ui.decisionsWidth).toBe(PANE.decisionsWidth);
     expect(restored.ui.notesWidth).toBe(PANE.notesWidth);

@@ -8,6 +8,7 @@ export const PANE = {
   tocWidth: 284,
   yamlWidth: 380,
   sideWidth: 344,
+  helpWidth: 360,
   bottomHeight: 210,
   decisionsWidth: 480,
   notesWidth: 560,
@@ -25,14 +26,17 @@ export type DeckSession = {
     side: boolean;
     bottom: boolean;
     yaml: boolean;
+    help: boolean;
     tocPinned: boolean;
     sidePinned: boolean;
     yamlPinned: boolean;
+    helpPinned: boolean;
     bottomPinned: boolean;
     theme: "light" | "dark";
     tocWidth: number;
     yamlWidth: number;
     sideWidth: number;
+    helpWidth: number;
     bottomHeight: number;
     decisionsWidth: number;
     notesWidth: number;
@@ -45,9 +49,11 @@ export function emptyChrome(): DeckSession["ui"] {
     side: true,
     bottom: true,
     yaml: false,
+    help: false,
     tocPinned: false,
     sidePinned: true,
     yamlPinned: true,
+    helpPinned: true,
     bottomPinned: true,
     theme: "dark",
     ...PANE,
@@ -147,14 +153,17 @@ export function normalizeSession(deck: Deck, input: unknown): DeckSession {
       side: ui.side,
       bottom: ui.bottom,
       yaml: ui.yaml === true,
+      help: ui.help === true,
       tocPinned: ui.tocPinned === true,
       sidePinned: ui.sidePinned === true,
       yamlPinned: ui.yamlPinned !== false,
+      helpPinned: ui.helpPinned !== false,
       bottomPinned: ui.bottomPinned !== false,
       theme,
       tocWidth: paneSize(ui.tocWidth, "tocWidth"),
       yamlWidth: paneSize(ui.yamlWidth, "yamlWidth"),
       sideWidth: paneSize(ui.sideWidth, "sideWidth"),
+      helpWidth: paneSize(ui.helpWidth, "helpWidth"),
       bottomHeight: paneSize(ui.bottomHeight, "bottomHeight"),
       decisionsWidth: paneSize(ui.decisionsWidth, "decisionsWidth"),
       notesWidth: notesPane(ui.notesWidth),

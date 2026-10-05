@@ -1,4 +1,7 @@
 import type { Slide } from "../model/schema";
+import { control } from "../help/controls";
+import { hideTip } from "../help/tips";
+import { shortcutCaps } from "../help/keys";
 import { Icon, IconButton, IconMark } from "./IconButton";
 
 export function Overview({
@@ -15,8 +18,8 @@ export function Overview({
   return (
     <div className="overview" role="dialog" aria-modal="true" aria-label="Slide overview">
       <div className="panel-head">
-        <IconMark label="Overview" name="overview" />
-        <IconButton label="Hide" onClick={onClose}>
+        <IconMark label="Overview" name="overview" tip={control("overview").about} />
+        <IconButton label="Hide" tip={hideTip("Overview")} keys={shortcutCaps("overview")} onClick={onClose}>
           <Icon name="hide" />
         </IconButton>
       </div>

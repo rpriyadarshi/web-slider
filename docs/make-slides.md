@@ -116,7 +116,11 @@ Arrow keys, space, and page up or down move through builds and then slides, skip
 
 The notes band shows the script and a preview of the next slide. The audience icon opens a second window that follows this one: the slide, the build, the blank color, the laser, and the caption. That window does not show notes or questions. The toolbar shows the clock beside the elapsed timer, and a restart icon resets the timer.
 
-The theme icon switches the shell between light and dark for this session. It does not edit the theme file. Export and the insert menu close with Escape. The outline and the side pane each have a pin and a close button.
+The theme icon switches the shell between light and dark for this session. It does not edit the theme file. Export and the insert menu close with Escape. The outline, examples, YAML, presenter strip, and help each have a pin and a close button. Esc closes a floating pane and leaves a docked pane open.
+
+## Help
+
+The question mark in the toolbar, or `?`, opens the help pane. Pin docks it beside the slide, the same way as Examples and YAML. Unpin floats it, and Esc closes it while it floats. Hold the pointer on a control, or tab to it, to read what it does right now. In the YAML pane, hold the pointer on a key to read that field.
 
 Laser, captions, the blank screen, and the audience window are controls. They are not fields in the YAML.
 

@@ -1,4 +1,6 @@
 import type { Slide } from "../model/schema";
+import { control } from "../help/controls";
+import { hideTip, pinTip } from "../help/tips";
 import { Icon, IconButton, IconMark } from "./IconButton";
 
 export function Toc({
@@ -21,12 +23,12 @@ export function Toc({
   return (
     <nav className={className} aria-label="Slides">
       <div className="panel-head">
-        <IconMark label="Outline" name="outline" />
+        <IconMark label="Outline" name="outline" tip={control("outline").about} />
         <div className="panel-actions">
-          <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
+          <IconButton label={pinned ? "Unpin" : "Pin"} tip={pinTip(pinned, "Outline")} pressed={pinned} onClick={onPin}>
             <Icon name="pin" />
           </IconButton>
-          <IconButton label="Hide" onClick={onHide}>
+          <IconButton label="Hide" tip={hideTip("Outline")} onClick={onHide}>
             <Icon name="hide" />
           </IconButton>
         </div>

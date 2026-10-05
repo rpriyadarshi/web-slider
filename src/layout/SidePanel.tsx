@@ -1,6 +1,8 @@
 import { isDarkHex } from "../highlight";
 import type { Block, ResolvedTheme } from "../model/schema";
 import { Blocks } from "../slides/Blocks";
+import { control } from "../help/controls";
+import { hideTip, pinTip } from "../help/tips";
 import { Icon, IconButton, IconMark } from "./IconButton";
 
 export function SidePanel({
@@ -34,12 +36,12 @@ export function SidePanel({
       }}
     >
       <div className="panel-head">
-        <IconMark label="Examples" name="examples" />
+        <IconMark label="Examples" name="examples" tip={control("examples").about} />
         <div className="panel-actions">
-          <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
+          <IconButton label={pinned ? "Unpin" : "Pin"} tip={pinTip(pinned, "Examples")} pressed={pinned} onClick={onPin}>
             <Icon name="pin" />
           </IconButton>
-          <IconButton label="Hide" onClick={onHide}>
+          <IconButton label="Hide" tip={hideTip("Examples")} onClick={onHide}>
             <Icon name="hide" />
           </IconButton>
         </div>

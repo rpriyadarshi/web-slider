@@ -30,7 +30,8 @@ export type IconName =
   | "laser"
   | "captions"
   | "runnable"
-  | "shipped";
+  | "shipped"
+  | "help";
 
 export function Icon({ name }: { name: IconName }) {
   return (
@@ -219,11 +220,25 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M8 12h3M13 12h3M8 15h8" />
     </>
   ),
+  help: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.3.9-1.3 1.7" />
+      <circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none" />
+    </>
+  ),
 };
 
-export function IconMark({ label, name }: { label: string; name: IconName }) {
+export function tipProps(title: string, body?: string, keys?: readonly string[]): Record<string, string> {
+  const props: Record<string, string> = { "data-tip-title": title };
+  if (body) props["data-tip"] = body;
+  if (keys && keys.length > 0) props["data-tip-keys"] = keys.join("|");
+  return props;
+}
+
+export function IconMark({ label, name, tip }: { label: string; name: IconName; tip?: string }) {
   return (
-    <span className="icon-mark" title={label}>
+    <span className="icon-mark" {...tipProps(label, tip)}>
       <Icon name={name} />
     </span>
   );
@@ -231,28 +246,39 @@ export function IconMark({ label, name }: { label: string; name: IconName }) {
 
 export function IconButton({
   label,
+  tip,
+  keys,
   pressed,
   disabled,
+  busy,
   onClick,
   className,
   children,
 }: {
   label: string;
+  tip?: string;
+  keys?: readonly string[];
   pressed?: boolean;
   disabled?: boolean;
+  busy?: boolean;
   onClick?: () => void;
   className?: string;
   children?: ReactNode;
 }) {
+  const inactive = Boolean(disabled || busy);
   return (
     <button
       type="button"
       className={className ? `icon-button ${className}` : "icon-button"}
       aria-label={label}
-      title={label}
       aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
+      aria-disabled={inactive || undefined}
+      aria-busy={busy || undefined}
+      {...tipProps(label, tip, keys)}
+      onClick={() => {
+        if (inactive) return;
+        onClick?.();
+      }}
     >
       {children}
     </button>

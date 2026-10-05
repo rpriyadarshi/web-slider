@@ -141,7 +141,7 @@ export async function saveExport(options: SaveExportOptions, channel: SaveChanne
 }
 
 /** A Blob from fetch can still close as an empty file. The writer receives the bytes themselves. */
-async function bytesOf(blob: Blob, name: string): Promise<Uint8Array> {
+async function bytesOf(blob: Blob, name: string): Promise<Uint8Array<ArrayBuffer>> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   if (bytes.byteLength === 0) throw new Error(`${name} came out empty, so nothing was saved.`);
   return bytes;

@@ -1,5 +1,20 @@
 import type { HighlighterCore } from "@shikijs/core";
 
+/** Languages the live view can highlight. Any other name fails when the slide is shown. */
+export const HIGHLIGHT_LANGUAGES = [
+  "bash",
+  "css",
+  "html",
+  "javascript",
+  "json",
+  "jsx",
+  "markdown",
+  "python",
+  "tsx",
+  "typescript",
+  "yaml",
+] as const;
+
 let pending: Promise<HighlighterCore> | null = null;
 
 function highlighter(): Promise<HighlighterCore> {

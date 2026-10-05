@@ -3,7 +3,8 @@ import { bindProbe, type ProbePath } from "../model/probe";
 import type { Widget } from "../model/schema";
 import type { WidgetAnswer } from "../model/session";
 import { WidgetList } from "../widgets/WidgetControl";
-import { Icon, IconButton } from "./IconButton";
+import { hideTip, pinTip } from "../help/tips";
+import { Icon, IconButton, tipProps } from "./IconButton";
 import { Splitter } from "./Splitter";
 
 export function BottomBar({
@@ -52,10 +53,10 @@ export function BottomBar({
       {onHeight ? <Splitter className="row" axis="y" label="Resize presenter strip" onDelta={onHeight} /> : null}
       {feedback ? null : (
         <div className="panel-actions bottom-actions">
-          <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
+          <IconButton label={pinned ? "Unpin" : "Pin"} tip={pinTip(pinned, "Presenter")} pressed={pinned} onClick={onPin}>
             <Icon name="pin" />
           </IconButton>
-          <IconButton label="Hide" onClick={onHide}>
+          <IconButton label="Hide" tip={hideTip("Presenter")} onClick={onHide}>
             <Icon name="hide" />
           </IconButton>
         </div>
@@ -75,13 +76,15 @@ export function BottomBar({
       <section className="notes-col" aria-label="Notes">
         <div className="notes-grid">
           <div className="script">
-            <h3>Script</h3>
+            <h3 {...tipProps("Script", "What you say. The audience window does not show this.")}>Script</h3>
             <p {...bindProbe(["slides", slideIndex, "notes"], probe, onProbe)}>
               {script?.trim() ? script : "No script for this slide."}
             </p>
           </div>
           <label className="taken">
-            {feedback ? "Feedback" : "Taken notes"}
+            <span {...tipProps(feedback ? "Feedback" : "Taken notes", feedback ? "What the audience sends back to the presenter." : "Notes you take during the talk. They stay in this browser until you download YAML.")}>
+              {feedback ? "Feedback" : "Taken notes"}
+            </span>
             <textarea
               value={notes}
               onFocus={() => onNotesFocus?.()}
@@ -94,6 +97,7 @@ export function BottomBar({
       {onNotesWidth ? <Splitter className="col" axis="x" label="Resize notes" onDelta={onNotesWidth} /> : null}
       {feedback ? null : (
         <section className="next-col" aria-label="Next">
+          <h3 {...tipProps("Next", "The next slide. Hidden slides are skipped.")}>Next</h3>
           <div className="next-preview">
             <div className="next-fit">{nextPreview}</div>
           </div>

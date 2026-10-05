@@ -14,12 +14,17 @@ import { checkPackageFiles, writeDeckPackage } from "../package/deckPackage";
 import { startCaptions } from "../present/captions";
 import { SlideView } from "../slides/SlideView";
 import { fontFaceRules } from "../theme/fonts";
+import { control } from "../help/controls";
+import { shortcutCaps, shortcutFor } from "../help/keys";
+import { backTip, blankTip, captionsTip, counterTip, exportTip, forwardTip, insertBlocked, laserTip, paneStateTip, removeSlideTip, removeTip, showTip } from "../help/tips";
 import { BottomBar } from "./BottomBar";
-import { Icon, IconButton } from "./IconButton";
+import { HelpPane } from "./HelpPane";
+import { Icon, IconButton, tipProps } from "./IconButton";
 import { Overview } from "./Overview";
 import { SidePanel } from "./SidePanel";
 import { Toc } from "./Toc";
 import { Splitter } from "./Splitter";
+import { TooltipLayer } from "./Tooltip";
 import { YamlPane } from "./YamlPane";
 
 function resizeUi(ui: DeckSession["ui"], key: PaneSize, delta: number): DeckSession["ui"] {
@@ -278,11 +283,13 @@ export function Shell({
         if (overview) setOverview(false);
         else if (themeOpen) setThemeOpen(false);
         else if (exportOpen) setExportOpen(false);
-        else if (session.ui.side && !session.ui.sidePinned) {
+        else if (session.ui.help && !session.ui.helpPinned) {
+          onSession((current) => ({ ...current, ui: { ...current.ui, help: false } }));
+        } else if (session.ui.side && !session.ui.sidePinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }));
         } else if (session.ui.yaml && !session.ui.yamlPinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }));
-        }         else if (session.ui.toc && !session.ui.tocPinned) {
+        } else if (session.ui.toc && !session.ui.tocPinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, toc: false } }));
         } else if (session.ui.bottom && !session.ui.bottomPinned) {
           onSession((current) => ({ ...current, ui: { ...current.ui, bottom: false } }));
@@ -293,37 +300,29 @@ export function Shell({
         return;
       }
       if (isTypingTarget(event.target)) return;
-      if (
-        blank &&
-        event.key !== "b" &&
-        event.key !== "B" &&
-        event.key !== "w" &&
-        event.key !== "W" &&
-        event.key !== "l" &&
-        event.key !== "L" &&
-        event.key !== "c" &&
-        event.key !== "C"
-      ) {
+      const shortcut = shortcutFor(event.key, event);
+      const run = shortcut && !(shortcut.presenterOnly && embed) ? shortcut.id : null;
+      if (blank && !shortcut?.keepsBlank) {
         setBlank(null);
         event.preventDefault();
         return;
       }
-      if (event.key === "b" || event.key === "B") {
+      if (run === "blank-black") {
         setBlank("black");
         event.preventDefault();
         return;
       }
-      if (event.key === "w" || event.key === "W") {
+      if (run === "blank-white") {
         setBlank("white");
         event.preventDefault();
         return;
       }
-      if (!embed && (event.key === "l" || event.key === "L")) {
+      if (run === "laser") {
         setLaserOn((on) => !on);
         event.preventDefault();
         return;
       }
-      if (!embed && (event.key === "c" || event.key === "C")) {
+      if (run === "captions") {
         setCaptionError(null);
         setCaptionsOn((on) => {
           if (on) setCaption("");
@@ -332,12 +331,12 @@ export function Shell({
         event.preventDefault();
         return;
       }
-      if (/^[0-9]$/.test(event.key)) {
+      if (run === "digit") {
         digits.current = `${digits.current}${event.key}`.slice(-3);
         event.preventDefault();
         return;
       }
-      if (event.key === "Enter" && digits.current) {
+      if (run === "jump" && digits.current) {
         const target = jumpToVisibleNumber(deck, Number(digits.current));
         digits.current = "";
         if (target) onSession((current) => ({ ...current, ...target }));
@@ -345,31 +344,34 @@ export function Shell({
         return;
       }
       digits.current = "";
-      if (event.key === " " && event.target instanceof HTMLElement && event.target.tagName === "BUTTON") return;
-      if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === "PageDown" || event.key === " ") {
+      if (run === "forward" && event.key === " " && event.target instanceof HTMLElement && event.target.tagName === "BUTTON") return;
+      if (run === "forward") {
         event.preventDefault();
         onSession((current) => ({ ...current, ...moveForward(deck, current.slideIndex, current.revealed) }));
-      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp" || event.key === "PageUp") {
+      } else if (run === "back") {
         event.preventDefault();
         onSession((current) => ({ ...current, ...moveBack(deck, current.slideIndex, current.revealed) }));
-      } else if (event.key === "Home") {
+      } else if (run === "home") {
         event.preventDefault();
         const first = visibleIndexes(deck)[0] ?? 0;
         onSession((current) => ({ ...current, slideIndex: first, revealed: 0 }));
-      } else if (event.key === "End") {
+      } else if (run === "end") {
         event.preventDefault();
         const visible = visibleIndexes(deck);
         const last = visible[visible.length - 1] ?? deck.slides.length - 1;
         onSession((current) => ({ ...current, ...jumpTo(deck, last) }));
-      } else if (event.key === "o" || event.key === "O") {
+      } else if (run === "overview") {
         setOverview((open) => !open);
-      } else if (event.key === "f" || event.key === "F") {
+      } else if (run === "fullscreen") {
         void toggleFullscreen();
+      } else if (run === "help") {
+        onSession((current) => ({ ...current, ui: { ...current.ui, help: !current.ui.help } }));
+        event.preventDefault();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [blank, deck, embed, exportOpen, onSession, overview, session.ui.bottom, session.ui.bottomPinned, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, session.ui.yaml, session.ui.yamlPinned, themeOpen]);
+  }, [blank, deck, embed, exportOpen, onSession, overview, session.ui.bottom, session.ui.bottomPinned, session.ui.help, session.ui.helpPinned, session.ui.side, session.ui.sidePinned, session.ui.toc, session.ui.tocPinned, session.ui.yaml, session.ui.yamlPinned, themeOpen]);
 
   function jump(index: number) {
     onSession((current) => ({ ...current, ...jumpTo(deck, index) }));
@@ -423,6 +425,8 @@ export function Shell({
   const menuOpen = themeOpen || exportOpen;
   const canRemove = !yamlError && removableNode(probe) !== null;
   const canRemoveSlide = !yamlError && deck.slides.length > 1;
+  const blocked = insertBlocked(yamlError);
+  const slideInsertTip = `Inserts a slide after "${deck.slides[structureSlideIndex()]?.title ?? "this slide"}".`;
   const presenter = (
     <BottomBar
       feedback={embed}
@@ -466,6 +470,7 @@ export function Shell({
       data-toc-pin={session.ui.toc && session.ui.tocPinned ? "open" : "closed"}
       data-side-pin={session.ui.side && session.ui.sidePinned ? "open" : "closed"}
       data-yaml-pin={session.ui.yaml && session.ui.yamlPinned ? "open" : "closed"}
+      data-help-pin={session.ui.help && session.ui.helpPinned ? "open" : "closed"}
       data-bottom={session.ui.bottom ? "open" : "closed"}
       style={{
         ["--ground" as string]: palette.ground,
@@ -478,6 +483,7 @@ export function Shell({
         ["--toc-col" as string]: session.ui.toc && session.ui.tocPinned ? `${session.ui.tocWidth}px` : "0px",
         ["--yaml-col" as string]: session.ui.yaml && session.ui.yamlPinned ? `${session.ui.yamlWidth}px` : "0px",
         ["--side-col" as string]: session.ui.side && session.ui.sidePinned ? `${session.ui.sideWidth}px` : "0px",
+        ["--help-col" as string]: session.ui.help && session.ui.helpPinned ? `${session.ui.helpWidth}px` : "0px",
         ["--bottom-row" as string]: embed || (session.ui.bottom && session.ui.bottomPinned) ? `${session.ui.bottomHeight}px` : "0px",
         ["--bottom-size" as string]: `${session.ui.bottomHeight}px`,
         ["--decisions-col" as string]: `${session.ui.decisionsWidth}px`,
@@ -497,41 +503,47 @@ export function Shell({
         </div>
         <div className="transport">
           <IconButton
-            label="Previous"
+            label={control("previous").label}
+            tip={backTip(deck, session.slideIndex, session.revealed)}
+            keys={shortcutCaps("back")}
             onClick={() => onSession((current) => ({ ...current, ...moveBack(deck, current.slideIndex, current.revealed) }))}
           >
             <Icon name="previous" />
           </IconButton>
-          <p className="slide-count">
+          <p className="slide-count" {...tipProps("Slide", counterTip(deck, session.slideIndex))}>
             {visibleNumber(deck, session.slideIndex) ?? "—"} / {visibleIndexes(deck).length}
           </p>
           <IconButton
-            label="Next"
+            label={control("next").label}
+            tip={forwardTip(deck, session.slideIndex, session.revealed)}
+            keys={shortcutCaps("forward")}
             onClick={() => onSession((current) => ({ ...current, ...moveForward(deck, current.slideIndex, current.revealed) }))}
           >
             <Icon name="next" />
           </IconButton>
         </div>
         <div className="toolbar-actions" hidden={embed}>
-          <p className="timer" aria-label="Clock" title="Clock">
+          <p className="timer" aria-label="Clock" {...tipProps(control("clock").label, control("clock").about)}>
             {clock}
           </p>
-          <p className="timer" aria-label="Elapsed time" title="Elapsed time">
+          <p className="timer" aria-label="Elapsed time" {...tipProps(control("elapsed").label, control("elapsed").about)}>
             {formatElapsed(elapsed)}
           </p>
-          <IconButton label="Restart timer" onClick={restart}>
+          <IconButton label={control("restart").label} tip={control("restart").about} onClick={restart}>
             <Icon name="restart" />
           </IconButton>
           {blank ? (
-            <p className="timer" title="Audience screen">
+            <p className="timer" {...tipProps(`Audience is ${blank}`, blankTip(blank))}>
               Audience is {blank}
             </p>
           ) : null}
-          <IconButton label="Laser pointer" pressed={laserOn} onClick={() => setLaserOn((on) => !on)}>
+          <IconButton label={control("laser").label} tip={laserTip(laserOn)} keys={shortcutCaps("laser")} pressed={laserOn} onClick={() => setLaserOn((on) => !on)}>
             <Icon name="laser" />
           </IconButton>
           <IconButton
-            label="Captions"
+            label={control("captions").label}
+            tip={captionsTip(captionsOn, captionError)}
+            keys={shortcutCaps("captions")}
             pressed={captionsOn}
             onClick={() => {
               setCaptionError(null);
@@ -544,7 +556,8 @@ export function Shell({
             <Icon name="captions" />
           </IconButton>
           <IconButton
-            label="Audience window"
+            label={control("audience").label}
+            tip={control("audience").about}
             onClick={() => {
               window.open(
                 `${window.location.pathname}?audience=1&id=${encodeURIComponent(deck.id)}`,
@@ -555,46 +568,51 @@ export function Shell({
           >
             <Icon name="audience" />
           </IconButton>
-          <IconButton label="Overview" pressed={overview} onClick={() => setOverview((open) => !open)}>
+          <IconButton label={control("overview").label} tip={paneStateTip("Overview", overview, false)} keys={shortcutCaps("overview")} pressed={overview} onClick={() => setOverview((open) => !open)}>
             <Icon name="overview" />
           </IconButton>
-          <IconButton label={fullscreen ? "Exit" : "Full screen"} onClick={() => void toggleFullscreen()}>
+          <IconButton label={fullscreen ? "Exit full screen" : control("fullscreen").label} tip={control("fullscreen").about} keys={shortcutCaps("fullscreen")} onClick={() => void toggleFullscreen()}>
             <Icon name={fullscreen ? "exit" : "fullscreen"} />
           </IconButton>
           <IconButton
-            label="Outline"
+            label={control("outline").label}
+            tip={paneStateTip("Outline", session.ui.toc, session.ui.tocPinned)}
             pressed={session.ui.toc}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, toc: !current.ui.toc } }))}
           >
             <Icon name="outline" />
           </IconButton>
           <IconButton
-            label="Examples"
+            label={control("examples").label}
+            tip={paneStateTip("Examples", session.ui.side, session.ui.sidePinned)}
             pressed={session.ui.side}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: !current.ui.side } }))}
           >
             <Icon name="examples" />
           </IconButton>
           <IconButton
-            label="YAML"
+            label={control("yaml").label}
+            tip={paneStateTip("YAML", session.ui.yaml, session.ui.yamlPinned)}
             pressed={session.ui.yaml}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: !current.ui.yaml } }))}
           >
             <Icon name="yaml" />
           </IconButton>
           <IconButton
-            label="Presenter"
+            label={control("presenter").label}
+            tip={paneStateTip("Presenter", session.ui.bottom, session.ui.bottomPinned)}
             pressed={session.ui.bottom}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: !current.ui.bottom } }))}
           >
             <Icon name="notes" />
           </IconButton>
-          <IconButton label="Open" onClick={requestOpen}>
+          <IconButton label={control("open").label} tip={control("open").about} onClick={requestOpen}>
             <Icon name="open" />
           </IconButton>
           {onResetShipped ? (
             <IconButton
-              label="Reset to shipped"
+              label={control("shipped").label}
+              tip={control("shipped").about}
               onClick={() => {
                 if (window.confirm("Replace the current slides and session notes with the shipped talk?")) onResetShipped();
               }}
@@ -604,7 +622,8 @@ export function Shell({
           ) : null}
           <div className="menu-anchor">
             <IconButton
-              label="Theme"
+              label={control("theme").label}
+              tip={control("theme").about}
               pressed={themeOpen}
               onClick={() => {
                 setThemeOpen((open) => !open);
@@ -615,10 +634,10 @@ export function Shell({
             </IconButton>
             {themeOpen ? (
               <div className="popup" role="menu" aria-label="Theme">
-                <IconButton label="Light" pressed={mode === "light"} onClick={() => setMode("light")}>
+                <IconButton label={control("light").label} tip={control("light").about} pressed={mode === "light"} onClick={() => setMode("light")}>
                   <Icon name="light" />
                 </IconButton>
-                <IconButton label="Dark" pressed={mode === "dark"} onClick={() => setMode("dark")}>
+                <IconButton label={control("dark").label} tip={control("dark").about} pressed={mode === "dark"} onClick={() => setMode("dark")}>
                   <Icon name="dark" />
                 </IconButton>
               </div>
@@ -626,8 +645,10 @@ export function Shell({
           </div>
           <div className="menu-anchor">
             <IconButton
-              label="Export"
+              label={control("export").label}
+              tip={exportTip(exporting)}
               pressed={exportOpen}
+              busy={exporting !== null}
               disabled={exporting !== null}
               onClick={() => {
                 setExportOpen((open) => !open);
@@ -639,7 +660,9 @@ export function Shell({
             {exportOpen ? (
               <div className="popup export-popup" role="menu" aria-label="Export">
                 <IconButton
-                  label="YAML"
+                  label={control("export-yaml").label}
+                  tip={control("export-yaml").about}
+                  busy={exporting !== null}
                   disabled={exporting !== null}
                   onClick={() => {
                     void startExport("yaml", portable.id, async () => new Blob([deckToYaml(portable, session)], { type: "application/yaml" }));
@@ -648,7 +671,9 @@ export function Shell({
                   <Icon name="yaml" />
                 </IconButton>
                 <IconButton
-                  label="PDF"
+                  label={control("export-pdf").label}
+                  tip={control("export-pdf").about}
+                  busy={exporting !== null}
                   disabled={exporting !== null}
                   onClick={() => {
                     void startExport("pdf", deck.id, async () => {
@@ -663,7 +688,9 @@ export function Shell({
                   <Icon name="pdf" />
                 </IconButton>
                 <IconButton
-                  label="Word"
+                  label={control("export-word").label}
+                  tip={control("export-word").about}
+                  busy={exporting !== null}
                   disabled={exporting !== null}
                   onClick={() => {
                     void startExport("docx", deck.id, async () => {
@@ -675,7 +702,9 @@ export function Shell({
                   <Icon name="word" />
                 </IconButton>
                 <IconButton
-                  label="PowerPoint"
+                  label={control("export-powerpoint").label}
+                  tip={control("export-powerpoint").about}
+                  busy={exporting !== null}
                   disabled={exporting !== null}
                   onClick={() => {
                     void startExport("pptx", deck.id, async () => {
@@ -687,7 +716,9 @@ export function Shell({
                   <Icon name="powerpoint" />
                 </IconButton>
                 <IconButton
-                  label="Package"
+                  label={control("export-package").label}
+                  tip={control("export-package").about}
+                  busy={exporting !== null}
                   disabled={exporting !== null}
                   onClick={() => {
                     void startExport(
@@ -702,7 +733,9 @@ export function Shell({
                 </IconButton>
                 {shareBuild ? null : (
                   <IconButton
-                    label="Runnable package"
+                    label={control("export-runnable").label}
+                    tip={control("export-runnable").about}
+                    busy={exporting !== null}
                     disabled={exporting !== null}
                     onClick={() => {
                     const command = { text: "" };
@@ -734,7 +767,9 @@ export function Shell({
                   </IconButton>
                 )}
                 <IconButton
-                  label="Handout"
+                  label={control("export-handout").label}
+                  tip={control("export-handout").about}
+                  busy={exporting !== null}
                   disabled={exporting !== null}
                   onClick={() => {
                     void startExport("handout", deck.id, async () => {
@@ -751,6 +786,15 @@ export function Shell({
               </div>
             ) : null}
           </div>
+          <IconButton
+            label={control("help").label}
+            tip={paneStateTip("Help", session.ui.help, session.ui.helpPinned)}
+            keys={shortcutCaps("help")}
+            pressed={session.ui.help}
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, help: !current.ui.help } }))}
+          >
+            <Icon name="help" />
+          </IconButton>
         </div>
         <div className="progress" aria-hidden="true">
           <span style={{ width: `${((visibleNumber(deck, session.slideIndex) ?? visibleIndexes(deck).length) / visibleIndexes(deck).length) * 100}%` }} />
@@ -765,6 +809,9 @@ export function Shell({
       ) : null}
       {!embed && session.ui.side && session.ui.sidePinned ? (
         <Splitter className="shell-side" axis="x" label="Resize examples" onDelta={(delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "sideWidth", -delta) }))} />
+      ) : null}
+      {!embed && session.ui.help && session.ui.helpPinned ? (
+        <Splitter className="shell-help" axis="x" label="Resize help" onDelta={(delta) => onSession((current) => ({ ...current, ui: resizeUi(current.ui, "helpWidth", -delta) }))} />
       ) : null}
 
       {menuOpen ? (
@@ -796,6 +843,7 @@ export function Shell({
           <IconButton
             className="reopen left"
             label="Outline"
+            tip={showTip("Outline")}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, toc: true } }))}
           >
             <Icon name="outline" />
@@ -816,6 +864,7 @@ export function Shell({
           <IconButton
             className="reopen right"
             label="Examples"
+            tip={showTip("Examples")}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: true } }))}
           >
             <Icon name="examples" />
@@ -825,15 +874,27 @@ export function Shell({
           <IconButton
             className="reopen yaml"
             label="YAML"
+            tip={showTip("YAML")}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: true } }))}
           >
             <Icon name="yaml" />
+          </IconButton>
+        ) : null}
+        {!embed && !session.ui.help ? (
+          <IconButton
+            className="reopen help"
+            label="Help"
+            tip={showTip("Help")}
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, help: true } }))}
+          >
+            <Icon name="help" />
           </IconButton>
         ) : null}
         {!embed && !session.ui.bottom ? (
           <IconButton
             className="reopen presenter"
             label="Presenter"
+            tip={showTip("Presenter")}
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: true } }))}
           >
             <Icon name="notes" />
@@ -874,6 +935,26 @@ export function Shell({
             canRemove={canRemove}
             onRemoveSlide={removeCurrentSlide}
             canRemoveSlide={canRemoveSlide}
+            insertBlocked={blocked}
+            slideTip={slideInsertTip}
+            removeTip={removeTip(deck, probe, yamlError)}
+            removeSlideTip={removeSlideTip(deck, structureSlideIndex(), yamlError)}
+          />
+        ) : null}
+        {!embed && session.ui.help && !session.ui.helpPinned ? (
+          <HelpPane
+            className="pane floating right"
+            deck={deck}
+            slideIndex={session.slideIndex}
+            probe={probe}
+            yamlError={yamlError}
+            blank={blank}
+            laserOn={laserOn}
+            captionsOn={captionsOn}
+            captionError={captionError}
+            pinned={false}
+            onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, helpPinned: true } }))}
+            onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, help: false } }))}
           />
         ) : null}
         <SlideView
@@ -920,6 +1001,10 @@ export function Shell({
           canRemove={canRemove}
           onRemoveSlide={removeCurrentSlide}
           canRemoveSlide={canRemoveSlide}
+          insertBlocked={blocked}
+          slideTip={slideInsertTip}
+          removeTip={removeTip(deck, probe, yamlError)}
+          removeSlideTip={removeSlideTip(deck, structureSlideIndex(), yamlError)}
         />
       ) : null}
 
@@ -931,6 +1016,23 @@ export function Shell({
           pinned
           onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, sidePinned: false } }))}
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, side: false } }))}
+        />
+      ) : null}
+
+      {!embed && session.ui.help && session.ui.helpPinned ? (
+        <HelpPane
+          className="pane docked help-pane"
+          deck={deck}
+          slideIndex={session.slideIndex}
+          probe={probe}
+          yamlError={yamlError}
+          blank={blank}
+          laserOn={laserOn}
+          captionsOn={captionsOn}
+          captionError={captionError}
+          pinned
+          onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, helpPinned: false } }))}
+          onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, help: false } }))}
         />
       ) : null}
 
@@ -959,13 +1061,14 @@ export function Shell({
                 Save {exportDownload.filename} again
               </button>
             ) : null}
-            <IconButton label="Hide" onClick={dismissExportBanner}>
+            <IconButton label="Hide" tip="Dismiss this message." onClick={dismissExportBanner}>
               <Icon name="hide" />
             </IconButton>
           </span>
         </div>
       ) : null}
       {exporting ? <p className="banner">Exporting {exporting}…</p> : null}
+      <TooltipLayer />
     </div>
   );
 }

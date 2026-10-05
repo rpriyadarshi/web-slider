@@ -129,7 +129,7 @@ export function removeParsed(source: string, failed: boolean, path: ProbePath): 
   return next;
 }
 
-function blockValue(type: Block["type"]): Block {
+export function blockValue(type: Block["type"]): Block {
   switch (type) {
     case "paragraph":
       return { type, text: "Text" };
@@ -162,7 +162,7 @@ function blockValue(type: Block["type"]): Block {
   }
 }
 
-function widgetValue(type: Widget["type"], id: string): Widget {
+export function widgetValue(type: Widget["type"], id: string): Widget {
   switch (type) {
     case "radio":
       return { id, type, prompt: "Choose", options: ["Yes", "No"] };

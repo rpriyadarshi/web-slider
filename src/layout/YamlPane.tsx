@@ -1,15 +1,20 @@
-import { defaultKeymap, history, historyKeymap, indentWithTab, redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
+import { defaultKeymap, history, redo, redoDepth, undo, undoDepth } from "@codemirror/commands";
 import { yaml } from "@codemirror/lang-yaml";
-import { bracketMatching, foldKeymap, HighlightStyle, indentOnInput, syntaxHighlighting } from "@codemirror/language";
-import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
+import { bracketMatching, HighlightStyle, indentOnInput, syntaxHighlighting } from "@codemirror/language";
+import { highlightSelectionMatches, openSearchPanel, search } from "@codemirror/search";
 import { EditorState, Prec, StateEffect, StateField, Transaction } from "@codemirror/state";
-import { Decoration, drawSelection, dropCursor, EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { Decoration, drawSelection, dropCursor, EditorView, hoverTooltip, keymap, lineNumbers } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { useEffect, useRef, useState } from "react";
+import { yamlKeyDoc } from "../help/context";
+import { control } from "../help/controls";
+import { editorCaps, foldKeymap, historyKeymap, indentWithTab, searchKeymap } from "../help/keys";
+import { blockDoc, widgetDoc } from "../help/reference";
+import { hideTip, historyTip, pinTip } from "../help/tips";
 import { BLOCK_KINDS, BLOCK_LABEL, WIDGET_KINDS, WIDGET_LABEL } from "../model/insert";
 import { caretSelection } from "../model/probe";
 import type { Block, Widget } from "../model/schema";
-import { Icon, IconButton, IconMark } from "./IconButton";
+import { Icon, IconButton, IconMark, tipProps } from "./IconButton";
 
 const yamlHighlight = HighlightStyle.define([
   { tag: tags.comment, color: "var(--muted)", fontStyle: "italic" },
@@ -46,6 +51,22 @@ const probeMark = StateField.define({
     return marks.map(transaction.changes);
   },
   provide: (field) => EditorView.decorations.from(field),
+});
+
+const keyHover = hoverTooltip((view, pos) => {
+  const found = yamlKeyDoc(view.state.doc.toString(), pos);
+  if (!found) return null;
+  return {
+    pos: found.from,
+    end: found.to,
+    above: true,
+    create() {
+      const dom = document.createElement("div");
+      dom.className = "yaml-key-doc";
+      dom.textContent = found.text;
+      return { dom };
+    },
+  };
 });
 
 const yamlTheme = EditorView.theme({
@@ -101,6 +122,10 @@ export function YamlPane({
   canRemove,
   onRemoveSlide,
   canRemoveSlide,
+  insertBlocked,
+  slideTip,
+  removeTip,
+  removeSlideTip,
   className,
 }: {
   value: string;
@@ -121,6 +146,10 @@ export function YamlPane({
   canRemove: boolean;
   onRemoveSlide: () => void;
   canRemoveSlide: boolean;
+  insertBlocked: string | null;
+  slideTip: string;
+  removeTip: string;
+  removeSlideTip: string;
   className: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -156,6 +185,7 @@ export function YamlPane({
           syntaxHighlighting(yamlHighlight),
           search({ top: true }),
           highlightSelectionMatches(),
+          keyHover,
           yamlTheme,
           probeMark,
           EditorState.tabSize.of(2),
@@ -244,6 +274,17 @@ export function YamlPane({
     action();
   }
 
+  function menuItem(title: string, about: string, blocked: string | null, action: () => void) {
+    return {
+      ...tipProps(title, blocked ?? about),
+      "aria-disabled": blocked ? true : undefined,
+      onClick: () => {
+        if (blocked) return;
+        choose(action);
+      },
+    };
+  }
+
   useEffect(() => {
     const view = viewRef.current;
     if (!view || !selection) return;
@@ -262,63 +303,57 @@ export function YamlPane({
   return (
     <section className={className} aria-label="YAML">
       <div className="panel-head">
-        <IconMark label="YAML" name="yaml" />
+        <IconMark label="YAML" name="yaml" tip={control("yaml").about} />
         <div className="panel-actions">
-          <IconButton label="Undo" disabled={!canUndo} onClick={() => { const view = viewRef.current; if (view) undo(view); }}>
+          <IconButton label="Undo" tip={historyTip("undo", canUndo)} keys={editorCaps((binding) => binding.key === "Mod-z")} disabled={!canUndo} onClick={() => { const view = viewRef.current; if (view) undo(view); }}>
             <Icon name="undo" />
           </IconButton>
-          <IconButton label="Redo" disabled={!canRedo} onClick={() => { const view = viewRef.current; if (view) redo(view); }}>
+          <IconButton label="Redo" tip={historyTip("redo", canRedo)} keys={editorCaps((binding) => binding.key === "Mod-y")} disabled={!canRedo} onClick={() => { const view = viewRef.current; if (view) redo(view); }}>
             <Icon name="redo" />
           </IconButton>
-          <IconButton label="Find" onClick={() => { const view = viewRef.current; if (view) openSearchPanel(view); }}>
+          <IconButton label="Find" tip={control("find").about} keys={editorCaps((binding) => binding.key === "Mod-f")} onClick={() => { const view = viewRef.current; if (view) openSearchPanel(view); }}>
             <Icon name="find" />
           </IconButton>
           <div className="menu-anchor" ref={menuRef}>
-            <IconButton label="Insert" pressed={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+            <IconButton label="Insert" tip={insertBlocked ?? control("insert").about} pressed={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
               <Icon name="insert" />
             </IconButton>
             {menuOpen ? (
               <div className="insert-menu" role="menu" aria-label="Insert">
-                <button type="button" role="menuitem" onClick={() => choose(onInsertSlide)}>
+                <button type="button" role="menuitem" {...menuItem("Slide", slideTip, insertBlocked, onInsertSlide)}>
                   Slide
                 </button>
                 <p className="insert-label">Blocks</p>
                 {BLOCK_KINDS.map((type) => (
-                  <button key={`blocks-${type}`} type="button" role="menuitem" onClick={() => choose(() => onInsertBlock("blocks", type))}>
+                  <button key={`blocks-${type}`} type="button" role="menuitem" {...menuItem(BLOCK_LABEL[type], `${blockDoc(type).about} Adds it to the slide.`, insertBlocked, () => onInsertBlock("blocks", type))}>
                     {BLOCK_LABEL[type]}
                   </button>
                 ))}
                 <p className="insert-label">Side</p>
                 {BLOCK_KINDS.map((type) => (
-                  <button key={`side-${type}`} type="button" role="menuitem" onClick={() => choose(() => onInsertBlock("side", type))}>
+                  <button key={`side-${type}`} type="button" role="menuitem" {...menuItem(BLOCK_LABEL[type], `${blockDoc(type).about} Adds it to the side column.`, insertBlocked, () => onInsertBlock("side", type))}>
                     {BLOCK_LABEL[type]}
                   </button>
                 ))}
                 <p className="insert-label">Widgets</p>
                 {WIDGET_KINDS.map((type) => (
-                  <button key={type} type="button" role="menuitem" onClick={() => choose(() => onInsertWidget(type))}>
+                  <button key={type} type="button" role="menuitem" {...menuItem(WIDGET_LABEL[type], `${widgetDoc(type).about} Adds it to the decision row.`, insertBlocked, () => onInsertWidget(type))}>
                     {WIDGET_LABEL[type]}
                   </button>
                 ))}
-                <button type="button" role="menuitem" disabled={!canRemove} onClick={() => choose(onRemove)}>
+                <button type="button" role="menuitem" {...menuItem("Remove", removeTip, canRemove ? null : removeTip, onRemove)}>
                   Remove
                 </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  disabled={!canRemoveSlide}
-                  title={canRemoveSlide ? "Remove slide" : "The last slide cannot be removed."}
-                  onClick={() => choose(onRemoveSlide)}
-                >
+                <button type="button" role="menuitem" {...menuItem("Remove slide", removeSlideTip, canRemoveSlide ? null : removeSlideTip, onRemoveSlide)}>
                   Remove slide
                 </button>
               </div>
             ) : null}
           </div>
-          <IconButton label={pinned ? "Unpin" : "Pin"} pressed={pinned} onClick={onPin}>
+          <IconButton label={pinned ? "Unpin" : "Pin"} tip={pinTip(pinned, "YAML")} pressed={pinned} onClick={onPin}>
             <Icon name="pin" />
           </IconButton>
-          <IconButton label="Hide" onClick={onHide}>
+          <IconButton label="Hide" tip={hideTip("YAML")} onClick={onHide}>
             <Icon name="hide" />
           </IconButton>
         </div>
@@ -332,7 +367,7 @@ export function YamlPane({
         data-lit={sessionLit ? "true" : undefined}
       >
         <div className="panel-head">
-          <h2>Session</h2>
+          <h2 {...tipProps("Session", "Notes and answers recorded on this slide during this run. This is not the deck file.")}>Session</h2>
         </div>
         <p className="yaml-session-note">This run. Not the deck file.</p>
         <pre>{sessionText}</pre>

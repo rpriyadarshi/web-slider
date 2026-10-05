@@ -46,7 +46,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline-offset: 2px;
 }
 
-button:disabled { opacity: 0.5; cursor: progress; }
+button:disabled,
+button[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+button[aria-busy="true"] { cursor: progress; }
 
 [data-probe-ancestor="true"] {
   outline: 1px dashed var(--highlight, var(--accent));
@@ -193,7 +195,7 @@ button.primary {
 .shell {
   height: 100dvh;
   display: grid;
-  grid-template-columns: var(--toc-col) minmax(0, 1fr) var(--yaml-col) var(--side-col);
+  grid-template-columns: var(--toc-col) minmax(0, 1fr) var(--yaml-col) var(--side-col) var(--help-col);
   grid-template-rows: auto minmax(0, 1fr) var(--bottom-row);
   background: var(--ground);
   color: var(--text);
@@ -225,7 +227,8 @@ button.primary {
 
 .shell-toc,
 .shell-yaml,
-.shell-side {
+.shell-side,
+.shell-help {
   grid-row: 2;
   width: 6px;
   align-self: stretch;
@@ -235,6 +238,7 @@ button.primary {
 .shell-toc { grid-column: 1; justify-self: end; margin-right: -3px; }
 .shell-yaml { grid-column: 3; justify-self: start; margin-left: -3px; }
 .shell-side { grid-column: 4; justify-self: start; margin-left: -3px; }
+.shell-help { grid-column: 5; justify-self: start; margin-left: -3px; }
 
 .toolbar {
   grid-column: 1 / -1;
@@ -357,7 +361,7 @@ button.primary {
   gap: 4px;
 }
 
-.panel-head h2, .script h3, .taken {
+.panel-head h2, .script h3, .next-col h3, .taken {
   margin: 0;
   font-size: 11px;
   letter-spacing: 0.12em;
@@ -856,6 +860,7 @@ textarea { flex: 1; resize: none; min-height: 0; }
 
 .reopen.left { left: 8px; top: 12px; }
 .reopen.right { right: 8px; top: 12px; }
+.reopen.help { right: 48px; top: 12px; }
 .reopen.yaml { right: 8px; bottom: 12px; }
 .reopen.presenter { left: 8px; bottom: 12px; }
 
@@ -1006,5 +1011,76 @@ textarea { flex: 1; resize: none; min-height: 0; }
 nav.pane.docked { grid-column: 1; }
 .yaml-pane.docked { grid-column: 3; }
 aside.pane.docked { grid-column: 4; }
+.help-pane.docked { grid-column: 5; }
+
+.help-search { display: block; padding: 8px 10px 0; }
+.help-search input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--ground);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.help-body { flex: 1; overflow: auto; padding: 12px 14px 20px; }
+.help-card { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.help-card h2, .help-body h3 { margin: 8px 0 6px; font-size: 14px; }
+.help-body p, .help-body li { font-size: 13px; line-height: 1.45; }
+.help-body details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.help-body summary { cursor: pointer; font-weight: 600; }
+.help-fields { margin: 6px 0 0; padding-left: 18px; }
+.help-body code, .help-example, .help-card pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+}
+.help-example, .help-card pre {
+  margin: 8px 0 0;
+  padding: 8px;
+  overflow: auto;
+  background: var(--ground);
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+.help-keys, .help-controls { list-style: none; margin: 0; padding: 0; }
+.help-keys li, .help-controls li { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; }
+.help-controls svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+.help-controls p { margin: 2px 0 0; }
+.help-miss { color: var(--muted); }
+.keys { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }
+.keys kbd, .tip kbd {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+  background: var(--ground);
+}
+.tip {
+  position: fixed;
+  z-index: 30;
+  max-width: 280px;
+  padding: 8px 10px;
+  background: var(--paper);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+.tip strong { display: block; font-size: 13px; }
+.tip p { margin: 4px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); overflow-wrap: anywhere; }
+.yaml-editor .cm-tooltip {
+  background: var(--paper);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  z-index: 8;
+}
+.yaml-editor .yaml-key-doc {
+  max-width: 320px;
+  padding: 8px 10px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+}
 
 .pane ol, .pane .side-body { flex: 1; }

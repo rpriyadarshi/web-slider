@@ -1,3 +1,5 @@
+import { tipProps } from "./IconButton";
+
 export function Splitter({
   label,
   axis,
@@ -15,6 +17,7 @@ export function Splitter({
       aria-orientation={axis === "x" ? "vertical" : "horizontal"}
       aria-label={label}
       className={className ? `splitter ${className}` : "splitter"}
+      {...tipProps(label, "Drag to resize.")}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         event.preventDefault();
