@@ -22,11 +22,21 @@ const manifestPathSchema = z
     message: "must be a package name or a site path such as samples/examples/northwind/manifest.yaml",
   });
 
+const deckPathSchema = z
+  .string()
+  .min(1)
+  .refine((value) => isSiteDeckPath(value), {
+    message: "must be a site path to a .yaml, .yml, or .zip talk such as talk/deck.zip. A filesystem path or ../ cannot be read.",
+  });
+
 export const configSchema = z
   .object({
     manifest: manifestPathSchema,
+    deck: deckPathSchema.optional(),
   })
   .strict();
+
+export type Config = z.infer<typeof configSchema>;
 
 export const manifestSchema = z
   .object({
@@ -65,6 +75,8 @@ export type Install = {
   manifestPath: string;
   manifest: ResolvedManifest;
   assetUrls: Map<string, string>;
+  /** The talk the config opens by default: a site path, or a disk path beside a config on disk. */
+  deckPath?: string;
 };
 
 export function completeTheme(theme: ThemeInput | undefined): ThemeInput {
@@ -173,13 +185,22 @@ export function localFileUrl(origin: string, diskPath: string): string {
 
 /** Manifest named by a config file on disk, resolved beside that config. A package name returns null. */
 export function diskManifestPath(configPath: string, manifest: string): string | null {
+  return diskSiblingPath(configPath, manifest, /\.ya?ml$/);
+}
+
+/** Default talk named by a config file on disk, resolved beside that config. A samples/ path returns null. */
+export function diskDeckPath(configPath: string, deck: string): string | null {
+  return diskSiblingPath(configPath, deck, /\.(ya?ml|zip)$/);
+}
+
+function diskSiblingPath(configPath: string, ref: string, suffix: RegExp): string | null {
   if (!isDiskConfigPath(configPath)) return null;
-  if (manifest.startsWith("samples/") || manifest.startsWith("/") || manifest.includes("\\") || manifest.split("/").includes("..")) {
+  if (ref.startsWith("samples/") || ref.startsWith("/") || ref.includes("\\") || ref.split("/").includes("..")) {
     return null;
   }
-  if (!/^[A-Za-z0-9][A-Za-z0-9_./-]*\.ya?ml$/.test(manifest)) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(ref) || !suffix.test(ref)) return null;
   const slash = configPath.lastIndexOf("/");
-  return `${configPath.slice(0, slash + 1)}${manifest}`;
+  return `${configPath.slice(0, slash + 1)}${ref}`;
 }
 
 /** `manifest.resolved.json` beside a manifest that lives on disk. A site path returns null. */
@@ -218,24 +239,22 @@ export async function loadInstall(
     "source" in request && typeof request.source === "string"
       ? parseConfig(request.source)
       : await readConfigFile(env, origin, "path" in request && typeof request.path === "string" ? request.path : "");
-  const beside =
-    "configPath" in request && typeof request.configPath === "string"
-      ? diskManifestPath(request.configPath, config.manifest)
-      : null;
-  if (beside) {
-    return loadManifestAt(env, origin, beside, missingManifest);
-  }
-  if (isPackageName(config.manifest)) {
-    return loadManifestAt(env, origin, packageManifestPath(config.manifest), missingPackage);
-  }
-  return loadManifestAt(env, origin, config.manifest, missingManifest);
+  const configPath = "configPath" in request && typeof request.configPath === "string" ? request.configPath : null;
+  const beside = configPath ? diskManifestPath(configPath, config.manifest) : null;
+  const loaded = beside
+    ? await loadManifestAt(env, origin, beside, missingManifest)
+    : isPackageName(config.manifest)
+      ? await loadManifestAt(env, origin, packageManifestPath(config.manifest), missingPackage)
+      : await loadManifestAt(env, origin, config.manifest, missingManifest);
+  if (!config.deck) return loaded;
+  return { ...loaded, deckPath: (configPath ? diskDeckPath(configPath, config.deck) : null) ?? config.deck };
 }
 
 async function readConfigFile(
   env: { fetch: typeof fetch; origin: string },
   origin: string,
   configPath: string,
-): Promise<{ manifest: string }> {
+): Promise<Config> {
   const path = configPath.trim();
   if (!path) {
     throw new Error("Config required. Pass --config, open ?config=, or choose a config file before a theme can load.");
@@ -417,6 +436,11 @@ function manifestFetchUrl(origin: string, manifestPath: string): URL {
 
 function isDiskAssetPath(value: string): boolean {
   return value.startsWith("/") && !value.includes("\\") && !value.split("/").includes("..") && /\.(svg|ttf|otf|woff2?)$/i.test(value);
+}
+
+export function isSiteDeckPath(value: string): boolean {
+  if (value.startsWith("/") || value.includes("\\") || value.includes("://") || value.split("/").includes("..")) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9_./-]*\.(ya?ml|zip)$/.test(value);
 }
 
 function isSiteYamlPath(value: string): boolean {

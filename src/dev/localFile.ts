@@ -19,7 +19,7 @@ export function isAllowedDiskPath(kind: DiskKind, filePath: string): boolean {
   if (kind === "config") return /\.ya?ml$/.test(filePath);
   const base = filePath.slice(filePath.lastIndexOf("/") + 1);
   if (base === "manifest.resolved.json") return true;
-  return /\.(ya?ml|svg|ttf|otf|woff2?)$/i.test(filePath);
+  return /\.(ya?ml|svg|ttf|otf|woff2?|zip)$/i.test(filePath);
 }
 
 export function openDiskFile(kind: DiskKind, filePath: string): OpenedDiskFile {
@@ -56,6 +56,7 @@ export function diskContentType(filePath: string): string {
     ".woff": "font/woff",
     ".woff2": "font/woff2",
     ".json": "application/json",
+    ".zip": "application/zip",
   };
   return types[path.extname(filePath).toLowerCase()] ?? "application/octet-stream";
 }
@@ -63,7 +64,7 @@ export function diskContentType(filePath: string): string {
 function refused(kind: DiskKind): string {
   return kind === "config"
     ? "Config path must be a .yaml file on disk."
-    : "File path must be a manifest, mark, font, or theme cache on disk.";
+    : "File path must be a manifest, mark, font, talk, or theme cache on disk.";
 }
 
 function missing(kind: DiskKind, filePath: string): string {

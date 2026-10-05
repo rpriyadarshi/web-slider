@@ -7,8 +7,10 @@ import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import { diskContentType, diskKind, openDiskFile } from "./src/dev/localFile";
+import { shareRoute } from "./src/dev/shareRoute";
 
 const samplesRoot = path.resolve("samples");
+const shareBuild = process.env.SLIDER_SHARE_BUILD === "1";
 
 const sampleTypes: Record<string, string> = {
   ".yaml": "text/yaml; charset=utf-8",
@@ -63,13 +65,16 @@ function serveLocalConfig(req: Connect.IncomingMessage, res: ServerResponse, nex
 }
 
 function localConfigPlugin(): Plugin {
+  const share = () => shareRoute({ configPath: sliderConfig, script: path.resolve("scripts/share.mjs"), cwd: process.cwd() });
   return {
     name: "web-slider-local-config",
     configureServer(server) {
       server.middlewares.use(serveLocalConfig);
+      server.middlewares.use(share());
     },
     configurePreviewServer(server) {
       server.middlewares.use(serveLocalConfig);
+      server.middlewares.use(share());
     },
   };
 }
@@ -83,8 +88,9 @@ function samplesPlugin(): Plugin {
     configurePreviewServer(server) {
       server.middlewares.use(serveSamples);
     },
-    async writeBundle() {
-      await cp(samplesRoot, path.resolve("dist/samples"), { recursive: true });
+    async writeBundle(options) {
+      if (shareBuild) return;
+      await cp(samplesRoot, path.resolve(options.dir ?? "dist", "samples"), { recursive: true });
     },
   };
 }
@@ -109,6 +115,7 @@ function sliderConfigPlugin(): Plugin {
       return {
         define: {
           "import.meta.env.VITE_SLIDER_CONFIG": JSON.stringify(sliderConfig),
+          "import.meta.env.VITE_SLIDER_SHARE_BUILD": JSON.stringify(shareBuild ? "1" : ""),
         },
       };
     },
@@ -141,6 +148,6 @@ export default defineConfig({
   plugins: [localConfigPlugin(), samplesPlugin(), sliderConfigPlugin(), react()],
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "scripts/**/*.test.mjs"],
   },
 });

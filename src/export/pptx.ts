@@ -5,7 +5,7 @@ import type { Deck, Slide } from "../model/schema";
 import { resolveTheme, titleSize } from "../model/schema";
 import type { DeckSession } from "../model/session";
 import { blocksToText, imageBlocks, widgetToText } from "../model/text";
-import { bytesToBlob } from "./download";
+import { bytesToBlob } from "./blob";
 import { fitBox, loadBrandMark, loadRaster } from "./images";
 
 const WIDTH = 13.333;

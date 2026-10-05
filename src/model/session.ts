@@ -42,11 +42,11 @@ export type DeckSession = {
 export function emptyChrome(): DeckSession["ui"] {
   return {
     toc: true,
-    side: false,
+    side: true,
     bottom: true,
-    yaml: true,
+    yaml: false,
     tocPinned: false,
-    sidePinned: false,
+    sidePinned: true,
     yamlPinned: true,
     bottomPinned: true,
     theme: "dark",

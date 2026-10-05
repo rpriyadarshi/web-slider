@@ -13,6 +13,7 @@ import { serializeDeck } from "./model/serialize";
 import { clampRevealed, normalizeSession, sessionFromDeck, type DeckSession } from "./model/session";
 import { importPptx } from "./import/pptx";
 import { bindPackageAssets, deckWithAssetUrls, packageAssetRefs, readDeckPackage } from "./package/deckPackage";
+import { bootDeckSource, fetchDeck, resetToShipped } from "./package/fetchDeck";
 import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
 import { applyFontFaces } from "./theme/fonts";
 
@@ -29,6 +30,15 @@ const bootRequest = resolveBootConfig({
 });
 
 type BootPhase = { kind: "loading" } | { kind: "ask"; error: string | null } | { kind: "ready" };
+
+type PreparedDeck = {
+  source: string;
+  parsed: Deck;
+  presented: Deck;
+  files: Map<string, Uint8Array>;
+  urls: Map<string, string>;
+  session: DeckSession;
+};
 
 function browserEnv() {
   return {
@@ -75,34 +85,58 @@ export function App() {
   );
   deckRef.current = deck;
 
-  async function openPrepared(source: string, files: Map<string, Uint8Array>, baseUrl?: string) {
+  async function prepareDeck(source: string, files: Map<string, Uint8Array>, baseUrl?: string): Promise<PreparedDeck> {
     const loaded = installRef.current;
     if (!loaded) throw new Error("The theme package is not loaded.");
+    const parsed = parseDeck(source);
+    const presented = presentTalk(parsed, loaded.manifest);
+    const next = sessionFromDeck(presented);
+    parseDeck(serializeDeck(parsed, next));
+    const deckUrls = await bindPackageAssets(packageAssetRefs(parsed), files, baseUrl);
+    const urls = new Map(loaded.assetUrls);
+    for (const [key, value] of deckUrls) urls.set(key, value);
+    return { source, parsed, presented: deckWithAssetUrls(presented, urls), files, urls, session: next };
+  }
+
+  function showPrepared(prepared: PreparedDeck) {
+    setSourceDeck(prepared.parsed);
+    setDeck(prepared.presented);
+    setDeckYaml(prepared.source);
+    setPackageFiles(prepared.files);
+    setAssetUrls(prepared.urls);
+    setSession(prepared.session);
+    setError(null);
+    setCanReturn(false);
+    setStorageBroken(false);
+    setPersistError(null);
+    setYamlError(null);
+  }
+
+  async function openPrepared(source: string, files: Map<string, Uint8Array>, baseUrl?: string) {
     try {
-      const parsed = parseDeck(source);
-      const presented = presentTalk(parsed, loaded.manifest);
-      const next = sessionFromDeck(presented);
-      parseDeck(serializeDeck(parsed, next));
-      const deckUrls = await bindPackageAssets(packageAssetRefs(parsed), files, baseUrl);
-      const urls = new Map(loaded.assetUrls);
-      for (const [key, value] of deckUrls) urls.set(key, value);
-      setSourceDeck(parsed);
-      setDeck(deckWithAssetUrls(presented, urls));
-      setDeckYaml(source);
-      setPackageFiles(files);
-      setAssetUrls(urls);
-      setSession(next);
-      setError(null);
-      setCanReturn(false);
-      setStorageBroken(false);
-      setPersistError(null);
-      setYamlError(null);
+      showPrepared(await prepareDeck(source, files, baseUrl));
     } catch (caught) {
       setError(messageOf(caught));
       setCanReturn(deckRef.current !== null);
     }
   }
   openRef.current = openPrepared;
+
+  async function openShipped() {
+    try {
+      await resetToShipped({
+        deckPath: installRef.current?.deckPath,
+        origin: window.location.origin,
+        fetch: (input, init) => window.fetch(input, init),
+        prepare: (pack) => prepareDeck(pack.yaml, pack.files, pack.baseUrl),
+        clear: clearPersisted,
+        apply: showPrepared,
+      });
+    } catch (caught) {
+      setError(messageOf(caught));
+      setCanReturn(deckRef.current !== null);
+    }
+  }
 
   function onYaml(text: string) {
     const gen = ++yamlGen.current;
@@ -236,6 +270,32 @@ export function App() {
         })
         .finally(() => setHydrated(true));
       return () => window.removeEventListener("message", onMessage);
+    }
+
+    const boot = bootDeckSource({
+      embed,
+      deckParam,
+      deckPath: install.deckPath,
+      origin: window.location.origin,
+      pageUrl: window.location.href,
+    });
+    if (boot) {
+      let cancel = false;
+      void fetchDeck((input, init) => window.fetch(input, init), boot)
+        .then(async (pack) => {
+          if (!cancel) await openRef.current(pack.yaml, pack.files, pack.baseUrl);
+        })
+        .catch((caught: unknown) => {
+          if (cancel) return;
+          setError(messageOf(caught));
+          setCanReturn(false);
+        })
+        .finally(() => {
+          if (!cancel) setHydrated(true);
+        });
+      return () => {
+        cancel = true;
+      };
     }
 
     try {
@@ -376,7 +436,16 @@ export function App() {
     throw new Error("The theme package is not loaded.");
   }
   if (audienceId) return <Audience deckId={audienceId} install={install} />;
-  if (!hydrated) return fileInput;
+  if (!hydrated) {
+    if (!embed && (deckParam || install.deckPath)) {
+      return (
+        <main className="start" data-boot="loading">
+          <p>Loading the talk.</p>
+        </main>
+      );
+    }
+    return fileInput;
+  }
   if (error) {
     return (
       <>
@@ -410,6 +479,7 @@ export function App() {
           onBlank={() => {
             void openPrepared(blankDeckSource(), new Map());
           }}
+          onShipped={install.deckPath ? () => void openShipped() : undefined}
           onExample={(path) => {
             void (async () => {
               try {
@@ -452,6 +522,7 @@ export function App() {
         persistError={persistError}
         yamlError={yamlError}
         onYaml={onYaml}
+        onResetShipped={!embed && install.deckPath ? () => void openShipped() : undefined}
         onEditTitle={(title) =>
           commitEdit((current) => replaceSlideTitle(current, current.slides[session.slideIndex]?.id ?? "", title))
         }

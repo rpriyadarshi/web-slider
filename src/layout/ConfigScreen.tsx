@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { shareBuild } from "../model/build";
 import { CatalogChoices } from "./CatalogChoices";
 
 export function ConfigScreen({
@@ -32,7 +33,7 @@ export function ConfigScreen({
           No theme is loaded until a config is supplied. Open or drop a .yaml config file, or enter a site path such as
           samples/examples/northwind/web-slider.config.yaml.
         </p>
-        <CatalogChoices list="installs" label="Themes" onChoose={onPath} />
+        {shareBuild ? null : <CatalogChoices list="installs" label="Themes" onChoose={onPath} />}
         <div className="start-actions">
           <button type="button" className="primary" onClick={() => inputRef.current?.click()}>
             Open config

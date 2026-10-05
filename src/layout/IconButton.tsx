@@ -28,7 +28,9 @@ export type IconName =
   | "restart"
   | "audience"
   | "laser"
-  | "captions";
+  | "captions"
+  | "runnable"
+  | "shipped";
 
 export function Icon({ name }: { name: IconName }) {
   return (
@@ -39,6 +41,18 @@ export function Icon({ name }: { name: IconName }) {
 }
 
 const paths: Record<IconName, ReactNode> = {
+  runnable: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <polygon points="10 9 15 12 10 15 10 9" />
+    </>
+  ),
+  shipped: (
+    <>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </>
+  ),
   previous: <polyline points="14 6 8 12 14 18" />,
   next: <polyline points="10 6 16 12 10 18" />,
   overview: (

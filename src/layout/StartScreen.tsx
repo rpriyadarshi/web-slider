@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls } from "../brand/kit";
+import { shareBuild } from "../model/build";
 import type { Install } from "../model/install";
 import { CatalogChoices } from "./CatalogChoices";
 
@@ -8,12 +9,14 @@ export function StartScreen({
   onOpenFile,
   requestOpen,
   onBlank,
+  onShipped,
   onExample,
 }: {
   install: Install;
   onOpenFile: (file: File) => void;
   requestOpen: () => void;
   onBlank: () => void;
+  onShipped?: () => void;
   onExample: (path: string) => void;
 }) {
   const [dragging, setDragging] = useState(false);
@@ -49,8 +52,13 @@ export function StartScreen({
           <button type="button" onClick={onBlank}>
             Blank deck
           </button>
+          {onShipped ? (
+            <button type="button" onClick={onShipped}>
+              Shipped talk
+            </button>
+          ) : null}
         </div>
-        <CatalogChoices list="examples" label="Examples" onChoose={onExample} />
+        {shareBuild ? null : <CatalogChoices list="examples" label="Examples" onChoose={onExample} />}
         <div
           className={dragging ? "dropzone dragover" : "dropzone"}
           onDragOver={(event) => {

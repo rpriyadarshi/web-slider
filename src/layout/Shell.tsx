@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls, type ChromeMode } from "../brand/kit";
-import { bytesToBlob, downloadBlob, downloadText } from "../export/download";
+import { bytesToBlob } from "../export/blob";
+import { exportFile, hideScratchPath, saveExport, type ExportKind } from "../export/saveFile";
 import { deckToYaml } from "../export/yaml";
+import { shareBuild } from "../model/build";
 import { editParsed, insertBlock, insertSlide, insertWidget, removeParsed } from "../model/insert";
 import { caretSelection, locateProbe, removableNode, selectionTarget, slideIndexInProbe, type ProbePath } from "../model/probe";
 import { resolveTheme, type Block, type Deck, type Widget } from "../model/schema";
 import { clampPane, formatSessionBlock, type DeckSession, type PaneSize, type WidgetAnswer } from "../model/session";
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
+import { checkPackageFiles, writeDeckPackage } from "../package/deckPackage";
 import { startCaptions } from "../present/captions";
 import { SlideView } from "../slides/SlideView";
 import { fontFaceRules } from "../theme/fonts";
@@ -39,6 +42,7 @@ export function Shell({
   onYaml,
   onEditTitle,
   onEditItem,
+  onResetShipped,
 }: {
   deck: Deck;
   session: DeckSession;
@@ -56,6 +60,7 @@ export function Shell({
   onYaml?: (yaml: string) => void;
   onEditTitle?: (title: string) => void;
   onEditItem?: (blockIndex: number, itemIndex: number, text: string) => void;
+  onResetShipped?: () => void;
 }) {
   const portable = exportDeck ?? deck;
   const slide = deck.slides[session.slideIndex];
@@ -383,13 +388,13 @@ export function Shell({
     setThemeOpen(false);
   }
 
-  async function runExport(kind: string, work: () => Promise<void>) {
+  async function startExport(kind: ExportKind, deckId: string, build: () => Promise<Blob>, check?: () => void) {
     setExporting(kind);
     setExportError(null);
     try {
-      await work();
+      await saveExport({ ...exportFile(kind, deckId), check, build });
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : String(error));
+      setExportError(hideScratchPath(error instanceof Error ? error.message : String(error)));
     } finally {
       setExporting(null);
     }
@@ -567,6 +572,16 @@ export function Shell({
           <IconButton label="Open" onClick={requestOpen}>
             <Icon name="open" />
           </IconButton>
+          {onResetShipped ? (
+            <IconButton
+              label="Reset to shipped"
+              onClick={() => {
+                if (window.confirm("Replace the current slides and session notes with the shipped talk?")) onResetShipped();
+              }}
+            >
+              <Icon name="shipped" />
+            </IconButton>
+          ) : null}
           <div className="menu-anchor">
             <IconButton
               label="Theme"
@@ -606,78 +621,98 @@ export function Shell({
                 <IconButton
                   label="YAML"
                   disabled={exporting !== null}
-                  onClick={() =>
-                    void runExport("yaml", async () =>
-                      downloadText(deckToYaml(portable, session), `${portable.id}.yaml`, "application/yaml"),
-                    )
-                  }
+                  onClick={() => {
+                    void startExport("yaml", portable.id, async () => new Blob([deckToYaml(portable, session)], { type: "application/yaml" }));
+                  }}
                 >
                   <Icon name="yaml" />
                 </IconButton>
                 <IconButton
                   label="PDF"
                   disabled={exporting !== null}
-                  onClick={() =>
-                    void runExport("pdf", async () => {
+                  onClick={() => {
+                    void startExport("pdf", deck.id, async () => {
                       const [{ buildPdf }, { loadFontFiles }] = await Promise.all([
                         import("../export/pdf"),
                         import("../theme/fonts"),
                       ]);
-                      downloadBlob(
-                        bytesToBlob(await buildPdf(deck, session, await loadFontFiles(deck.fonts, assets)), "application/pdf"),
-                        `${deck.id}.pdf`,
-                      );
-                    })
-                  }
+                      return bytesToBlob(await buildPdf(deck, session, await loadFontFiles(deck.fonts, assets)), "application/pdf");
+                    });
+                  }}
                 >
                   <Icon name="pdf" />
                 </IconButton>
                 <IconButton
                   label="Word"
                   disabled={exporting !== null}
-                  onClick={() =>
-                    void runExport("docx", async () => {
+                  onClick={() => {
+                    void startExport("docx", deck.id, async () => {
                       const { buildDocx } = await import("../export/docx");
-                      downloadBlob(await buildDocx(deck, session), `${deck.id}.docx`);
-                    })
-                  }
+                      return buildDocx(deck, session);
+                    });
+                  }}
                 >
                   <Icon name="word" />
                 </IconButton>
                 <IconButton
                   label="PowerPoint"
                   disabled={exporting !== null}
-                  onClick={() =>
-                    void runExport("pptx", async () => {
+                  onClick={() => {
+                    void startExport("pptx", deck.id, async () => {
                       const { buildPptx } = await import("../export/pptx");
-                      downloadBlob(await buildPptx(deck, session), `${deck.id}.pptx`);
-                    })
-                  }
+                      return buildPptx(deck, session);
+                    });
+                  }}
                 >
                   <Icon name="powerpoint" />
                 </IconButton>
                 <IconButton
                   label="Package"
                   disabled={exporting !== null}
-                  onClick={() =>
-                    void runExport("package", async () => {
-                      const { writeDeckPackage } = await import("../package/deckPackage");
-                      const blob = await writeDeckPackage(deckToYaml(portable, session), packageFiles ?? new Map());
-                      downloadBlob(blob, `${portable.id}.zip`);
-                    })
-                  }
+                  onClick={() => {
+                    void startExport(
+                      "package",
+                      portable.id,
+                      () => writeDeckPackage(deckToYaml(portable, session), packageFiles ?? new Map()),
+                      () => checkPackageFiles(portable, packageFiles ?? new Map()),
+                    );
+                  }}
                 >
                   <Icon name="package" />
                 </IconButton>
+                {shareBuild ? null : (
+                  <IconButton
+                    label="Runnable package"
+                    disabled={exporting !== null}
+                    onClick={() => {
+                      void startExport(
+                        "runnable",
+                        portable.id,
+                        async () => {
+                          const { requestRunnablePackage } = await import("../export/runnable");
+                          const talk = await writeDeckPackage(sourceYaml, packageFiles ?? new Map());
+                          const fetchImpl: typeof fetch = (input, init) => window.fetch(input, init);
+                          return requestRunnablePackage(fetchImpl, window.location.origin, talk, portable.id);
+                        },
+                        () => {
+                          if (!sourceYaml) throw new Error("No talk is open to package.");
+                          checkPackageFiles(portable, packageFiles ?? new Map());
+                        },
+                      );
+                    }}
+                  >
+                    <Icon name="runnable" />
+                  </IconButton>
+                )}
                 <IconButton
                   label="Handout"
                   disabled={exporting !== null}
-                  onClick={() =>
-                    void runExport("handout", async () => {
+                  onClick={() => {
+                    void startExport("handout", deck.id, async () => {
                       const { buildHandout } = await import("../export/docx");
-                      downloadBlob(await buildHandout(deck, session), `${deck.id}-handout.docx`);
-                    })
-                  }
+                      return buildHandout(deck, session);
+                    });
+                  }}
                 >
                   <Icon name="notes" />
                 </IconButton>

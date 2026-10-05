@@ -118,6 +118,33 @@ The script creates an iframe at `/?embed=1` on the slider origin, fetches `src`,
 
 The iframe uses the theme the slider was booted with. Start that site with `--config`, or open the frame with `?embed=1&config=...`. `embed.js` does not take a theme path. The host sends only the talk. A page can also iframe `/?embed=1&deck=` with an absolute deck URL.
 
+## Hand someone a runnable package
+
+A runnable package is one zip: the presenter, your theme, and one talk. The person you send it to needs no Node and no config path. They unpack it and double-click `Start.command` (macOS) or `Start.bat` (Windows), or run `./start.sh` (Linux). A bundled server starts on `127.0.0.1`, prints the link, and opens the browser on the talk. The window stays open while they present.
+
+Build it from the running app. Boot with your theme on disk, open the talk, and choose Export → Runnable package:
+
+```bash
+npm run dev -- --config /absolute/path/to/web-slider.config.yaml
+```
+
+The same build from a shell:
+
+```bash
+npm run share -- \
+  --config /absolute/path/to/web-slider.config.yaml \
+  --deck /absolute/path/to/talk.zip \
+  --out /absolute/path/to/talk-presenter.zip
+```
+
+The package carries `app/talk/web-slider.config.yaml` with `manifest: talk/manifest.yaml` and `deck: talk/deck.zip`. It also carries the marks, the fonts, and the font licences the manifest names, plus the talk. It does not carry `samples/`. The manifest must sit beside the config and carry its own marks; a brand package name is refused. A talk that names a file it does not carry is refused.
+
+`deck:` is optional in any config. When a config sets it, boot opens that talk instead of the stored session, and `?deck=` outranks it. Open, drop, and Blank deck still load other talks under the same theme. Reset to shipped in the toolbar reads the config's talk again and discards edits, notes, and answers in this browser. A reload or a new start also opens the shipped talk, so recipients keep their notes with Export → YAML.
+
+A fresh session shows Examples open and YAML closed. The YAML button is still in the toolbar.
+
+The four server binaries live in `scripts/share/runtime/`. After you change `scripts/share-server/`, rebuild them with `npm run share:runtime`, which needs Go.
+
 ## What you hand the author
 
 You hand them a running app with your theme loaded, and [make-slides.md](make-slides.md). They bring a YAML talk. They do not bring a second copy of your mark.

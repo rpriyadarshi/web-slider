@@ -51,6 +51,14 @@ export function packageAssetRefs(deck: Deck): string[] {
   return [...refs];
 }
 
+/** A package must carry every file its deck names. */
+export function checkPackageFiles(deck: Deck, files: Map<string, Uint8Array>): void {
+  const missing = packageAssetRefs(deck).filter((ref) => !files.has(ref));
+  if (missing.length > 0) {
+    throw new Error(`The talk names files it does not carry: ${missing.join(", ")}. Open the talk's .zip so those files travel with it.`);
+  }
+}
+
 export async function bindPackageAssets(
   refs: string[],
   files: Map<string, Uint8Array>,
