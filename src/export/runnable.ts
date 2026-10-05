@@ -21,6 +21,46 @@ export function shareCommand(node: string, script: string, args: readonly string
   return [node, script, ...args].map(quoteShell).join(" ");
 }
 
+/** Banner form of a `shareCommand` line: program and script, then each flag with its value. */
+export function shareCommandDisplay(command: string): string {
+  const words = shellWords(command);
+  if (words.length < 2) return command;
+  const lines = [`${words[0]} ${words[1]}`];
+  for (let index = 2; index < words.length; index += 2) {
+    const value = words[index + 1];
+    lines.push(value === undefined ? words[index] : `${words[index]} ${value}`);
+  }
+  return lines.join(" \\\n  ");
+}
+
+function shellWords(command: string): string[] {
+  const words: string[] = [];
+  let index = 0;
+  while (index < command.length) {
+    while (command[index] === " ") index += 1;
+    if (index >= command.length) break;
+    const start = index;
+    if (command[index] === "'") {
+      index += 1;
+      while (index < command.length) {
+        if (command.startsWith("'\\''", index)) {
+          index += 4;
+          continue;
+        }
+        if (command[index] === "'") {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+    } else {
+      while (index < command.length && command[index] !== " ") index += 1;
+    }
+    words.push(command.slice(start, index));
+  }
+  return words;
+}
+
 function quoteShell(arg: string): string {
   if (arg.length > 0 && /^[A-Za-z0-9_./:@+=,-]+$/.test(arg)) return arg;
   return `'${arg.replace(/'/g, `'\\''`)}'`;

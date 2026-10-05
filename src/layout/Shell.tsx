@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls, type ChromeMode } from "../brand/kit";
 import { bytesToBlob } from "../export/blob";
+import { shareCommandDisplay } from "../export/runnable";
 import { ExportDownloaded, downloadExportFile, exportFile, hideScratchPath, saveExport, type ExportKind } from "../export/saveFile";
 import { deckToYaml } from "../export/yaml";
 import { shareBuild } from "../model/build";
@@ -396,21 +397,27 @@ export function Shell({
     check?: () => void,
     commandOf?: () => string,
   ) {
+    const file = exportFile(kind, deckId);
     setExporting(kind);
     setExportError(null);
     setExportDownload(null);
     try {
-      await saveExport({ ...exportFile(kind, deckId), check, build });
+      await saveExport({ ...file, check, build });
       const command = commandOf?.() ?? "";
-      if (command) setExportError(command);
+      setExportError(command ? shareCommandDisplay(command) : `Exported ${file.suggestedName}.`);
     } catch (error) {
       const message = hideScratchPath(error instanceof Error ? error.message : String(error));
       const command = commandOf?.() ?? "";
-      setExportError(command ? `${command}\n${message}` : message);
+      setExportError(command ? `${shareCommandDisplay(command)}\n${message}` : message);
       if (error instanceof ExportDownloaded) setExportDownload({ blob: error.blob, filename: error.filename });
     } finally {
       setExporting(null);
     }
+  }
+
+  function dismissExportBanner() {
+    setExportError(null);
+    setExportDownload(null);
   }
 
   const menuOpen = themeOpen || exportOpen;
@@ -941,20 +948,22 @@ export function Shell({
         </p>
       ) : null}
       {exportError ? (
-        <p className="banner" role="alert">
-          {exportError}
-          {exportDownload ? (
-            <>
-              {" "}
+        <div className="banner export-banner" role="alert">
+          <span className="export-banner-text">{exportError}</span>
+          <span className="export-banner-actions">
+            {exportDownload ? (
               <button
                 type="button"
                 onClick={() => downloadExportFile(exportDownload.blob, exportDownload.filename)}
               >
                 Save {exportDownload.filename} again
               </button>
-            </>
-          ) : null}
-        </p>
+            ) : null}
+            <IconButton label="Hide" onClick={dismissExportBanner}>
+              <Icon name="hide" />
+            </IconButton>
+          </span>
+        </div>
       ) : null}
       {exporting ? <p className="banner">Exporting {exporting}…</p> : null}
     </div>

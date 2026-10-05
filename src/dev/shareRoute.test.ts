@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shareCommand } from "../export/runnable";
+import { shareCommand, shareCommandDisplay } from "../export/runnable";
 import { isAllowedDiskPath } from "./localFile";
 import { exportErrorText, shareRefusal } from "./shareRoute";
 
@@ -32,6 +32,25 @@ describe("runnable package route", () => {
       ]),
     ).toBe(
       "/usr/bin/node /repo/scripts/share.mjs --config /home/author/theme/web-slider.config.yaml --deck /tmp/web-slider-export-1/deck.zip --out /tmp/web-slider-export-1/pd-dv-presenter.zip",
+    );
+  });
+
+  it("breaks the share command onto one flag per line for the banner", () => {
+    const line = shareCommand("/usr/bin/node", "/repo/scripts/share.mjs", [
+      "--config",
+      "/home/author/theme/web-slider.config.yaml",
+      "--deck",
+      "/tmp/web-slider-export-1/deck.zip",
+      "--out",
+      "/tmp/web-slider-export-1/pd-dv-presenter.zip",
+    ]);
+    expect(shareCommandDisplay(line)).toBe(
+      [
+        "/usr/bin/node /repo/scripts/share.mjs \\",
+        "  --config /home/author/theme/web-slider.config.yaml \\",
+        "  --deck /tmp/web-slider-export-1/deck.zip \\",
+        "  --out /tmp/web-slider-export-1/pd-dv-presenter.zip",
+      ].join("\n"),
     );
   });
 
