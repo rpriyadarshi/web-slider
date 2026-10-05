@@ -11,12 +11,13 @@ const refused = () => {
 };
 
 /** A save dialog whose file records what the export did to it. */
-function dialog(file: { remove?: "works" | "missing" | "fails"; write?: "works" | "fails" } = {}) {
+function dialog(file: { remove?: "works" | "missing" | "fails"; write?: "works" | "fails"; open?: "fails" } = {}) {
   const events: string[] = [];
   const written: Array<Blob | BufferSource> = [];
   const picked: PickedFile = {
     createWritable: async () => {
       events.push("open");
+      if (file.open === "fails") throw new DOMException("The request is not allowed by the user agent or the platform in the current context.", "NotAllowedError");
       return {
         write: async (data: Blob | BufferSource) => {
           if (file.write === "fails") throw new Error("Disk is full.");
@@ -145,6 +146,21 @@ describe("saveExport", () => {
       "does not carry",
     );
     expect(events).toEqual([]);
+  });
+
+  it("downloads the finished file when the dialog refuses the write", async () => {
+    const downloads: Array<[Blob, string]> = [];
+    const { events, written, channel, build } = dialog({ open: "fails", remove: "fails" });
+    channel.download = (blob, name) => void downloads.push([blob, name]);
+    const bytes = zip();
+    await expect(saveExport({ ...exportFile("runnable", "pd-dv"), build: build(() => bytes) }, channel)).rejects.toThrow(
+      /sent to your browser downloads/,
+    );
+    expect(events).toEqual(["pick pd-dv-presenter.zip", "open", "build"]);
+    expect(written).toEqual([]);
+    expect(downloads).toHaveLength(1);
+    expect(downloads[0]?.[0]).toBe(bytes);
+    expect(downloads[0]?.[1]).toBe("pd-dv-presenter.zip");
   });
 
   it("downloads only finished bytes when the browser has no save dialog", async () => {

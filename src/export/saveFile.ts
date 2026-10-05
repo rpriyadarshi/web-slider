@@ -12,6 +12,21 @@ export type SaveExportOptions = {
 
 export type SaveResult = "saved" | "cancelled";
 
+/** The save dialog created an empty file and refused the write. The finished bytes were downloaded instead. */
+export class ExportDownloaded extends Error {
+  readonly filename: string;
+  readonly blob: Blob;
+
+  constructor(filename: string, blob: Blob, cause: string) {
+    super(
+      `${cause} The finished ${filename} was sent to your browser downloads. Use that file, and delete the empty one from the save dialog.`,
+    );
+    this.name = "ExportDownloaded";
+    this.filename = filename;
+    this.blob = blob;
+  }
+}
+
 export type OpenedWritable = {
   write: (data: Blob | BufferSource) => Promise<void>;
   close: () => Promise<void>;
@@ -105,11 +120,16 @@ export async function saveExport(options: SaveExportOptions, channel: SaveChanne
     throw error;
   }
   // Same turn as the dialog. Anything awaited first expires the gesture and createWritable is refused.
+  // Chrome on Linux still refuses createWritable after a successful dialog, and the dialog has already
+  // truncated the chosen file. Build the bytes and download them; do not stop with only that empty file.
   let writable: OpenedWritable;
   try {
     writable = await file.createWritable();
   } catch (error) {
-    throw await releaseUnwritten(file, options.suggestedName, error);
+    const blob = await built(options);
+    channel.download(blob, options.suggestedName);
+    const failure = await releaseUnwritten(file, options.suggestedName, error);
+    throw new ExportDownloaded(options.suggestedName, blob, failure.message);
   }
   try {
     await writable.write(await bytesOf(await built(options), options.suggestedName));
@@ -156,11 +176,14 @@ async function releaseUnwritten(file: PickedFile, name: string, error: unknown, 
 }
 
 function browserChannel(): SaveChannel {
-  const show = (window as unknown as { showSaveFilePicker?: SaveChannel["picker"] }).showSaveFilePicker;
-  return {
-    picker: typeof show === "function" ? (options) => show.call(window, options) : undefined,
-    download: downloadBlob,
-  };
+  // showSaveFilePicker creates the chosen file, then Chrome on this machine refuses createWritable
+  // and remove. The dialog file stays empty. The download is the write that succeeds.
+  return { download: downloadBlob };
+}
+
+/** Browser download. Used when the save dialog refuses the write, and from the banner button. */
+export function downloadExportFile(blob: Blob, filename: string): void {
+  downloadBlob(blob, filename);
 }
 
 function downloadBlob(blob: Blob, filename: string): void {

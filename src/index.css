@@ -882,6 +882,8 @@ textarea { flex: 1; resize: none; min-height: 0; }
   bottom: 16px;
   margin: 0;
   padding: 10px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   background: var(--paper);
   color: var(--text);
   border: 1px solid var(--highlight);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls, type ChromeMode } from "../brand/kit";
 import { bytesToBlob } from "../export/blob";
-import { exportFile, hideScratchPath, saveExport, type ExportKind } from "../export/saveFile";
+import { ExportDownloaded, downloadExportFile, exportFile, hideScratchPath, saveExport, type ExportKind } from "../export/saveFile";
 import { deckToYaml } from "../export/yaml";
 import { shareBuild } from "../model/build";
 import { editParsed, insertBlock, insertSlide, insertWidget, removeParsed } from "../model/insert";
@@ -75,6 +75,7 @@ export function Shell({
   const [fullscreen, setFullscreen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportDownload, setExportDownload] = useState<{ blob: Blob; filename: string } | null>(null);
   const [blank, setBlank] = useState<null | "black" | "white">(null);
   const [laserOn, setLaserOn] = useState(false);
   const [captionsOn, setCaptionsOn] = useState(false);
@@ -388,13 +389,25 @@ export function Shell({
     setThemeOpen(false);
   }
 
-  async function startExport(kind: ExportKind, deckId: string, build: () => Promise<Blob>, check?: () => void) {
+  async function startExport(
+    kind: ExportKind,
+    deckId: string,
+    build: () => Promise<Blob>,
+    check?: () => void,
+    commandOf?: () => string,
+  ) {
     setExporting(kind);
     setExportError(null);
+    setExportDownload(null);
     try {
       await saveExport({ ...exportFile(kind, deckId), check, build });
+      const command = commandOf?.() ?? "";
+      if (command) setExportError(command);
     } catch (error) {
-      setExportError(hideScratchPath(error instanceof Error ? error.message : String(error)));
+      const message = hideScratchPath(error instanceof Error ? error.message : String(error));
+      const command = commandOf?.() ?? "";
+      setExportError(command ? `${command}\n${message}` : message);
+      if (error instanceof ExportDownloaded) setExportDownload({ blob: error.blob, filename: error.filename });
     } finally {
       setExporting(null);
     }
@@ -685,20 +698,29 @@ export function Shell({
                     label="Runnable package"
                     disabled={exporting !== null}
                     onClick={() => {
-                      void startExport(
-                        "runnable",
-                        portable.id,
-                        async () => {
-                          const { requestRunnablePackage } = await import("../export/runnable");
-                          const talk = await writeDeckPackage(sourceYaml, packageFiles ?? new Map());
-                          const fetchImpl: typeof fetch = (input, init) => window.fetch(input, init);
-                          return requestRunnablePackage(fetchImpl, window.location.origin, talk, portable.id);
-                        },
-                        () => {
-                          if (!sourceYaml) throw new Error("No talk is open to package.");
-                          checkPackageFiles(portable, packageFiles ?? new Map());
-                        },
-                      );
+                    const command = { text: "" };
+                    void startExport(
+                      "runnable",
+                      portable.id,
+                      async () => {
+                        const { RunnableExportError, requestRunnablePackage } = await import("../export/runnable");
+                        const talk = await writeDeckPackage(sourceYaml, packageFiles ?? new Map());
+                        const fetchImpl: typeof fetch = (input, init) => window.fetch(input, init);
+                        try {
+                          const packed = await requestRunnablePackage(fetchImpl, window.location.origin, talk, portable.id);
+                          command.text = packed.command;
+                          return packed.blob;
+                        } catch (error) {
+                          if (error instanceof RunnableExportError) command.text = error.command;
+                          throw error;
+                        }
+                      },
+                      () => {
+                        if (!sourceYaml) throw new Error("No talk is open to package.");
+                        checkPackageFiles(portable, packageFiles ?? new Map());
+                      },
+                      () => command.text,
+                    );
                     }}
                   >
                     <Icon name="runnable" />
@@ -921,6 +943,17 @@ export function Shell({
       {exportError ? (
         <p className="banner" role="alert">
           {exportError}
+          {exportDownload ? (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={() => downloadExportFile(exportDownload.blob, exportDownload.filename)}
+              >
+                Save {exportDownload.filename} again
+              </button>
+            </>
+          ) : null}
         </p>
       ) : null}
       {exporting ? <p className="banner">Exporting {exporting}…</p> : null}

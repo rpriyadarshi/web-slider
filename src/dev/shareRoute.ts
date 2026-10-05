@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { hideScratchPath } from "../export/saveFile";
+import { SHARE_COMMAND_HEADER, shareCommand } from "../export/runnable";
 
 export const SHARE_ROUTE = "/__slider/share";
 
@@ -40,13 +41,17 @@ export function shareRoute(options: ShareRouteOptions) {
     }
     const name = `${url.searchParams.get("name")}-presenter`;
     void buildShare(req, name, options).then(
-      (bytes) => {
+      (built) => {
         res.statusCode = 200;
         res.setHeader("Content-Type", "application/zip");
         res.setHeader("Content-Disposition", `attachment; filename="${name}.zip"`);
-        res.end(bytes);
+        res.setHeader(SHARE_COMMAND_HEADER, built.command);
+        res.end(built.bytes);
       },
-      (error: unknown) => reply(res, 500, exportErrorText(error instanceof Error ? error.message : String(error))),
+      (error: unknown) => {
+        const command = error instanceof ShareBuildError ? error.command : "";
+        reply(res, 500, exportErrorText(error instanceof Error ? error.message : String(error)), command);
+      },
     );
   };
 }
@@ -67,16 +72,31 @@ export function shareRefusal(configPath: string, name: string | null): string | 
   return null;
 }
 
-async function buildShare(req: IncomingMessage, name: string, options: ShareRouteOptions): Promise<Buffer> {
+class ShareBuildError extends Error {
+  readonly command: string;
+
+  constructor(message: string, command: string) {
+    super(message);
+    this.name = "ShareBuildError";
+    this.command = command;
+  }
+}
+
+async function buildShare(req: IncomingMessage, name: string, options: ShareRouteOptions): Promise<{ bytes: Buffer; command: string }> {
   const body = await readBody(req);
   if (body.byteLength === 0) throw new Error("Runnable package received no talk.");
   const dir = await mkdtemp(path.join(os.tmpdir(), "web-slider-export-"));
+  const deck = path.join(dir, "deck.zip");
+  const out = path.join(dir, `${name}.zip`);
+  const args = ["--config", options.configPath, "--deck", deck, "--out", out];
+  const command = shareCommand(process.execPath, options.script, args);
   try {
-    const deck = path.join(dir, "deck.zip");
-    const out = path.join(dir, `${name}.zip`);
     await writeFile(deck, body);
-    await runShare(options, ["--config", options.configPath, "--deck", deck, "--out", out]);
-    return await readFile(out);
+    await runShare(options, args);
+    return { bytes: await readFile(out), command };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new ShareBuildError(message, command);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -118,8 +138,9 @@ function readBody(req: IncomingMessage): Promise<Buffer> {
   });
 }
 
-function reply(res: ServerResponse, status: number, message: string): void {
+function reply(res: ServerResponse, status: number, message: string, command = ""): void {
   res.statusCode = status;
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  if (command) res.setHeader(SHARE_COMMAND_HEADER, command);
   res.end(message);
 }

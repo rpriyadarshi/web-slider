@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { shareCommand } from "../export/runnable";
 import { isAllowedDiskPath } from "./localFile";
 import { exportErrorText, shareRefusal } from "./shareRoute";
 
@@ -17,6 +18,21 @@ describe("runnable package route", () => {
     );
     expect(shown).toMatch(/diagrams\/landscape\.png/);
     expect(shown).not.toMatch(/\/tmp/);
+  });
+
+  it("prints the node share command as one shell line", () => {
+    expect(
+      shareCommand("/usr/bin/node", "/repo/scripts/share.mjs", [
+        "--config",
+        "/home/author/theme/web-slider.config.yaml",
+        "--deck",
+        "/tmp/web-slider-export-1/deck.zip",
+        "--out",
+        "/tmp/web-slider-export-1/pd-dv-presenter.zip",
+      ]),
+    ).toBe(
+      "/usr/bin/node /repo/scripts/share.mjs --config /home/author/theme/web-slider.config.yaml --deck /tmp/web-slider-export-1/deck.zip --out /tmp/web-slider-export-1/pd-dv-presenter.zip",
+    );
   });
 
   it("lets the dev server read a talk zip beside a config on disk, but not as a config", () => {
