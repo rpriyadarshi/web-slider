@@ -21,6 +21,14 @@ npm run dev -- --config samples/examples/northwind/web-slider.config.yaml
 
 `npm test` checks the deck schema, navigation, PowerPoint import, and the exporters. `npm run build` produces the static site and copies `samples/` into `dist/samples/`. `npm run dev` and `npm run preview` take the same `--config` flag. With no flag and no `?config=` query, the boot screen asks for one.
 
+Check a talk on disk, and build its package when it names local images:
+
+```bash
+npm run pack -- --deck /absolute/path/to/talk.yaml
+```
+
+That command uses the same deck schema and image checks as the presenter. It writes a zip only when the talk names a package path such as `diagrams/architecture.png`. It writes nothing when every image is an `https://` URL or a `data:` URI. Problems print on stderr and nothing is written. Exit 0 means the talk is ready: open the zip it names, or the YAML when it says no zip was written. Optional `--out /absolute/path/to/talk.zip` chooses the package path. The author chapter is [docs/make-slides.md](docs/make-slides.md).
+
 ## Where the files sit in the story
 
 `public/` is the site. It holds `embed.js`. The admin does not write it, and neither does the author.

@@ -1,8 +1,8 @@
 # Agents
 
-Read [AGENTS.md](../AGENTS.md) first. If the talk belongs in another workspace, stop. You are not about to write a file in this repository.
+Read [AGENTS.md](../AGENTS.md) first. If the talk belongs in another workspace, stop. You are not about to write a file in this repository. Where that talk and its theme live, how the config boots, and the `npm run pack` check that validates a talk and writes its zip are in [AGENTS.md](../AGENTS.md).
 
-This chapter is only for a change the user explicitly asked you to make to Web Slider's shipped samples. A customer deck or a briefing is not that change. Write it in the directory the user named, or ask. Do not invent a folder under `samples/`. Do not name another workspace's directories. Do not reuse a theme shipped in this repository as that deck's theme. Build the theme beside the talk.
+This chapter is only for a change the user explicitly asked you to make to Web Slider's shipped samples. A customer deck or a briefing is not that change. Write it in the directory the user named, or ask. Do not invent a folder under `samples/`. Do not name another workspace's directories. Do not reuse a theme shipped in this repository as that deck's theme. The theme is the admin seat, in [prompts/admin-theme.md](../prompts/admin-theme.md).
 
 This chapter tells you which file inside this repository, and which contract to follow. It does not repeat those contracts.
 

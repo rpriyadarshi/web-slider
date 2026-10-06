@@ -39,14 +39,26 @@ Clicking a part of the slide, including a widget, selects the matching YAML node
 
 ## Output
 
-Prefer one `.yaml` file. Put slide images inline as `data:` URIs or `https://` URLs.
+Before you finish, from this repository:
 
-When the deck needs several images, also produce a zip package:
+```bash
+npm run pack -- --deck /absolute/path/to/talk.yaml
+```
 
-- `deck.yaml` at the root
-- image files at the relative paths named in the YAML
-- no `..` path segments and no path that starts with `/`
-- no copy of the manifest, the mark, or the font files
+That command is the presenter's check (`npm run pack`, `src/package/packTalk.ts`). It parses the talk with `deckSchema`. It writes a zip only when an `image.src` is a package path, and only after those files are PNG or JPEG files beside the talk. It writes nothing when every image is an `https://` URL or a `data:` URI. It prints every problem and writes nothing when the talk fails. The talk is finished when the command exits 0. Open the zip it names, or the YAML when it says no zip was written. Do not write a zip script of your own.
+
+You do not write or boot the theme. If the room has no theme yet, stop and follow [admin-theme.md](admin-theme.md).
+
+### Diagrams (Mermaid and the like)
+
+There is no diagram block type in the schema. Do not invent `type: mermaid`.
+
+1. Write sources beside the talk (`diagrams/*.mmd` or similar).
+2. Render to PNG or JPEG (`mmdc` from `@mermaid-js/mermaid-cli` is fine; set `MMDC_PUPPETEER_CONFIG` when headless Chrome needs an executable path).
+3. Reference them as package paths on `image` blocks, for example `src: diagrams/architecture.png`.
+4. Run `npm run pack` on the talk. That packs the files. A bare YAML file cannot resolve package paths.
+
+Keep the sources with the talk. Commit rendered PNGs or the zip when the briefing must present without running the render step.
 
 ## Deck
 
@@ -118,10 +130,12 @@ Five to twelve slides. Open with `layout: title`, use `section` as a break, and 
 Before you finish, confirm:
 
 - The file is a talk. It has no `brand`, `theme`, or `fonts` at the deck root, and no type sizes, chrome, or fonts on a slide.
-- You did not emit a config, a manifest, a mark, a font, or `embed.js`.
+- You did not emit a config, a manifest, a mark, a font, or `embed.js`. Those are the admin seat.
 - Every id is unique where the schema requires it, and matches letters, numbers, hyphens, and underscores.
 - Every color matches `#rrggbb`.
-- Every image src is https, data, or a package path that exists in the zip.
+- `npm run pack -- --deck` on this talk exited 0. You did not write a zip script of your own.
+- When pack prints a package path, that zip is what you open. When it says no zip was written, the YAML is what you open.
+- Diagram sources, if any, are rendered to PNG or JPEG. You did not invent a Mermaid block type.
 - Every video src and every link href is `https://`.
 - Every link has either an href or a slide id, not both, and the slide id exists.
 - Every chart has one value per label, and every table row has one cell per header.

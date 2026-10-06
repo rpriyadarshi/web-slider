@@ -131,11 +131,14 @@ npm run dev -- --config /absolute/path/to/web-slider.config.yaml
 The same build from a shell:
 
 ```bash
+npm run pack -- --deck /absolute/path/to/talk.yaml
 npm run share -- \
   --config /absolute/path/to/web-slider.config.yaml \
   --deck /absolute/path/to/talk.zip \
   --out /absolute/path/to/talk-presenter.zip
 ```
+
+`npm run pack` is the talk check. It writes `talk.zip` only when the talk names a local image; otherwise pass the YAML to `--deck` when share accepts a bare talk. When the talk names package paths, pass the zip pack wrote. The author story is [make-slides.md](make-slides.md#check-the-talk-on-disk).
 
 The package carries `app/talk/web-slider.config.yaml` with `manifest: talk/manifest.yaml` and `deck: talk/deck.zip`. It also carries the marks, the fonts, and the font licences the manifest names, plus the talk. It does not carry `samples/`. The manifest must sit beside the config and carry its own marks; a brand package name is refused. A talk that names a file it does not carry is refused.
 

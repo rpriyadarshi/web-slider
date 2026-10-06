@@ -7,6 +7,7 @@
     "dev": "node scripts/launch.mjs dev",
     "build": "tsc -p tsconfig.json --noEmit && node scripts/launch.mjs build",
     "preview": "node scripts/launch.mjs preview",
+    "pack": "node scripts/pack.mjs",
     "share": "node scripts/share.mjs",
     "share:runtime": "node scripts/share-runtime.mjs",
     "test": "vitest run"

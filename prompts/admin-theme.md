@@ -2,7 +2,7 @@
 
 You are the admin. You dress the room: the brand, the colors, the type, and the fonts. You do not write the slides. If the request is a talk, stop and follow [generate-deck.md](generate-deck.md).
 
-Write the theme in the directory the user named, beside the talk, with its own `manifest.yaml`, its own mark files, and its own font files. You do not set `brand` to a package shipped in this repository. You do not point `fonts` into `samples/themes/`. That alias is not a theme. If they did not name a directory, ask. Do not guess another workspace's directories. [AGENTS.md](../AGENTS.md) is the rule.
+Write the theme in the owning workspace. Prefer a house theme that workspace already keeps for briefings when one exists. Otherwise write it beside the talk, with its own `web-slider.config.yaml`, `manifest.yaml`, mark files, and font files. You do not set `brand` to a package shipped in this repository. You do not point `fonts` into `samples/themes/`. That alias is not a theme. If they did not name a directory, ask. Do not guess another workspace's directories. [AGENTS.md](../AGENTS.md) is the rule. Boot with the absolute path to that config; the talk (or its zip package) opens after the theme loads.
 
 The folders under `samples/themes/` and `samples/examples/` below are the shipped product samples. You add another one only when the user explicitly told you to change Web Slider's shipped samples. The routing for that case is [docs/agents.md](../docs/agents.md). The human story is [docs/admin.md](../docs/admin.md).
 

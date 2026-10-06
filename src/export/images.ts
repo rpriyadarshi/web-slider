@@ -37,14 +37,26 @@ async function drawSvgToPng(src: string): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
-export async function loadRaster(src: string): Promise<RasterImage> {
-  const { bytes, mimeHint } = await readImageBytes(src);
+/** The raster check PDF, Word, and PowerPoint use. Packing a talk uses this same function. */
+export function rasterFromBytes(bytes: Uint8Array, mimeHint: string | null = null): RasterImage {
   const mime = sniffMime(bytes) ?? mimeFromHint(mimeHint);
   if (mime !== "image/png" && mime !== "image/jpeg") {
     throw new Error("Only PNG and JPEG images can be exported.");
   }
   const size = mime === "image/png" ? pngSize(bytes) : jpegSize(bytes);
   return { bytes, mime, width: size.width, height: size.height };
+}
+
+export async function loadRaster(src: string): Promise<RasterImage> {
+  const { bytes, mimeHint } = await readImageBytes(src);
+  return rasterFromBytes(bytes, mimeHint);
+}
+
+/** A data-URI slide image, checked with the same raster rules as export. https URLs are left for the presenter to fetch. */
+export function rasterFromDeclaredSource(src: string): RasterImage | null {
+  if (!src.startsWith("data:")) return null;
+  const read = dataImageBytes(src);
+  return rasterFromBytes(read.bytes, read.mimeHint);
 }
 
 export function fitBox(
@@ -73,19 +85,21 @@ function fetchableMark(src: string): string {
   return `/${src}`;
 }
 
-async function readImageBytes(src: string): Promise<{ bytes: Uint8Array; mimeHint: string | null }> {
-  if (src.startsWith("data:")) {
-    const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(src);
-    if (!match) throw new Error("Image data URI is malformed.");
-    const payload = match[3] ?? "";
-    if (match[2]) {
-      const binary = atob(payload);
-      const bytes = new Uint8Array(binary.length);
-      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-      return { bytes, mimeHint: match[1] ?? null };
-    }
-    return { bytes: new TextEncoder().encode(decodeURIComponent(payload)), mimeHint: match[1] ?? null };
+function dataImageBytes(src: string): { bytes: Uint8Array; mimeHint: string | null } {
+  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(src);
+  if (!match) throw new Error("Image data URI is malformed.");
+  const payload = match[3] ?? "";
+  if (match[2]) {
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return { bytes, mimeHint: match[1] ?? null };
   }
+  return { bytes: new TextEncoder().encode(decodeURIComponent(payload)), mimeHint: match[1] ?? null };
+}
+
+async function readImageBytes(src: string): Promise<{ bytes: Uint8Array; mimeHint: string | null }> {
+  if (src.startsWith("data:")) return dataImageBytes(src);
 
   const response = await fetch(src);
   if (!response.ok) {

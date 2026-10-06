@@ -66,9 +66,17 @@ async function loadHighlighter(): Promise<HighlighterCore> {
   });
 }
 
+/** The live view rejects any other name when the slide is shown. Packing a talk uses this same check. */
+export function highlightLanguageError(language: string | undefined): string | null {
+  if (!language || (HIGHLIGHT_LANGUAGES as readonly string[]).includes(language)) return null;
+  return `Cannot highlight language "${language}".`;
+}
+
 export async function highlightCode(code: string, language: string | undefined, dark: boolean): Promise<string> {
   const engine = await highlighter();
   const theme = dark ? "github-dark" : "github-light";
+  const refused = highlightLanguageError(language);
+  if (refused) throw new Error(refused);
   if (!language) {
     return engine.codeToHtml(code, { lang: "text", theme });
   }

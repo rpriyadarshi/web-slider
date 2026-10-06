@@ -10,13 +10,38 @@ You do not add or edit `samples/`, `src/`, `docs/`, `prompts/`, `public/`, or an
 
 Write the talk in the workspace that owns the work, in the directory the user named. If they did not name a directory, ask. Do not choose `samples/` because this repo contains examples. Do not name or guess another workspace's directories.
 
-If that talk needs its own look, build the theme beside the talk in that same folder: `manifest.yaml`, the mark files, and the font files. Those files belong with the talk. They are not a new product theme in this repository, and they are not an alias of a theme shipped here.
+If that talk needs its own look, the theme is the admin seat: [prompts/admin-theme.md](prompts/admin-theme.md). Prefer a house theme the workspace already keeps for briefings when one exists. Otherwise build the theme beside the talk: `web-slider.config.yaml`, `manifest.yaml`, the mark files, and the font files. Those files belong with the talk. They are not a new product theme in this repository, and they are not an alias of a theme shipped here. Do not set `brand` or font paths at `samples/themes/` in this repository.
 
-Boot that config with its absolute path. The dev server reads a `.yaml` path that starts with `/`. The browser does not fetch it as a site URL, and `samples/catalog.yaml` is not involved.
+The admin seat boots that config with its absolute path. The dev server reads a `.yaml` path that starts with `/`. The browser does not fetch it as a site URL, and `samples/catalog.yaml` is not involved.
 
 ```bash
 npm run dev -- --config /absolute/path/to/web-slider.config.yaml
 ```
+
+Then open the talk from the start screen or by dropping the file on the window. Opening a talk does not replace the theme.
+
+### Finish
+
+From this repository, before the talk is finished:
+
+```bash
+npm run pack -- --deck /absolute/path/to/talk.yaml
+```
+
+That command is the presenter's check. It parses the talk with `deckSchema`, and it uses the same image and code-language checks the presenter uses. It writes a zip only when an `image.src` is a package path, and only after each of those files is a PNG or JPEG beside the talk. It writes nothing when every image is an `https://` URL or a `data:` URI. Problems are printed and nothing is written. The talk is finished when the command exits 0. Open the zip it names, or the YAML when it says no zip was written. Do not write a zip script of your own.
+
+### Diagrams
+
+There is no Mermaid (or other diagram) block type. If the talk needs diagrams:
+
+1. Keep Mermaid (or other) sources beside the talk, for example `diagrams/*.mmd`.
+2. Render them to PNG or JPEG beside the talk. `mmdc` from `@mermaid-js/mermaid-cli` is fine; headless Chrome may need `MMDC_PUPPETEER_CONFIG`.
+3. In the talk YAML, point `image.src` at package paths such as `diagrams/architecture.png`. A path must not start with `/` and must not contain `..`.
+4. Run the finish command above. It packs those files. A bare `.yaml` file cannot resolve package paths.
+
+The zip has `deck.yaml` at the root and the files the talk names. It does not contain the manifest, marks, or fonts. Rebuild by running the finish command again whenever the YAML or a diagram changes. Keep the `.mmd` sources in git. Commit the rendered PNGs or the zip when the briefing must open without a render step.
+
+Author checklist: [prompts/generate-deck.md](prompts/generate-deck.md). Theme checklist: [prompts/admin-theme.md](prompts/admin-theme.md). Human package story: [docs/make-slides.md](docs/make-slides.md).
 
 ## This repository
 

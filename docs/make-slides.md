@@ -14,9 +14,21 @@ After a theme has loaded, the start screen offers three ways in.
 
 This browser keeps that deck, the widget answers, and the notes you take. Nothing is written back to the original file. Download YAML when you want a file that contains the answers and the notes. That download is a new file. Comments from the original are not copied into it. Opening that download restores the answers and notes into the session.
 
-A `.zip` package has `deck.yaml` at the root and the files the deck names. Download one from the package icon in Export. The package does not contain the mark or the font files.
+A `.zip` package has `deck.yaml` at the root and the files the deck names. Download one from the package icon in Export, or build one on disk with the check below. A bare YAML file cannot resolve a local image path; open the zip after the theme has loaded. The package does not contain the mark or the font files.
 
 A `.pptx` import keeps each slide's title, bullets, and speaker notes. Pictures, charts, and animations in that file are left out.
+
+## Check the talk on disk
+
+From this repository, after you save the YAML:
+
+```bash
+npm run pack -- --deck /absolute/path/to/talk.yaml
+```
+
+That command is the presenter's check. It parses the talk the way the app does. When the talk names a local image path such as `diagrams/architecture.png`, those files must sit beside the YAML as PNG or JPEG, and the command writes a zip that carries them. When every image is an `https://` URL or a `data:` URI, it writes no zip and tells you to open the YAML. Optional `--out /absolute/path/to/talk.zip` chooses where the package is written.
+
+Problems print on the terminal and nothing is written. Exit 0 means the talk is ready. Open the zip it names, or the YAML when it says no zip was written. There is no Mermaid block in the schema. Render a diagram to PNG or JPEG, point `image.src` at that file, then run the same command.
 
 ## What you write
 
@@ -94,7 +106,7 @@ Use these on `blocks` and on `side`. Side content is a short reference, not a se
 - `video`: an `https` address, and an optional `title`
 - `quote`: `text`, optional `attribution`
 - `code`: `code`, optional `language`. Omit `language` for plain text. The live view highlights `bash`, `css`, `html`, `javascript`, `json`, `jsx`, `markdown`, `python`, `tsx`, `typescript`, and `yaml`. Any other name fails when the slide is shown.
-- `image`: `src`, optional `alt`. `src` is `https`, a `data` URI, or a path inside the zip package. A path cannot start with `/` or contain `..`.
+- `image`: `src`, optional `alt`. `src` is `https`, a `data` URI, or a path inside the zip package. A path cannot start with `/` or contain `..`. A local path needs the package from [Check the talk on disk](#check-the-talk-on-disk).
 - `callout`: `text`
 - `divider`
 
@@ -132,6 +144,6 @@ Export writes a new file. The original you opened is unchanged.
 - **PDF** uses the theme's type and the talk's aspect, and embeds Inter, Source Serif 4, and JetBrains Mono.
 - **Word** and **PowerPoint** name those fonts and the same sizes. A machine without the fonts installed will substitute. A chart becomes its labels and values. A video becomes its title and address.
 - **Handout** is a Word file: each visible slide, then its script, the questions with the recorded answers, and the notes taken on that slide.
-- **Package** is a zip of `deck.yaml` and the images the talk names.
+- **Package** is a zip of `deck.yaml` and the images the talk names. The same zip on disk comes from `npm run pack` in [Check the talk on disk](#check-the-talk-on-disk).
 
 Hidden slides are left out. Images in the files must be PNG or JPEG. An SVG mark from the theme is drawn in the browser export. Code is colored on screen and plain monospace in the files.
