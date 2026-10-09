@@ -32,14 +32,26 @@ That command is the presenter's check. It parses the talk with `deckSchema`, and
 
 ### Diagrams
 
-There is no Mermaid (or other diagram) block type. If the talk needs diagrams:
+Prefer a native Mermaid block in the talk YAML:
 
-1. Keep Mermaid (or other) sources beside the talk, for example `diagrams/*.mmd`.
+```yaml
+- type: mermaid
+  source: |
+    flowchart LR
+      A --> B
+  caption: Optional label
+```
+
+The presenter draws it live. PDF, Word, and PowerPoint rasterize it in the browser. Pack does not need a PNG for that block.
+
+For other diagram tools, or when you want a static raster in the package:
+
+1. Keep sources beside the talk, for example `diagrams/*.mmd`.
 2. Render them to PNG or JPEG beside the talk. `mmdc` from `@mermaid-js/mermaid-cli` is fine; headless Chrome may need `MMDC_PUPPETEER_CONFIG`.
 3. In the talk YAML, point `image.src` at package paths such as `diagrams/architecture.png`. A path must not start with `/` and must not contain `..`.
 4. Run the finish command above. It packs those files. A bare `.yaml` file cannot resolve package paths.
 
-The zip has `deck.yaml` at the root and the files the talk names. It does not contain the manifest, marks, or fonts. Rebuild by running the finish command again whenever the YAML or a diagram changes. Keep the `.mmd` sources in git. Commit the rendered PNGs or the zip when the briefing must open without a render step.
+The zip has `deck.yaml` at the root and the files the talk names. It does not contain the manifest, marks, or fonts. Rebuild by running the finish command again whenever the YAML or a packaged diagram changes.
 
 Author checklist: [prompts/generate-deck.md](prompts/generate-deck.md). Theme checklist: [prompts/admin-theme.md](prompts/admin-theme.md). Human package story: [docs/make-slides.md](docs/make-slides.md).
 

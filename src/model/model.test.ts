@@ -66,6 +66,7 @@ describe("parseDeck", () => {
     expect(deck.slides.at(-1)?.hidden).toBe(true);
     expect(deck.slides.some((slide) => slide.widgets?.some((widget) => widget.type === "scale"))).toBe(true);
     expect(deck.slides.some((slide) => slide.side?.some((block) => block.type === "code"))).toBe(true);
+    expect(deck.slides.some((slide) => slide.blocks?.some((block) => block.type === "mermaid"))).toBe(true);
     expect(sample).not.toContain("Keep taken notes on the deck");
     expect(sample).toContain("Keep taken notes in the session");
     expect(deck.brand).toBeUndefined();

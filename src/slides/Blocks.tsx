@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { highlightCode } from "../highlight";
+import { renderMermaidSvg } from "../mermaid/render";
 import { bindProbe, type ProbePath } from "../model/probe";
 import type { Block } from "../model/schema";
 import { isRevealed } from "../model/steps";
@@ -166,6 +167,13 @@ function BlockView({
       </div>
     );
   }
+  if (block.type === "mermaid") {
+    return (
+      <div {...bindProbe(blockPath, probe, onProbe)}>
+        <MermaidBlock source={block.source} caption={block.caption} dark={dark} />
+      </div>
+    );
+  }
   if (block.type === "image") {
     return (
       <figure className="block figure" {...bindProbe(blockPath, probe, onProbe)}>
@@ -280,6 +288,61 @@ export function EditableText({
         }
       }}
     />
+  );
+}
+
+function MermaidBlock({ source, caption, dark }: { source: string; caption?: string; dark: boolean }) {
+  const host = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const style = getComputedStyle(host.current ?? document.documentElement);
+    const colors = {
+      background: style.getPropertyValue("--slide-bg").trim() || (dark ? "#111111" : "#ffffff"),
+      surface: style.getPropertyValue("--slide-surface").trim() || (dark ? "#1c1c1c" : "#f4f4f4"),
+      text: style.getPropertyValue("--slide-text").trim() || (dark ? "#e8e8e8" : "#111111"),
+      muted: style.getPropertyValue("--slide-muted").trim() || (dark ? "#9a9a9a" : "#666666"),
+      accent: style.getPropertyValue("--slide-accent").trim() || "#3db892",
+      dark,
+    };
+    renderMermaidSvg(source, colors).then(
+      (value) => {
+        if (!cancelled) {
+          setSvg(value);
+          setError(null);
+        }
+      },
+      (reason: unknown) => {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : String(reason));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [source, dark]);
+
+  return (
+    <div ref={host}>
+      {error ? (
+        <div className="block code-error">
+          <p>{error}</p>
+          <pre>
+            <code>{source}</code>
+          </pre>
+        </div>
+      ) : !svg ? (
+        <pre className="block code">
+          <code>{source}</code>
+        </pre>
+      ) : (
+        <figure className="block mermaid-figure">
+          <div className="mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />
+          {caption ? <figcaption>{caption}</figcaption> : null}
+        </figure>
+      )}
+    </div>
   );
 }
 

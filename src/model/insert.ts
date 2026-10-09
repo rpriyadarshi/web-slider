@@ -11,6 +11,7 @@ export const BLOCK_KINDS = [
   "callout",
   "table",
   "chart",
+  "mermaid",
   "link",
   "image",
   "video",
@@ -28,6 +29,7 @@ export const BLOCK_LABEL: Record<Block["type"], string> = {
   callout: "Callout",
   table: "Table",
   chart: "Chart",
+  mermaid: "Mermaid",
   link: "Link",
   image: "Image",
   video: "Video",
@@ -145,6 +147,8 @@ export function blockValue(type: Block["type"]): Block {
       return { type, headers: ["A", "B"], rows: [["One", "Two"]] };
     case "chart":
       return { type, kind: "bar", labels: ["A", "B"], values: [1, 2] };
+    case "mermaid":
+      return { type, source: "flowchart LR\n  A --> B" };
     case "link":
       return { type, text: "Link", href: "https://example.com" };
     case "image":

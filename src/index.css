@@ -660,6 +660,25 @@ button.primary {
   border-radius: 10px;
 }
 
+.mermaid-figure {
+  margin: 0;
+  text-align: center;
+}
+.mermaid-figure .mermaid-svg {
+  display: flex;
+  justify-content: center;
+}
+.mermaid-figure .mermaid-svg svg {
+  max-width: 100%;
+  max-height: 280px;
+  height: auto;
+}
+.mermaid-figure figcaption {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--slide-muted);
+}
+
 .code, .code pre, .shiki {
   margin: 0;
   text-align: left;

@@ -29,6 +29,8 @@ export function blockToText(block: Block): string {
         block.kind === "bar" ? "Bar chart" : "Column chart",
         ...block.labels.map((label, index) => `${label}: ${block.values[index]}`),
       ].join("\n");
+    case "mermaid":
+      return block.caption ? `[Diagram: ${block.caption}]` : "[Diagram]";
     case "code":
       return block.code.replace(/\s+$/, "");
     case "image":
@@ -40,7 +42,7 @@ export function blockToText(block: Block): string {
 
 export function blocksToText(blocks: Block[] | undefined): string {
   return (blocks ?? [])
-    .filter((block) => block.type !== "image")
+    .filter((block) => block.type !== "image" && block.type !== "mermaid")
     .map(blockToText)
     .filter((text) => text !== "")
     .join("\n\n");
@@ -48,6 +50,10 @@ export function blocksToText(blocks: Block[] | undefined): string {
 
 export function imageBlocks(blocks: Block[] | undefined): Extract<Block, { type: "image" }>[] {
   return (blocks ?? []).filter((block): block is Extract<Block, { type: "image" }> => block.type === "image");
+}
+
+export function mermaidBlocks(blocks: Block[] | undefined): Extract<Block, { type: "mermaid" }>[] {
+  return (blocks ?? []).filter((block): block is Extract<Block, { type: "mermaid" }> => block.type === "mermaid");
 }
 
 export function widgetToText(widget: Widget, answer: WidgetAnswer | undefined): string {

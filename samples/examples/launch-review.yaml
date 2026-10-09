@@ -71,16 +71,19 @@ slides:
     layout: content
     title: Pick a date
     subtitle: Friday is the default
-    notes: Move the date only when someone names the condition.
+    notes: Point at the sequence. Move the date only when someone names the condition.
     theme:
       background: "#1b2430"
       accent: "#8eb6ff"
     blocks:
       - type: paragraph
         text: Move Friday only with a named owner and a written condition.
-      - type: image
-        alt: Three-step launch sequence
-        src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAACgCAYAAACc/t08AAAEbUlEQVR4nO3cQUocURSGUffhNAvIYrLD7CzDzAKZJwQcdBptWq16z+t3BmckShXcn/4Q8eHxy9c/AAB0POx+AAAA1hKAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBOA7/fj+bfszAG9jvzCX/b6PAHyFf8d2r93PCvzPfmEu+z2eALzDrUP7/eunQ4QPzH5hLvs9jwC84blju5dDhL3sF+ay3/MJwBe89fBuHeLud4IK+4W57HcNAfiMo47PEcJ69gtz2e86AvDK0cfnCGEd+4W57HctAXjhrONzhHA++4W57Hc9AXjhzOO7PsLd7wqfjf3CXPa7ngB8suL4HCGcw35hLvvdQwA+cYAwl/3CXPa7hwBcfHyOEI5lvzCX/e4jAB0gjGa/MJf97iMAHSCMZr8wl/3uIwA3HyBwDPuFuQSgABSAwJvYL8wlAAVgIv58iMCx7Bfm2rXf3f2xWz4AH/0GED4F+4W5dux3d3vsJgD9ESqMZr8wl/3uIwAdIIxmvzCX/e4jAB0gjGa/MJf97iMAHSCMZr8wl/3uIwA3HKHjg2PZL8xlv3sIwCcOEOayX5jLfvcQgBdWHKHjg3PYL8xlv+sJwAtn/0+iy5+/+13hs7FfmMt+1xOAV846QscH57NfmMt+1xKAzzj6CB0frGO/MJf9riMAX3DUETo+WM9+YS77XUMA3nB5PK89xOvv3f0uUGO/MJf9nk8A3uH6mK6P8tbXdz871NkvzGW/5xGAr3Dr0BwefGz2C3PZ7/EEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYgQgAECMAAQAiBGAAAAxAhAAIEYAAgDECEAAgBgBCAAQIwABAGIEIABAjAAEAIgRgAAAMQIQACBGAAIAxAhAAIAYAQgAECMAAQBiBCAAQIwABACIEYAAADECEAAgRgACAMQIQACAGAEIABAjAAEAYv4CEd5QaIocBOsAAAAASUVORK5CYII="
+      - type: mermaid
+        caption: Three-step launch sequence
+        source: |
+          flowchart LR
+            Owner[Name the owner] --> Condition[Write the condition]
+            Condition --> Record[Record the decision]
       - type: divider
       - type: paragraph
         text: Record the condition in the decision row before you leave the slide.
@@ -101,13 +104,15 @@ slides:
   - id: plan
     layout: content
     title: How Friday gets confirmed
-    notes: Point at the table, then use the link if the room goes back to scope.
+    notes: Point at the diagram, then the table. Use the link if the room goes back to scope.
     blocks:
-      - type: numbered
-        items:
-          - text: Name the owner
-          - text: Write the condition
-          - text: Confirm Friday
+      - type: mermaid
+        caption: Confirm Friday only after the condition is written
+        source: |
+          flowchart LR
+            Owner[Name the owner] --> Condition[Write the condition]
+            Condition --> Friday[Confirm Friday]
+            Condition --> Monday[Move to Monday]
       - type: table
         headers: [Option, Owner]
         rows:
@@ -119,12 +124,21 @@ slides:
   - id: evidence
     layout: content
     title: What the room can see
-    notes: The chart is the count. Play the walkthrough only if someone asks.
+    notes: The chart is the count. The sequence is the handoff. Play the walkthrough only if someone asks.
     blocks:
       - type: chart
         kind: column
         labels: [Friday, Monday]
         values: [4, 2]
+      - type: mermaid
+        caption: Handoff when the date moves
+        source: |
+          sequenceDiagram
+            participant Chair
+            participant Product
+            Chair->>Product: Name the condition
+            Product-->>Chair: Accept or cut scope
+            Chair->>Chair: Record the decision
       - type: video
         title: Launch walkthrough
         src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4

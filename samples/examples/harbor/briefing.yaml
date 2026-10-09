@@ -19,21 +19,19 @@ slides:
   - id: berth
     layout: content
     title: Berth plan
-    notes: Ask who owns the late vessel before you leave the slide.
+    notes: Point at the diagram. Ask who owns the late vessel before you leave the slide.
     blocks:
       - type: paragraph
         text: Two vessels are inside the window. One is not.
-      - type: bullets
-        items:
-          - text: North pier takes the grain ship at 06:40
-            step: 1
-          - text: South pier holds the container ship until 07:10
-            step: 2
-          - text: The tanker waits for a named pilot
-            step: 3
+      - type: mermaid
+        caption: Three calls on the tide window
+        source: |
+          flowchart TD
+            Window[06:40 window] --> North[North pier grain ship]
+            Window --> South[South pier container ship]
+            Window --> Tanker[Tanker waits for a named pilot]
       - type: callout
         text: A missing pilot is an open berth.
-        step: 3
     side:
       - type: code
         language: yaml
@@ -54,12 +52,18 @@ slides:
     layout: content
     title: Labor on the window
     subtitle: Heads counted at 05:30
-    notes: The chart is the count. Do not add a fourth gang without a name.
+    notes: The chart is the count. The diagram is the shortfall. Do not add a fourth gang without a name.
     blocks:
       - type: chart
         kind: column
         labels: [North, South, Tanker]
         values: [18, 14, 6]
+      - type: mermaid
+        caption: South pier is two short of the plan
+        source: |
+          flowchart LR
+            Count[Heads at 05:30] --> South[South pier short two]
+            South --> Name[Name the drivers]
       - type: paragraph
         text: South pier is two short of the plan.
     widgets:
@@ -69,21 +73,24 @@ slides:
   - id: exceptions
     layout: content
     title: What is still open
-    notes: Point at the row, then use the link if the room goes back to the berth.
+    notes: Point at the diagram, then the table. Use the link if the room goes back to the berth.
     theme:
       background: "#E7EEF3"
       accent: "#1B4F72"
     blocks:
+      - type: mermaid
+        caption: Close the window only with a named owner
+        source: |
+          flowchart TD
+            Open[Open items] --> Pilot[Pilot for the tanker]
+            Open --> Drivers[Two crane drivers]
+            Pilot --> Confirm[Confirm 06:40]
+            Drivers --> Confirm
       - type: table
         headers: [Item, Owner]
         rows:
           - [Pilot for the tanker, Harbor master]
           - [Two crane drivers, Stevedore]
-      - type: numbered
-        items:
-          - text: Name the owner
-          - text: Write the condition
-          - text: Confirm 06:40
       - type: link
         text: Back to the berth plan
         slide: berth

@@ -14,6 +14,7 @@ import {
 } from "docx";
 import { resolveBrand } from "../brand/kit";
 import { isDarkHex } from "../highlight";
+import { mermaidFallbackText, mermaidRasterOrNull } from "../mermaid/export";
 import type { Block, Deck, ResolvedTheme, Slide } from "../model/schema";
 import { resolveTheme, titleSize } from "../model/schema";
 import type { DeckSession } from "../model/session";
@@ -154,6 +155,33 @@ async function blockParagraphs(blocks: Block[], theme: ResolvedTheme): Promise<P
         }),
       );
       if (block.alt) paragraphs.push(paragraph(block.alt, theme.fontBody, 12, theme.muted, false));
+      continue;
+    }
+    if (block.type === "mermaid") {
+      let image;
+      try {
+        image = await mermaidRasterOrNull(block, theme);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Mermaid diagram failed: ${message}`);
+      }
+      if (!image) {
+        paragraphs.push(...lines(mermaidFallbackText(block), theme.fontMono, 12, theme.text, false));
+        continue;
+      }
+      const box = fitBox(image.width, image.height, 620, 280);
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new ImageRun({
+              type: "png",
+              data: image.bytes,
+              transformation: { width: Math.round(box.width), height: Math.round(box.height) },
+            }),
+          ],
+        }),
+      );
+      if (block.caption) paragraphs.push(paragraph(block.caption, theme.fontBody, 12, theme.muted, false));
       continue;
     }
     if (block.type === "code") {

@@ -51,14 +51,24 @@ You do not write or boot the theme. If the room has no theme yet, stop and follo
 
 ### Diagrams (Mermaid and the like)
 
-There is no diagram block type in the schema. Do not invent `type: mermaid`.
+Prefer a native Mermaid block:
+
+```yaml
+- type: mermaid
+  source: |
+    flowchart LR
+      A --> B
+  caption: Optional label
+```
+
+The presenter draws it. Exports rasterize it. Do not use `type: code` with `language: mermaid`.
+
+For other diagram tools, or a static raster in the package:
 
 1. Write sources beside the talk (`diagrams/*.mmd` or similar).
 2. Render to PNG or JPEG (`mmdc` from `@mermaid-js/mermaid-cli` is fine; set `MMDC_PUPPETEER_CONFIG` when headless Chrome needs an executable path).
 3. Reference them as package paths on `image` blocks, for example `src: diagrams/architecture.png`.
 4. Run `npm run pack` on the talk. That packs the files. A bare YAML file cannot resolve package paths.
-
-Keep the sources with the talk. Commit rendered PNGs or the zip when the briefing must present without running the render step.
 
 ## Deck
 
@@ -102,6 +112,7 @@ Use these on `blocks` and `side`. `step` is a non-negative integer. It hides the
 - `numbered`: same item shape as bullets
 - `table`: `headers` (list of non-empty strings) and `rows` (list of string lists). Each row has one cell per header.
 - `chart`: `kind` (`bar` or `column`), `labels`, and `values` (one finite number per label, at least one, at most 12). The live view and the PDF draw the bars. Word and PowerPoint write the labels and values as text.
+- `mermaid`: `source` (non-empty Mermaid text), optional `caption`. The live view draws the diagram. PDF, Word, and PowerPoint rasterize it to PNG in the browser. Pack does not need a separate image file.
 - `link`: `text`, plus either `href` (`https://...`) or `slide` (a slide id in this deck). Exactly one of those.
 - `video`: `src` (`https://...` only), optional `title`. It plays in the presenter. Exports keep the title and the address.
 - `quote`: `text`, optional `attribution`
@@ -135,7 +146,7 @@ Before you finish, confirm:
 - Every color matches `#rrggbb`.
 - `npm run pack -- --deck` on this talk exited 0. You did not write a zip script of your own.
 - When pack prints a package path, that zip is what you open. When it says no zip was written, the YAML is what you open.
-- Diagram sources, if any, are rendered to PNG or JPEG. You did not invent a Mermaid block type.
+- Mermaid diagrams use `type: mermaid` with `source`. Other diagram tools are rendered to PNG or JPEG on `image` blocks.
 - Every video src and every link href is `https://`.
 - Every link has either an href or a slide id, not both, and the slide id exists.
 - Every chart has one value per label, and every table row has one cell per header.

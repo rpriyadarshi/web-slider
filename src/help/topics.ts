@@ -73,7 +73,7 @@ export const TOPICS: readonly Topic[] = [
     title: "Export",
     paragraphs: [
       "Export writes a new file. The original you opened is unchanged. Hidden slides are left out.",
-      "YAML merges the answers and the notes into the talk so you can open them again. PDF embeds the theme fonts. Word and PowerPoint name those fonts and substitute if they are not installed. A chart becomes its labels and values. A video becomes its title and address.",
+      "YAML merges the answers and the notes into the talk so you can open them again. PDF embeds the theme fonts. Word and PowerPoint name those fonts and substitute if they are not installed. A chart becomes its labels and values. A Mermaid diagram is drawn as a picture. A video becomes its title and address.",
       "Handout is a Word file: each visible slide, then its script, the questions with the recorded answers, and the notes taken on that slide. Package is a zip of deck.yaml and the images the talk names. Runnable package is that zip plus a presenter the recipient can start. The banner shows the command.",
     ],
   },

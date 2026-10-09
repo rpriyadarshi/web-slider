@@ -19,18 +19,16 @@ slides:
   - id: impact
     layout: content
     title: What the customer saw
-    notes: Stay on the count. Do not open the log until someone asks.
+    notes: Stay on the count and the timeline. Do not open the log until someone asks.
     blocks:
       - type: paragraph
         text: Checkout failed for the customers in the chart.
-      - type: bullets
-        items:
-          - text: Payments returned an error from 14:02
-            step: 1
-          - text: The status page was updated at 14:11
-            step: 2
-          - text: Checkout recovered at 14:41
-            step: 3
+      - type: mermaid
+        caption: Forty minutes from first error to recovery
+        source: |
+          flowchart LR
+            E1402[14:02 Errors] --> E1411[14:11 Status page]
+            E1411 --> E1441[14:41 Recovered]
       - type: chart
         kind: column
         labels: [Errors, Recovered]
@@ -46,10 +44,21 @@ slides:
   - id: cause
     layout: content
     title: The check that failed
-    notes: Read the command, then name the owner of the retry.
+    notes: Point at the sequence, then the command. Name the owner of the retry.
     blocks:
       - type: paragraph
         text: The deploy skipped the payment health check.
+      - type: mermaid
+        caption: Where the deploy went green without a check
+        source: |
+          sequenceDiagram
+            participant CI
+            participant Pay as Payments
+            participant Store
+            CI->>Pay: Health check skipped
+            CI->>Store: Deploy marked green
+            Store-->>Pay: Checkout traffic
+            Pay-->>Store: Errors from 14:02
       - type: code
         language: bash
         code: |
@@ -64,16 +73,17 @@ slides:
   - id: fix
     layout: content
     title: The fix
-    notes: Do not leave without a date and a name.
+    notes: Point at the diagram. Do not leave without a date and a name.
     theme:
       background: "#241C18"
       accent: "#E07A3D"
     blocks:
-      - type: numbered
-        items:
-          - text: Restore the health check
-          - text: Name the owner
-          - text: Set the date
+      - type: mermaid
+        caption: The fix is done when the check is back and someone owns the date
+        source: |
+          flowchart LR
+            Check[Restore the health check] --> Owner[Name the owner]
+            Owner --> Date[Set the date]
       - type: video
         title: Checkout walkthrough
         src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4

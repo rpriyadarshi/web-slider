@@ -42,17 +42,18 @@ slides:
     layout: content
     title: The residual
     subtitle: Name it before you sign
-    notes: The chart is the open amount by book. Ask for the owner of the largest bar.
+    notes: The chart is the open amount by book. The diagram is the close path. Ask for the owner of the largest bar.
     blocks:
       - type: chart
         kind: bar
         labels: [Sales, Services, Tax]
         values: [1.2, 0.4, 0.1]
-      - type: numbered
-        items:
-          - text: Name the book
-          - text: Name the owner
-          - text: Write the condition to close
+      - type: mermaid
+        caption: Name the book before you write the condition
+        source: |
+          flowchart LR
+            Book[Name the book] --> Owner[Name the owner]
+            Owner --> Condition[Write the condition to close]
     widgets:
       - id: confidence
         type: scale
@@ -60,13 +61,22 @@ slides:
   - id: signoff
     layout: content
     title: Sign-off
-    notes: Leave this slide only after the condition is written.
+    notes: Point at the diagram. Leave only after the condition is written.
     theme:
       background: "#EFEAE2"
       accent: "#1E4D3A"
     blocks:
       - type: paragraph
         text: The quarter closes when the controller can read the condition back.
+      - type: mermaid
+        caption: Sign-off only with a written condition
+        source: |
+          sequenceDiagram
+            participant Controller
+            participant Owner
+            Controller->>Owner: Read the residual
+            Owner-->>Controller: Name and condition
+            Controller->>Controller: Sign the close
       - type: link
         text: Back to the adjustments
         slide: adjustments

@@ -4,9 +4,10 @@ import { isDarkHex } from "../highlight";
 import type { Deck, Slide } from "../model/schema";
 import { resolveTheme, titleSize } from "../model/schema";
 import type { DeckSession } from "../model/session";
-import { blocksToText, imageBlocks, widgetToText } from "../model/text";
+import { mermaidFallbackText, mermaidRasterOrNull } from "../mermaid/export";
+import { blocksToText, imageBlocks, mermaidBlocks, widgetToText } from "../model/text";
 import { bytesToBlob } from "./blob";
-import { fitBox, loadBrandMark, loadRaster } from "./images";
+import { fitBox, loadBrandMark, loadRaster, type RasterImage } from "./images";
 
 const WIDTH = 13.333;
 const HEIGHT = 7.5;
@@ -35,9 +36,24 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
   page.background = { color: plain(theme.background) };
 
   const images = [...imageBlocks(slide.blocks), ...imageBlocks(slide.side)];
+  const diagrams = [...mermaidBlocks(slide.blocks), ...mermaidBlocks(slide.side)];
+  const diagramRasters: RasterImage[] = [];
+  const diagramText: string[] = [];
+  for (const block of diagrams) {
+    let image;
+    try {
+      image = await mermaidRasterOrNull(block, theme);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Slide "${slide.id}": Mermaid diagram failed: ${message}`);
+    }
+    if (image) diagramRasters.push(image);
+    else diagramText.push(mermaidFallbackText(block));
+  }
+  const visuals = images.length + diagramRasters.length;
   const widgets = slide.widgets ?? [];
   const widgetText = widgets.map((widget) => widgetToText(widget, session.answers[slide.id]?.[widget.id])).join("\n\n");
-  const imageBand = images.length > 0 ? 2.15 : 0;
+  const imageBand = visuals > 0 ? 2.15 : 0;
   const widgetBand = widgetText ? 1.15 : 0;
   const contentBottom = HEIGHT - 0.35 - imageBand - widgetBand;
   let y = 0.38;
@@ -70,7 +86,7 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
     y += 0.4;
   }
 
-  const body = blocksToText(slide.blocks);
+  const body = [blocksToText(slide.blocks), ...diagramText].filter(Boolean).join("\n\n");
   const side = blocksToText(slide.side);
   const textHeight = Math.max(0.8, contentBottom - y);
   if (side) {
@@ -114,10 +130,11 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
     });
   }
 
-  if (images.length > 0) {
+  if (visuals > 0) {
     const bandY = HEIGHT - 0.32 - widgetBand - imageBand;
-    const slot = (WIDTH - 1) / images.length;
-    for (const [index, block] of images.entries()) {
+    const slot = (WIDTH - 1) / visuals;
+    let index = 0;
+    for (const block of images) {
       let image;
       try {
         image = await loadRaster(block.src);
@@ -125,17 +142,12 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Slide "${slide.id}": ${message}`);
       }
-      const box = fitBox(image.width, image.height, (slot - 0.16) * 96, imageBand * 96);
-      const w = box.width / 96;
-      const h = box.height / 96;
-      const data = toPptxData(image.bytes, image.mime);
-      page.addImage({
-        data,
-        x: 0.5 + index * slot + (slot - w) / 2,
-        y: bandY + (imageBand - h) / 2,
-        w,
-        h,
-      });
+      placePptxRaster(page, image, 0.5 + index * slot, bandY, slot, imageBand);
+      index += 1;
+    }
+    for (const image of diagramRasters) {
+      placePptxRaster(page, image, 0.5 + index * slot, bandY, slot, imageBand);
+      index += 1;
     }
   }
 
@@ -185,6 +197,26 @@ async function addSlide(pptx: PptxGenJS, deck: Deck, slide: Slide, session: Deck
     .filter((entry): entry is string => Boolean(entry))
     .join("\n\n");
   if (notes) page.addNotes(notes);
+}
+
+function placePptxRaster(
+  page: PptxGenJS.Slide,
+  image: RasterImage,
+  x: number,
+  bandY: number,
+  slot: number,
+  imageBand: number,
+): void {
+  const box = fitBox(image.width, image.height, (slot - 0.16) * 96, imageBand * 96);
+  const w = box.width / 96;
+  const h = box.height / 96;
+  page.addImage({
+    data: toPptxData(image.bytes, image.mime),
+    x: x + (slot - w) / 2,
+    y: bandY + (imageBand - h) / 2,
+    w,
+    h,
+  });
 }
 
 function plain(hex: string): string {

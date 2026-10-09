@@ -28,7 +28,7 @@ npm run pack -- --deck /absolute/path/to/talk.yaml
 
 That command is the presenter's check. It parses the talk the way the app does. When the talk names a local image path such as `diagrams/architecture.png`, those files must sit beside the YAML as PNG or JPEG, and the command writes a zip that carries them. When every image is an `https://` URL or a `data:` URI, it writes no zip and tells you to open the YAML. Optional `--out /absolute/path/to/talk.zip` chooses where the package is written.
 
-Problems print on the terminal and nothing is written. Exit 0 means the talk is ready. Open the zip it names, or the YAML when it says no zip was written. There is no Mermaid block in the schema. Render a diagram to PNG or JPEG, point `image.src` at that file, then run the same command.
+Problems print on the terminal and nothing is written. Exit 0 means the talk is ready. Open the zip it names, or the YAML when it says no zip was written. Mermaid diagrams use `type: mermaid` with a `source` field in the talk; the presenter draws them and exports rasterize them, so pack does not need a PNG for those blocks. Other diagrams still go through PNG or JPEG on `image.src`, then the same command.
 
 ## What you write
 

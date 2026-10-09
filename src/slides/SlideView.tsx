@@ -61,6 +61,7 @@ export function SlideView({
       style={{
         background: theme.background,
         color: theme.text,
+        ["--slide-bg" as string]: theme.background,
         ["--slide-surface" as string]: theme.surface,
         ["--slide-text" as string]: theme.text,
         ["--slide-muted" as string]: theme.muted,

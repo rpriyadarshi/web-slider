@@ -2,6 +2,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { resolveBrand } from "../brand/kit";
 import { isDarkHex } from "../highlight";
+import { mermaidFallbackText, mermaidRasterOrNull } from "../mermaid/export";
 import type { Block, Deck, ResolvedTheme, Slide } from "../model/schema";
 import { resolveTheme, titleSize } from "../model/schema";
 import type { DeckSession } from "../model/session";
@@ -240,6 +241,28 @@ async function drawBlocks(
       cursor.page.drawImage(embedded, { x, y: cursor.y - box.height, width: box.width, height: box.height });
       cursor.y -= box.height + 6;
       if (block.alt) cursor.text(block.alt, body, 11 * scale, colors.muted, centered, 6);
+    } else if (block.type === "mermaid") {
+      let image;
+      try {
+        image = await mermaidRasterOrNull(block, theme);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Mermaid diagram failed: ${message}`);
+      }
+      if (!image) {
+        cursor.panel(mermaidFallbackText(block), mono, 11 * scale, colors.text, colors.surface, null, 8);
+        continue;
+      }
+      const embedded = await pdf.embedPng(image.bytes);
+      const box = fitBox(image.width, image.height, cursor.width, 150 * scale);
+      if (cursor.y - box.height < cursor.bottom) {
+        cursor.failed = true;
+        return;
+      }
+      const x = centered ? cursor.x + (cursor.width - box.width) / 2 : cursor.x;
+      cursor.page.drawImage(embedded, { x, y: cursor.y - box.height, width: box.width, height: box.height });
+      cursor.y -= box.height + 6;
+      if (block.caption) cursor.text(block.caption, body, 11 * scale, colors.muted, centered, 6);
     }
   }
 }

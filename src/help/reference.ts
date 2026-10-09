@@ -119,6 +119,15 @@ const BLOCKS: { [T in Block["type"]]: { about: string; fields: { [K in keyof Ext
       step: STEP,
     }),
   },
+  mermaid: {
+    about: "A Mermaid diagram. The live view draws it. Exports rasterize it to PNG.",
+    fields: blockFields<"mermaid">({
+      type: BLOCK_TYPE,
+      source: "The Mermaid source. flowchart, sequenceDiagram, and the other Mermaid diagram kinds.",
+      caption: "A short label under the diagram.",
+      step: STEP,
+    }),
+  },
   link: {
     about: "A link to an https address or to another slide in this talk. Set one of those, not both.",
     fields: blockFields<"link">({

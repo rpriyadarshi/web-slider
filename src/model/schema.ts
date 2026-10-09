@@ -167,6 +167,14 @@ export const blockSchema = z.discriminatedUnion("type", [
       step: stepField,
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("mermaid"),
+      source: z.string().min(1),
+      caption: z.string().min(1).optional(),
+      step: stepField,
+    })
+    .strict(),
 ]);
 
 const optionsSchema = z.array(z.string().min(1)).min(2);
