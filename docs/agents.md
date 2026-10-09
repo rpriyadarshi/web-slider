@@ -50,10 +50,11 @@ These are the mistakes that make the presenter reject the work, or that put a se
 - A theme whose `brand` is a package shipped under `samples/themes/`, or whose font paths point into that directory, so a shipped theme stands in for one that was never built.
 - A config that inlines colors. The config's only key is `manifest`.
 - A second schema, written in prose or in a new parser, that disagrees with `src/model/schema.ts`.
+- A Mermaid flowchart or sequence pre-rendered to PNG on an `image` block when `type: mermaid` would do. Prefer the native block.
 
 ## After you write
 
-Author checklist: the end of [prompts/generate-deck.md](../prompts/generate-deck.md).
+Author checklist: the end of [prompts/generate-deck.md](../prompts/generate-deck.md). Prefer native `type: mermaid` for diagrams Mermaid can draw. Do not invent a PNG pipeline for those.
 
 Admin checklist: the end of [prompts/admin-theme.md](../prompts/admin-theme.md).
 

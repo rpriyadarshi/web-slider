@@ -32,7 +32,7 @@ That command is the presenter's check. It parses the talk with `deckSchema`, and
 
 ### Diagrams
 
-Prefer a native Mermaid block in the talk YAML:
+Prefer native Mermaid. If the diagram can be expressed in Mermaid, put it in the talk as `type: mermaid`. Do not invent `type: code` with `language: mermaid`. Do not pre-render Mermaid to PNG with `mmdc` and an `image` block unless the user asked for a static raster, or Mermaid cannot draw that diagram.
 
 ```yaml
 - type: mermaid
@@ -44,7 +44,7 @@ Prefer a native Mermaid block in the talk YAML:
 
 The presenter draws it live. PDF, Word, and PowerPoint rasterize it in the browser. Pack does not need a PNG for that block.
 
-For other diagram tools, or when you want a static raster in the package:
+For other diagram tools only (or a static raster the user asked for):
 
 1. Keep sources beside the talk, for example `diagrams/*.mmd`.
 2. Render them to PNG or JPEG beside the talk. `mmdc` from `@mermaid-js/mermaid-cli` is fine; headless Chrome may need `MMDC_PUPPETEER_CONFIG`.

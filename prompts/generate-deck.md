@@ -51,7 +51,7 @@ You do not write or boot the theme. If the room has no theme yet, stop and follo
 
 ### Diagrams (Mermaid and the like)
 
-Prefer a native Mermaid block:
+Prefer native Mermaid. If the diagram can be expressed in Mermaid, write `type: mermaid` with `source` in the talk. Do not use `type: code` with `language: mermaid`. Do not pre-render Mermaid to PNG with `mmdc` and an `image` block unless the user asked for a static raster, or Mermaid cannot draw that diagram.
 
 ```yaml
 - type: mermaid
@@ -61,9 +61,9 @@ Prefer a native Mermaid block:
   caption: Optional label
 ```
 
-The presenter draws it. Exports rasterize it. Do not use `type: code` with `language: mermaid`.
+The presenter draws it. PDF, Word, and PowerPoint rasterize it. Pack does not need a PNG for that block.
 
-For other diagram tools, or a static raster in the package:
+For other diagram tools only (or a static raster the user asked for):
 
 1. Write sources beside the talk (`diagrams/*.mmd` or similar).
 2. Render to PNG or JPEG (`mmdc` from `@mermaid-js/mermaid-cli` is fine; set `MMDC_PUPPETEER_CONFIG` when headless Chrome needs an executable path).
@@ -146,7 +146,7 @@ Before you finish, confirm:
 - Every color matches `#rrggbb`.
 - `npm run pack -- --deck` on this talk exited 0. You did not write a zip script of your own.
 - When pack prints a package path, that zip is what you open. When it says no zip was written, the YAML is what you open.
-- Mermaid diagrams use `type: mermaid` with `source`. Other diagram tools are rendered to PNG or JPEG on `image` blocks.
+- Diagrams that Mermaid can draw use `type: mermaid` with `source`. You did not pre-render those to PNG. Other diagram tools use PNG or JPEG on `image` blocks.
 - Every video src and every link href is `https://`.
 - Every link has either an href or a slide id, not both, and the slide id exists.
 - Every chart has one value per label, and every table row has one cell per header.
