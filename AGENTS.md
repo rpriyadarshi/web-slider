@@ -30,6 +30,10 @@ npm run pack -- --deck /absolute/path/to/talk.yaml
 
 That command is the presenter's check. It parses the talk with `deckSchema`, and it uses the same image and code-language checks the presenter uses. It writes a zip only when an `image.src` is a package path, and only after each of those files is a PNG or JPEG beside the talk. It writes nothing when every image is an `https://` URL or a `data:` URI. Problems are printed and nothing is written. The talk is finished when the command exits 0. Open the zip it names, or the YAML when it says no zip was written. Do not write a zip script of your own.
 
+### Aspect
+
+The theme manifest sets `aspect` (`16:9` or `4:3`). Every slide shares that page. The page has three regions: the title, one visual that fills the rest of the body, and the footer the presenter draws. Do not write decks that need a taller or scrolling stage to show the content. One primary visual per content slide; put a second visual on the next slide or in `side`. A Mermaid diagram whose labels would render smaller than the theme footer type does not fit: split the slide. The presenter will not draw that diagram. Author checklist: [prompts/generate-deck.md](prompts/generate-deck.md).
+
 ### Diagrams
 
 Prefer native Mermaid. If the diagram can be expressed in Mermaid, put it in the talk as `type: mermaid`. Do not invent `type: code` with `language: mermaid`. Do not pre-render Mermaid to PNG with `mmdc` and an `image` block unless the user asked for a static raster, or Mermaid cannot draw that diagram.

@@ -61,6 +61,7 @@ describe("parseDeck", () => {
       "content",
       "content",
       "content",
+      "content",
     ]);
     expect(deck.footer).toBe("Launch Review");
     expect(deck.slides.at(-1)?.hidden).toBe(true);

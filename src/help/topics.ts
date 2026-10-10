@@ -38,7 +38,8 @@ export const TOPICS: readonly Topic[] = [
     id: "panes",
     title: "Panes",
     paragraphs: [
-      "Outline, Examples, YAML, Presenter, and Help each open from the toolbar. Pin docks a pane beside the slide. Unpin lets it float, and Esc closes a floating pane. A docked pane stays. Drag a pane's edge to resize it.",
+      "The toolbar groups controls: timer, then room tools, then view (overview, zoom, full screen), then panes, then files, then help.",
+      "Outline, Presenter, Examples, YAML, and Help each open from the panes group. Pin docks a pane beside the slide. Unpin lets it float, and Esc closes a floating pane. A docked pane stays. Drag a pane's edge to resize it.",
       "A closed pane also has a button on the corner of the slide. Examples are the side column of the current slide. Presenter shows the decisions, the script, the notes you take, and the next slide.",
     ],
   },
@@ -65,6 +66,7 @@ export const TOPICS: readonly Topic[] = [
     title: "Files",
     paragraphs: [
       "A YAML file is the talk. A zip package has deck.yaml at the root and the images the talk names. It does not contain the mark or the font files. Drop a .yaml file, a .zip package, or a .pptx file anywhere on the window.",
+      "Home leaves the talk and returns to the start screen, where you can open another sample, a recent catalog talk, or a file. Continue returns to the talk you left.",
       "Reset to shipped replaces the slides and the notes you took with the talk this install shipped. Comments in the original are not copied into a YAML download.",
     ],
   },

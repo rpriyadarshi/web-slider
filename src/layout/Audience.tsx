@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { presentTalk, type Install } from "../model/install";
 import { parseDeck } from "../model/parse";
 import type { Deck } from "../model/schema";
 import { deckWithAssetUrls } from "../package/deckPackage";
+import { fitScale, slideReference, viewScale } from "../present/stageZoom";
 import { SlideView } from "../slides/SlideView";
 
 export function Audience({ deckId, install }: { deckId: string; install: Install }) {
@@ -13,6 +14,8 @@ export function Audience({ deckId, install }: { deckId: string; install: Install
   const [laser, setLaser] = useState<{ x: number; y: number } | null>(null);
   const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const stageFrameRef = useRef<HTMLDivElement>(null);
+  const [pageFit, setPageFit] = useState(1);
 
   useEffect(() => {
     const channel = new BroadcastChannel(`web-slider:${deckId}`);
@@ -56,6 +59,24 @@ export function Audience({ deckId, install }: { deckId: string; install: Install
     };
   }, [deckId, install]);
 
+  const aspect = deck?.aspect === "4:3" ? "4:3" : "16:9";
+  const pageRef = slideReference(aspect);
+
+  useLayoutEffect(() => {
+    const frame = stageFrameRef.current;
+    if (!frame || !deck) return;
+
+    const measure = () => {
+      const next = fitScale(frame.clientWidth, frame.clientHeight, pageRef.width, pageRef.height);
+      setPageFit((prev) => (Math.abs(prev - next) < 0.0001 ? prev : next));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [deck, pageRef.height, pageRef.width]);
+
   if (error) return <p className="banner">{error}</p>;
   if (!deck) return <main className="start"><p>Waiting for the presenter window.</p></main>;
   const slide = deck.slides[slideIndex];
@@ -63,8 +84,25 @@ export function Audience({ deckId, install }: { deckId: string; install: Install
 
   return (
     <div className="audience">
-      <div className="stage">
-        <SlideView deck={deck} slide={slide} revealed={revealed} laser={laser} assets={install.assetUrls} />
+      <div
+        ref={stageFrameRef}
+        className="stage stage-frame"
+        data-aspect={aspect}
+        style={
+          {
+            "--page-w": `${pageRef.width}px`,
+            "--page-h": `${pageRef.height}px`,
+            "--view-scale": String(viewScale(pageFit, 1)),
+          } as CSSProperties
+        }
+      >
+        <div className="stage-zoom-space">
+          <div className="stage-page-slot">
+            <div className="stage-page">
+              <SlideView deck={deck} slide={slide} revealed={revealed} laser={laser} assets={install.assetUrls} />
+            </div>
+          </div>
+        </div>
       </div>
       {blank ? <div className="audience-blank" style={{ background: blank }} /> : null}
       {caption ? <p className="captions audience-captions">{caption}</p> : null}

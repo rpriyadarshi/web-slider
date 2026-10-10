@@ -39,7 +39,7 @@ async function loadMermaid(colors: MermaidColors): Promise<typeof import("mermai
       edgeLabelBackground: colors.background,
       fontFamily: "Inter, system-ui, sans-serif",
     },
-    flowchart: { htmlLabels: false },
+    flowchart: { htmlLabels: false, useMaxWidth: true },
     sequence: { useMaxWidth: true },
     htmlLabels: false,
   } as Parameters<typeof mod.default.initialize>[0]);

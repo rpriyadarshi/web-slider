@@ -51,9 +51,11 @@ A value with no slash is a package name and loads `samples/themes/<name>/manifes
 brand: emporion          # a package name, or the brand object below
 theme: {}                # optional; omitted fields use the built-in defaults after validation
 fonts: {}                # required for a family that is not built in; see Fonts
-aspect: "16:9"           # or "4:3"
+aspect: "16:9"           # or "4:3"; every slide in every talk on this theme uses this ratio
 showSlideNumber: true
 ```
+
+`aspect` is the slide page for the whole install. Authors do not invent a second ratio per slide. A talk may set `aspect` only when that one talk must differ from this default.
 
 Unknown keys are rejected and the theme does not load.
 

@@ -50,7 +50,9 @@ export function emptyChrome(): DeckSession["ui"] {
     bottom: true,
     yaml: false,
     help: false,
-    tocPinned: false,
+    // Dock open panes in the shell grid. Floating panes reserve stage padding and
+    // fight the fit/zoom layout; pin by default so every open chrome column is real.
+    tocPinned: true,
     sidePinned: true,
     yamlPinned: true,
     helpPinned: true,
@@ -154,8 +156,8 @@ export function normalizeSession(deck: Deck, input: unknown): DeckSession {
       bottom: ui.bottom,
       yaml: ui.yaml === true,
       help: ui.help === true,
-      tocPinned: ui.tocPinned === true,
-      sidePinned: ui.sidePinned === true,
+      tocPinned: ui.tocPinned !== false,
+      sidePinned: ui.sidePinned !== false,
       yamlPinned: ui.yamlPinned !== false,
       helpPinned: ui.helpPinned !== false,
       bottomPinned: ui.bottomPinned !== false,

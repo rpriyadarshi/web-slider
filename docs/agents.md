@@ -51,6 +51,7 @@ These are the mistakes that make the presenter reject the work, or that put a se
 - A config that inlines colors. The config's only key is `manifest`.
 - A second schema, written in prose or in a new parser, that disagrees with `src/model/schema.ts`.
 - A Mermaid flowchart or sequence pre-rendered to PNG on an `image` block when `type: mermaid` would do. Prefer the native block.
+- A content slide that stacks several visuals (chart + Mermaid + video, or a diagram beside a code block and a callout). The body has room for one visual. A diagram whose labels would fall below the theme footer type is unreadable; split the slide and rebuild the deck. The presenter will not draw it.
 
 ## After you write
 

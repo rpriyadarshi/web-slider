@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls } from "../brand/kit";
 import { shareBuild } from "../model/build";
 import type { Install } from "../model/install";
+import { loadRecent } from "../session/recent";
 import { CatalogChoices } from "./CatalogChoices";
 
 export function StartScreen({
@@ -11,6 +12,8 @@ export function StartScreen({
   onBlank,
   onShipped,
   onExample,
+  onContinue,
+  continueTitle,
 }: {
   install: Install;
   onOpenFile: (file: File) => void;
@@ -18,8 +21,11 @@ export function StartScreen({
   onBlank: () => void;
   onShipped?: () => void;
   onExample: (path: string) => void;
+  onContinue?: () => void;
+  continueTitle?: string;
 }) {
   const [dragging, setDragging] = useState(false);
+  const recent = loadRecent();
   const brand = withAssetUrls(resolveBrand(install.manifest.brand), install.assetUrls);
   const mode = install.manifest.theme.chrome === "light" ? "light" : "dark";
   const palette = resolveChrome(install.manifest.theme, mode, brand);
@@ -42,14 +48,24 @@ export function StartScreen({
         <p className="eyebrow">Web Slider</p>
         <h1>Present from a YAML deck.</h1>
         <p className="lede">
-          This install loads {install.manifestPath}. The toolbar opens the outline, examples, the YAML file, presenter
-          notes, the theme, export, and help. Decisions and the notes you take during the talk stay in this browser
-          until you download them.
+          This install loads {install.manifestPath}. Open a sample or a file to start. From a talk, Home returns here.
+          The toolbar opens the outline, examples, the YAML file, presenter notes, the theme, export, and help.
         </p>
         <div className="start-actions">
-          <button type="button" className="primary" onClick={requestOpen}>
-            Open YAML
-          </button>
+          {onContinue ? (
+            <button type="button" className="primary" onClick={onContinue}>
+              Continue{continueTitle ? `: ${continueTitle}` : ""}
+            </button>
+          ) : (
+            <button type="button" className="primary" onClick={requestOpen}>
+              Open YAML
+            </button>
+          )}
+          {onContinue ? (
+            <button type="button" onClick={requestOpen}>
+              Open YAML
+            </button>
+          ) : null}
           <button type="button" onClick={onBlank}>
             Blank deck
           </button>
@@ -60,6 +76,18 @@ export function StartScreen({
           ) : null}
         </div>
         {shareBuild ? null : <CatalogChoices list="examples" label="Examples" onChoose={onExample} />}
+        {shareBuild || recent.length === 0 ? null : (
+          <div className="sample-block">
+            <p className="sample-label">Recent</p>
+            <div className="sample-list">
+              {recent.map((entry) => (
+                <button key={entry.path} type="button" onClick={() => onExample(entry.path)}>
+                  {entry.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div
           className={dragging ? "dropzone dragover" : "dropzone"}
           onDragOver={(event) => {

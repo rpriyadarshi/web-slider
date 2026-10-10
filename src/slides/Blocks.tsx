@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { highlightCode } from "../highlight";
+import {
+  fitMermaidSvg,
+  footerTypePx,
+  intrinsicSvgSize,
+  mermaidAvailBox,
+  planMermaidFit,
+  smallestSvgFontPx,
+} from "../mermaid/fit";
 import { renderMermaidSvg } from "../mermaid/render";
 import { bindProbe, type ProbePath } from "../model/probe";
 import type { Block } from "../model/schema";
@@ -154,7 +162,7 @@ function BlockView({
   if (block.type === "divider") return <hr className="block divider" {...bindProbe(blockPath, probe, onProbe)} />;
   if (block.type === "video") {
     return (
-      <figure className="block figure" {...bindProbe(blockPath, probe, onProbe)}>
+      <figure className="block figure block-slot" {...bindProbe(blockPath, probe, onProbe)}>
         <video controls src={block.src} title={block.title} />
         {block.title ? <figcaption>{block.title}</figcaption> : null}
       </figure>
@@ -162,21 +170,21 @@ function BlockView({
   }
   if (block.type === "chart") {
     return (
-      <div {...bindProbe(blockPath, probe, onProbe)}>
+      <div className="block-slot" {...bindProbe(blockPath, probe, onProbe)}>
         <ChartBlock kind={block.kind} labels={block.labels} values={block.values} />
       </div>
     );
   }
   if (block.type === "mermaid") {
     return (
-      <div {...bindProbe(blockPath, probe, onProbe)}>
+      <div className="block-slot" {...bindProbe(blockPath, probe, onProbe)}>
         <MermaidBlock source={block.source} caption={block.caption} dark={dark} />
       </div>
     );
   }
   if (block.type === "image") {
     return (
-      <figure className="block figure" {...bindProbe(blockPath, probe, onProbe)}>
+      <figure className="block figure block-slot" {...bindProbe(blockPath, probe, onProbe)}>
         <img src={block.src} alt={block.alt ?? ""} />
         {block.alt ? <figcaption>{block.alt}</figcaption> : null}
       </figure>
@@ -201,7 +209,13 @@ function ChartBlock({ kind, labels, values }: { kind: "bar" | "column"; labels: 
     const plotHeight = 128;
     const zero = plotTop + ((max - 0) / span) * plotHeight;
     return (
-      <svg className="block chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Column chart">
+      <svg
+        className="block chart"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Column chart"
+      >
         {values.map((value, index) => {
           const barHeight = (Math.abs(value) / span) * plotHeight;
           const x = 12 + index * slot + slot * 0.18;
@@ -220,7 +234,13 @@ function ChartBlock({ kind, labels, values }: { kind: "bar" | "column"; labels: 
   const plotWidth = 220;
   const zero = 88 + ((0 - min) / span) * plotWidth;
   return (
-    <svg className="block chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Bar chart">
+    <svg
+      className="block chart"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="Bar chart"
+    >
       {values.map((value, index) => {
         const barWidth = (Math.abs(value) / span) * plotWidth;
         const y = 8 + index * slot + slot * 0.2;
@@ -293,6 +313,8 @@ export function EditableText({
 
 function MermaidBlock({ source, caption, dark }: { source: string; caption?: string; dark: boolean }) {
   const host = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const note = useRef<HTMLParagraphElement>(null);
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -323,8 +345,41 @@ function MermaidBlock({ source, caption, dark }: { source: string; caption?: str
     };
   }, [source, dark]);
 
+  useLayoutEffect(() => {
+    const root = host.current;
+    const box = viewport.current;
+    if (!root || !box || !svg) return;
+
+    const apply = () => {
+      const diagram = box.querySelector("svg");
+      if (!(diagram instanceof SVGSVGElement)) return;
+      const avail = mermaidAvailBox(root, box);
+      const plan = planMermaidFit(
+        intrinsicSvgSize(diagram),
+        smallestSvgFontPx(diagram),
+        avail.width,
+        avail.height,
+        footerTypePx(root),
+      );
+      if (note.current) note.current.hidden = plan.readable;
+      diagram.style.visibility = plan.readable ? "visible" : "hidden";
+      if (!plan.readable) return;
+      fitMermaidSvg(diagram, avail.width, avail.height);
+    };
+
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(box);
+    observer.observe(root);
+    window.addEventListener("resize", apply);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", apply);
+    };
+  }, [svg]);
+
   return (
-    <div ref={host}>
+    <div ref={host} className="mermaid-host">
       {error ? (
         <div className="block code-error">
           <p>{error}</p>
@@ -338,7 +393,10 @@ function MermaidBlock({ source, caption, dark }: { source: string; caption?: str
         </pre>
       ) : (
         <figure className="block mermaid-figure">
-          <div className="mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />
+          <div ref={viewport} className="mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />
+          <p ref={note} className="diagram-unreadable" hidden>
+            This diagram does not fit the page. Split the slide.
+          </p>
           {caption ? <figcaption>{caption}</figcaption> : null}
         </figure>
       )}

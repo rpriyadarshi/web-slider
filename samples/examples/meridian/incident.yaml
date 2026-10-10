@@ -19,7 +19,7 @@ slides:
   - id: impact
     layout: content
     title: What the customer saw
-    notes: Stay on the count and the timeline. Do not open the log until someone asks.
+    notes: Stay on the timeline. The count is the next slide.
     blocks:
       - type: paragraph
         text: Checkout failed for the customers in the chart.
@@ -29,6 +29,11 @@ slides:
           flowchart LR
             E1402[14:02 Errors] --> E1411[14:11 Status page]
             E1411 --> E1441[14:41 Recovered]
+  - id: count
+    layout: content
+    title: Who was hit
+    notes: The chart is the count. Do not open the log until someone asks.
+    blocks:
       - type: chart
         kind: column
         labels: [Errors, Recovered]
@@ -44,10 +49,8 @@ slides:
   - id: cause
     layout: content
     title: The check that failed
-    notes: Point at the sequence, then the command. Name the owner of the retry.
+    notes: Point at the sequence. The command is the next slide.
     blocks:
-      - type: paragraph
-        text: The deploy skipped the payment health check.
       - type: mermaid
         caption: Where the deploy went green without a check
         source: |
@@ -59,6 +62,15 @@ slides:
             CI->>Store: Deploy marked green
             Store-->>Pay: Checkout traffic
             Pay-->>Store: Errors from 14:02
+    side:
+      - type: link
+        text: Back to the impact
+        slide: impact
+  - id: command
+    layout: content
+    title: The check that was skipped
+    notes: Read the command. A green deploy with a skipped check is still a failed deploy.
+    blocks:
       - type: code
         language: bash
         code: |
@@ -66,14 +78,10 @@ slides:
           echo $?
       - type: callout
         text: A green deploy with a skipped check is still a failed deploy.
-    side:
-      - type: link
-        text: Back to the impact
-        slide: impact
   - id: fix
     layout: content
     title: The fix
-    notes: Point at the diagram. Do not leave without a date and a name.
+    notes: Point at the diagram. Do not leave without a date and a name. The walkthrough is the next slide.
     theme:
       background: "#241C18"
       accent: "#E07A3D"
@@ -84,13 +92,18 @@ slides:
           flowchart LR
             Check[Restore the health check] --> Owner[Name the owner]
             Owner --> Date[Set the date]
-      - type: video
-        title: Checkout walkthrough
-        src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4
     widgets:
       - id: owner
         type: text
         prompt: Owner of the fix
+  - id: walkthrough
+    layout: content
+    title: Checkout walkthrough
+    notes: Play this only if someone asks.
+    blocks:
+      - type: video
+        title: Checkout walkthrough
+        src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4
   - id: principle
     layout: quote
     title: Principle

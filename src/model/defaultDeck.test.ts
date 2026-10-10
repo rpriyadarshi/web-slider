@@ -73,10 +73,20 @@ describe("default talk", () => {
     }
   });
 
-  it("opens a fresh session with Examples open and YAML closed", () => {
+  it("opens a fresh session with Outline and Examples docked and YAML closed", () => {
     const chrome = emptyChrome();
-    expect({ side: chrome.side, sidePinned: chrome.sidePinned, yaml: chrome.yaml }).toEqual({ side: true, sidePinned: true, yaml: false });
+    expect({
+      toc: chrome.toc,
+      tocPinned: chrome.tocPinned,
+      side: chrome.side,
+      sidePinned: chrome.sidePinned,
+      yaml: chrome.yaml,
+    }).toEqual({ toc: true, tocPinned: true, side: true, sidePinned: true, yaml: false });
     const session = sessionFromDeck(parseDeck(blankDeckSource()));
-    expect({ side: session.ui.side, yaml: session.ui.yaml }).toEqual({ side: true, yaml: false });
+    expect({ side: session.ui.side, yaml: session.ui.yaml, tocPinned: session.ui.tocPinned }).toEqual({
+      side: true,
+      yaml: false,
+      tocPinned: true,
+    });
   });
 });

@@ -19,6 +19,7 @@
 html, body, #root {
   margin: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -194,6 +195,8 @@ button.primary {
 
 .shell {
   height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   display: grid;
   grid-template-columns: var(--toc-col) minmax(0, 1fr) var(--yaml-col) var(--side-col) var(--help-col);
   grid-template-rows: auto minmax(0, 1fr) var(--bottom-row);
@@ -270,6 +273,14 @@ button.primary {
 }
 
 .toolbar-actions { justify-content: flex-end; }
+
+.toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  min-height: 22px;
+  margin: 0 4px;
+  background: color-mix(in srgb, var(--muted) 45%, var(--line));
+}
 
 .slide-count, .timer, .font-limit {
   margin: 0;
@@ -407,9 +418,8 @@ button.primary {
   min-height: 0;
   position: relative;
   display: grid;
-  place-items: center;
+  place-items: stretch;
   padding: 18px 40px 22px;
-  container-type: size;
   background:
     radial-gradient(900px 280px at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
     var(--ground);
@@ -418,24 +428,109 @@ button.primary {
 .stage:has(.pane.floating.left) { padding-left: 344px; }
 .stage:has(.pane.floating.right) { padding-right: 344px; }
 
-.slide {
-  position: relative;
-  width: min(100cqw, calc(100cqh * 16 / 9));
-  height: min(100cqh, calc(100cqw * 9 / 16));
+.stage-frame {
+  --page-w: 960px;
+  --page-h: 540px;
+  --view-scale: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: stretch;
+  overflow: hidden;
+}
+
+.stage-frame[data-zoomed] {
   overflow: auto;
+}
+
+/*
+ * Zoom layout: the slot's box is the *scaled* size (so fit never overflows the
+ * stage). The inner page keeps the fixed aspect design size and is painted with
+ * transform: scale; transform does not affect layout on its own.
+ */
+.stage-zoom-space {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.stage-frame[data-zoomed] .stage-zoom-space {
+  width: max(100%, calc(var(--page-w) * var(--view-scale)));
+  height: max(100%, calc(var(--page-h) * var(--view-scale)));
+}
+
+.stage-page-slot {
+  width: calc(var(--page-w) * var(--view-scale));
+  height: calc(var(--page-h) * var(--view-scale));
+  position: relative;
+  overflow: hidden;
+}
+
+.stage-page {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: var(--page-w);
+  height: var(--page-h);
+  transform: scale(var(--view-scale));
+  transform-origin: 0 0;
+}
+
+.slide {
+  /* Two regions: body, then the footer. Media cannot paint into the footer row. */
+  --slide-pad-x: 8%;
+  --slide-pad-top: 6%;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   border-radius: var(--slide-radius, 16px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-  padding: 7% 8%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: var(--slide-pad-top) var(--slide-pad-x) 0;
+}
+
+.slide-copy {
+  grid-row: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  animation: rise 180ms ease;
+}
+
+.slide > .captions,
+.slide > .laser {
+  grid-row: 1;
+}
+
+/* Body region fills the row above the footer; stretch blocks share what's left. */
+.layout-content .slide-copy {
   display: flex;
   flex-direction: column;
 }
 
-.slide[data-aspect="4:3"] {
-  width: min(100cqw, calc(100cqh * 4 / 3));
-  height: min(100cqh, calc(100cqw * 3 / 4));
+.layout-content .blocks {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65em;
+  overflow: hidden;
 }
 
-.slide-copy { animation: rise 180ms ease; }
+.layout-content .blocks > .block-slot {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(8px); }
@@ -473,10 +568,13 @@ button.primary {
   position: relative;
 }
 
-.layout-section .slide-copy, .layout-title .slide-copy {
+.layout-section .slide-copy,
+.layout-title .slide-copy,
+.layout-quote .slide-copy {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   align-content: center;
-  min-height: 100%;
 }
 
 .blocks { display: grid; gap: 14px; }
@@ -503,7 +601,16 @@ button.primary {
   padding: 6px 8px;
 }
 
-.chart { width: min(100%, 640px); height: auto; }
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+.layout-content .block-slot > .chart {
+  flex: 1 1 auto;
+  height: 100%;
+}
 .chart rect { fill: var(--slide-accent); }
 .chart text {
   fill: var(--slide-muted);
@@ -512,8 +619,15 @@ button.primary {
 }
 .figure video {
   width: 100%;
-  max-height: 280px;
+  min-height: 0;
   background: var(--slide-surface);
+}
+.layout-content .figure video,
+.layout-content .figure img {
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
 }
 
 .laser {
@@ -560,15 +674,25 @@ button.primary {
 }
 
 .slide-footer {
-  margin-top: auto;
+  grid-row: 2;
+  position: static;
+  height: auto;
+  margin: 0;
+  padding: 0.45em 0 0.7em;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding-top: 16px;
   font-family: var(--slide-body), sans-serif;
   font-size: var(--type-footer);
   color: var(--slide-muted);
+  pointer-events: none;
+}
+
+.slide-footer a,
+.slide-footer button,
+.slide-footer [contenteditable] {
+  pointer-events: auto;
 }
 
 .slide-brand {
@@ -611,11 +735,20 @@ button.primary {
   transform: translateY(-50%) scale(min(calc(100cqw / 960px), calc(100cqh / 720px)));
 }
 
-.next-preview .slide { box-shadow: none; }
+.next-preview .slide {
+  box-shadow: none;
+  overflow: hidden;
+}
 .next-preview .slide-copy { animation: none; }
 
 .audience { height: 100dvh; background: #000; }
-.audience .stage { height: 100%; grid-column: auto; grid-row: auto; }
+.audience .stage {
+  height: 100%;
+  grid-column: auto;
+  grid-row: auto;
+  padding: 0;
+  background: #000;
+}
 .audience-blank { position: fixed; inset: 0; z-index: 30; }
 
 .callout, .quote, .pull-quote {
@@ -652,30 +785,81 @@ button.primary {
   margin: 4px 0;
 }
 
-.figure { margin: 0; }
+.figure { margin: 0; min-height: 0; }
 .figure img {
   max-width: 100%;
-  max-height: 220px;
   object-fit: contain;
   border-radius: 10px;
 }
 
+.mermaid-host {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.layout-content .block-slot > .mermaid-host {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .mermaid-figure {
+  position: relative;
   margin: 0;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
   text-align: center;
 }
+
+.diagram-unreadable {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 1em;
+  text-align: center;
+  color: var(--slide-text);
+  font-family: var(--slide-body), sans-serif;
+  font-size: var(--type-body);
+  background: var(--slide-bg, transparent);
+}
+.layout-content .mermaid-figure {
+  flex: 1 1 auto;
+}
+
+/* The viewport is the slot the grid assigned. JS fits the SVG inside it. */
 .mermaid-figure .mermaid-svg {
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
   display: flex;
   justify-content: center;
+  align-items: center;
+  padding: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
+.layout-content .mermaid-figure .mermaid-svg {
+  flex: 1 1 auto;
+}
+
 .mermaid-figure .mermaid-svg svg {
-  max-width: 100%;
-  max-height: 280px;
-  height: auto;
+  display: block;
+  max-width: none;
+  max-height: none;
 }
+
 .mermaid-figure figcaption {
-  margin-top: 6px;
-  font-size: 12px;
+  flex: 0 0 auto;
+  margin: 0;
+  max-width: 100%;
+  font-size: var(--type-caption, 14px);
   color: var(--slide-muted);
 }
 

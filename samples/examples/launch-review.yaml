@@ -104,7 +104,7 @@ slides:
   - id: plan
     layout: content
     title: How Friday gets confirmed
-    notes: Point at the diagram, then the table. Use the link if the room goes back to scope.
+    notes: Point at the diagram. The owners sit in the side column. Use the link if the room goes back to scope.
     blocks:
       - type: mermaid
         caption: Confirm Friday only after the condition is written
@@ -113,25 +113,39 @@ slides:
             Owner[Name the owner] --> Condition[Write the condition]
             Condition --> Friday[Confirm Friday]
             Condition --> Monday[Move to Monday]
+      - type: link
+        text: Back to scope
+        slide: scope
+    side:
       - type: table
         headers: [Option, Owner]
         rows:
           - [Friday, Launch chair]
           - [Next Monday, Product]
-      - type: link
-        text: Back to scope
-        slide: scope
   - id: evidence
     layout: content
     title: What the room can see
-    notes: The chart is the count. The sequence is the handoff. Play the walkthrough only if someone asks.
+    notes: The chart is the count. Advance for the handoff sequence. Play the walkthrough from the side only if someone asks.
     blocks:
       - type: chart
         kind: column
         labels: [Friday, Monday]
         values: [4, 2]
+      - type: callout
+        text: Four for Friday. Two for Monday.
+    side:
+      - type: video
+        title: Launch walkthrough
+        src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4
+      - type: callout
+        text: Optional. Play only if the room asks.
+  - id: handoff
+    layout: content
+    title: Handoff when the date moves
+    notes: Point at the sequence. Chair names the condition; Product accepts or cuts scope.
+    blocks:
       - type: mermaid
-        caption: Handoff when the date moves
+        caption: Chair and Product
         source: |
           sequenceDiagram
             participant Chair
@@ -139,9 +153,6 @@ slides:
             Chair->>Product: Name the condition
             Product-->>Chair: Accept or cut scope
             Chair->>Chair: Record the decision
-      - type: video
-        title: Launch walkthrough
-        src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4
   - id: appendix
     hidden: true
     layout: content

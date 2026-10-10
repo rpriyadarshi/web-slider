@@ -14,6 +14,7 @@ import { clampRevealed, normalizeSession, sessionFromDeck, type DeckSession } fr
 import { importPptx } from "./import/pptx";
 import { bindPackageAssets, deckWithAssetUrls, packageAssetRefs, readDeckPackage } from "./package/deckPackage";
 import { bootDeckSource, fetchDeck, resetToShipped } from "./package/fetchDeck";
+import { rememberRecent } from "./session/recent";
 import { clearPersisted, loadPersisted, savePersisted } from "./session/store";
 import { applyFontFaces } from "./theme/fonts";
 
@@ -68,6 +69,7 @@ export function App() {
   const [assetUrls, setAssetUrls] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [canReturn, setCanReturn] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
   const [storageBroken, setStorageBroken] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [persistError, setPersistError] = useState<string | null>(null);
@@ -107,9 +109,15 @@ export function App() {
     setSession(prepared.session);
     setError(null);
     setCanReturn(false);
+    setBrowsing(false);
     setStorageBroken(false);
     setPersistError(null);
     setYamlError(null);
+  }
+
+  function goHome() {
+    setBrowsing(true);
+    setError(null);
   }
 
   async function openPrepared(source: string, files: Map<string, Uint8Array>, baseUrl?: string) {
@@ -399,6 +407,27 @@ export function App() {
     setError(null);
     setStorageBroken(false);
     setCanReturn(false);
+    setBrowsing(false);
+  }
+
+  async function openExample(path: string) {
+    try {
+      const response = await fetch(new URL(path, window.location.origin));
+      if (!response.ok) {
+        throw new Error(`Example failed to load (${response.status}): ${path}`);
+      }
+      const text = await response.text();
+      const start = text.trimStart().slice(0, 20).toLowerCase();
+      if (start.startsWith("<!doctype") || start.startsWith("<html")) {
+        throw new Error(`Example not found: ${path}. The server returned HTML instead of the deck.`);
+      }
+      const prepared = await prepareDeck(text, new Map());
+      rememberRecent({ title: prepared.parsed.title, path });
+      showPrepared(prepared);
+    } catch (caught) {
+      setError(messageOf(caught));
+      setCanReturn(deckRef.current !== null);
+    }
   }
 
   const fileInput = (
@@ -461,7 +490,7 @@ export function App() {
       </>
     );
   }
-  if (!deck || !session) {
+  if (browsing || !deck || !session) {
     if (embed) {
       return (
         <main className="start">
@@ -481,24 +510,10 @@ export function App() {
           }}
           onShipped={install.deckPath ? () => void openShipped() : undefined}
           onExample={(path) => {
-            void (async () => {
-              try {
-                const response = await fetch(new URL(path, window.location.origin));
-                if (!response.ok) {
-                  throw new Error(`Example failed to load (${response.status}): ${path}`);
-                }
-                const text = await response.text();
-                const start = text.trimStart().slice(0, 20).toLowerCase();
-                if (start.startsWith("<!doctype") || start.startsWith("<html")) {
-                  throw new Error(`Example not found: ${path}. The server returned HTML instead of the deck.`);
-                }
-                await openPrepared(text, new Map());
-              } catch (caught) {
-                setError(messageOf(caught));
-                setCanReturn(deckRef.current !== null);
-              }
-            })();
+            void openExample(path);
           }}
+          onContinue={deck && session ? () => setBrowsing(false) : undefined}
+          continueTitle={deck?.title}
         />
       </>
     );
@@ -519,6 +534,7 @@ export function App() {
         onSession={(recipe) => setSession((current) => (current ? recipe(current) : current))}
         onOpenFile={openFile}
         requestOpen={() => inputRef.current?.click()}
+        onHome={embed ? undefined : goHome}
         persistError={persistError}
         yamlError={yamlError}
         onYaml={onYaml}

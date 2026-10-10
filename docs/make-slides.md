@@ -92,7 +92,7 @@ Ids use letters, numbers, hyphens, or underscores, and start with a letter or nu
 
 `step` on a block or a list item hides it until you advance. The first press reveals the next step, then the next slide.
 
-`aspect` is `16:9` or `4:3`, and `showSlideNumber` is true or false. Set them only when this talk differs from the theme.
+`aspect` is `16:9` or `4:3`, and `showSlideNumber` is true or false. Set them only when this talk differs from the theme. Every slide shares that one page size. The title sits at the top, one chart or diagram or picture or video fills the rest of the body, and the lockup stays in the footer. A diagram the page cannot show at footer-sized labels does not belong on that slide: split it. The presenter leaves an unreadable diagram undrawn.
 
 ### Blocks
 

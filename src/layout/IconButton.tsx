@@ -31,7 +31,11 @@ export type IconName =
   | "captions"
   | "runnable"
   | "shipped"
-  | "help";
+  | "help"
+  | "zoomIn"
+  | "zoomOut"
+  | "zoomFit"
+  | "home";
 
 export function Icon({ name }: { name: IconName }) {
   return (
@@ -225,6 +229,35 @@ const paths: Record<IconName, ReactNode> = {
       <circle cx="12" cy="12" r="8" />
       <path d="M9.5 9.5a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.3.9-1.3 1.7" />
       <circle cx="12" cy="16.5" r="0.8" fill="currentColor" stroke="none" />
+    </>
+  ),
+  zoomIn: (
+    <>
+      <circle cx="11" cy="11" r="6" />
+      <line x1="15.5" y1="15.5" x2="20" y2="20" />
+      <line x1="11" y1="8" x2="11" y2="14" />
+      <line x1="8" y1="11" x2="14" y2="11" />
+    </>
+  ),
+  zoomOut: (
+    <>
+      <circle cx="11" cy="11" r="6" />
+      <line x1="15.5" y1="15.5" x2="20" y2="20" />
+      <line x1="8" y1="11" x2="14" y2="11" />
+    </>
+  ),
+  zoomFit: (
+    <>
+      <polyline points="4 9 9 9 9 4" />
+      <polyline points="15 4 15 9 20 9" />
+      <polyline points="20 15 15 15 15 20" />
+      <polyline points="9 20 9 15 4 15" />
+    </>
+  ),
+  home: (
+    <>
+      <path d="M4 11 12 4l8 7" />
+      <path d="M6 10v9h4v-5h4v5h4v-9" />
     </>
   ),
 };

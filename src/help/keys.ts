@@ -60,6 +60,27 @@ export const SHORTCUTS = [
     about: "Show every slide, or close that grid.",
   },
   {
+    id: "zoom-in",
+    keys: ["=", "+"],
+    caps: ["=", "+"],
+    about: "Make the slide larger on the stage.",
+    presenterOnly: true,
+  },
+  {
+    id: "zoom-out",
+    keys: ["-", "_"],
+    caps: ["-"],
+    about: "Make the slide smaller on the stage.",
+    presenterOnly: true,
+  },
+  {
+    id: "zoom-fit",
+    keys: ["\\"],
+    caps: ["\\"],
+    about: "Fit the slide to the stage.",
+    presenterOnly: true,
+  },
+  {
     id: "fullscreen",
     keys: ["f", "F"],
     caps: ["F"],

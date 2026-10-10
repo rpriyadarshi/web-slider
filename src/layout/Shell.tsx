@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls, type ChromeMode } from "../brand/kit";
 import { bytesToBlob } from "../export/blob";
 import { shareCommandDisplay } from "../export/runnable";
@@ -12,6 +12,17 @@ import { clampPane, formatSessionBlock, type DeckSession, type PaneSize, type Wi
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
 import { checkPackageFiles, writeDeckPackage } from "../package/deckPackage";
 import { startCaptions } from "../present/captions";
+import {
+  STAGE_ZOOM_FIT,
+  STAGE_ZOOM_MAX,
+  STAGE_ZOOM_MIN,
+  fitScale,
+  slideReference,
+  viewScale,
+  zoomIn,
+  zoomLabel,
+  zoomOut,
+} from "../present/stageZoom";
 import { SlideView } from "../slides/SlideView";
 import { fontFaceRules } from "../theme/fonts";
 import { control } from "../help/controls";
@@ -37,6 +48,7 @@ export function Shell({
   onSession,
   onOpenFile,
   requestOpen,
+  onHome,
   persistError,
   assets,
   embed = false,
@@ -55,6 +67,7 @@ export function Shell({
   onSession: (recipe: (session: DeckSession) => DeckSession) => void;
   requestOpen: () => void;
   onOpenFile: (file: File) => void;
+  onHome?: () => void;
   persistError: string | null;
   assets?: Map<string, string>;
   embed?: boolean;
@@ -76,6 +89,11 @@ export function Shell({
   const brand = withAssetUrls(resolveBrand(deck.brand), assets);
   const mode = session.ui.theme;
   const [overview, setOverview] = useState(false);
+  const [stageZoom, setStageZoom] = useState(STAGE_ZOOM_FIT);
+  const stageFrameRef = useRef<HTMLDivElement>(null);
+  const aspect = deck.aspect === "4:3" ? "4:3" : "16:9";
+  const pageRef = slideReference(aspect);
+  const [pageFit, setPageFit] = useState(1);
   const [themeOpen, setThemeOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -266,6 +284,21 @@ export function Shell({
     });
   }, [captionsOn]);
 
+  useLayoutEffect(() => {
+    const frame = stageFrameRef.current;
+    if (!frame) return;
+
+    const measure = () => {
+      const next = fitScale(frame.clientWidth, frame.clientHeight, pageRef.width, pageRef.height);
+      setPageFit((prev) => (Math.abs(prev - next) < 0.0001 ? prev : next));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [pageRef.height, pageRef.width]);
+
   useEffect(() => {
     if (!slide.autoAdvance || blank) return;
     const last = revealThresholds(slide).at(-1) ?? 0;
@@ -362,6 +395,15 @@ export function Shell({
         onSession((current) => ({ ...current, ...jumpTo(deck, last) }));
       } else if (run === "overview") {
         setOverview((open) => !open);
+      } else if (run === "zoom-in") {
+        setStageZoom((zoom) => zoomIn(zoom));
+        event.preventDefault();
+      } else if (run === "zoom-out") {
+        setStageZoom((zoom) => zoomOut(zoom));
+        event.preventDefault();
+      } else if (run === "zoom-fit") {
+        setStageZoom(STAGE_ZOOM_FIT);
+        event.preventDefault();
       } else if (run === "fullscreen") {
         void toggleFullscreen();
       } else if (run === "help") {
@@ -499,6 +541,11 @@ export function Shell({
       <header className="toolbar">
         <div className="brand">
           {brand ? <BrandLockup brand={brand} mode={mode} /> : null}
+          {onHome ? (
+            <IconButton label={control("home").label} tip={control("home").about} onClick={onHome}>
+              <Icon name="home" />
+            </IconButton>
+          ) : null}
           <h1>{deck.title}</h1>
         </div>
         <div className="transport">
@@ -537,6 +584,9 @@ export function Shell({
               Audience is {blank}
             </p>
           ) : null}
+
+          <span className="toolbar-sep" aria-hidden="true" />
+
           <IconButton label={control("laser").label} tip={laserTip(laserOn)} keys={shortcutCaps("laser")} pressed={laserOn} onClick={() => setLaserOn((on) => !on)}>
             <Icon name="laser" />
           </IconButton>
@@ -568,12 +618,45 @@ export function Shell({
           >
             <Icon name="audience" />
           </IconButton>
+
+          <span className="toolbar-sep" aria-hidden="true" />
+
           <IconButton label={control("overview").label} tip={paneStateTip("Overview", overview, false)} keys={shortcutCaps("overview")} pressed={overview} onClick={() => setOverview((open) => !open)}>
             <Icon name="overview" />
+          </IconButton>
+          <IconButton
+            label={control("zoom-out").label}
+            tip={`${control("zoom-out").about} Now at ${zoomLabel(stageZoom)}.`}
+            keys={shortcutCaps("zoom-out")}
+            disabled={stageZoom <= STAGE_ZOOM_MIN}
+            onClick={() => setStageZoom((zoom) => zoomOut(zoom))}
+          >
+            <Icon name="zoomOut" />
+          </IconButton>
+          <IconButton
+            label={control("zoom-in").label}
+            tip={`${control("zoom-in").about} Now at ${zoomLabel(stageZoom)}.`}
+            keys={shortcutCaps("zoom-in")}
+            disabled={stageZoom >= STAGE_ZOOM_MAX}
+            onClick={() => setStageZoom((zoom) => zoomIn(zoom))}
+          >
+            <Icon name="zoomIn" />
+          </IconButton>
+          <IconButton
+            label={control("zoom-fit").label}
+            tip={`${control("zoom-fit").about} Now at ${zoomLabel(stageZoom)}.`}
+            keys={shortcutCaps("zoom-fit")}
+            pressed={stageZoom === STAGE_ZOOM_FIT}
+            onClick={() => setStageZoom(STAGE_ZOOM_FIT)}
+          >
+            <Icon name="zoomFit" />
           </IconButton>
           <IconButton label={fullscreen ? "Exit full screen" : control("fullscreen").label} tip={control("fullscreen").about} keys={shortcutCaps("fullscreen")} onClick={() => void toggleFullscreen()}>
             <Icon name={fullscreen ? "exit" : "fullscreen"} />
           </IconButton>
+
+          <span className="toolbar-sep" aria-hidden="true" />
+
           <IconButton
             label={control("outline").label}
             tip={paneStateTip("Outline", session.ui.toc, session.ui.tocPinned)}
@@ -581,6 +664,14 @@ export function Shell({
             onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, toc: !current.ui.toc } }))}
           >
             <Icon name="outline" />
+          </IconButton>
+          <IconButton
+            label={control("presenter").label}
+            tip={paneStateTip("Presenter", session.ui.bottom, session.ui.bottomPinned)}
+            pressed={session.ui.bottom}
+            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: !current.ui.bottom } }))}
+          >
+            <Icon name="notes" />
           </IconButton>
           <IconButton
             label={control("examples").label}
@@ -598,14 +689,9 @@ export function Shell({
           >
             <Icon name="yaml" />
           </IconButton>
-          <IconButton
-            label={control("presenter").label}
-            tip={paneStateTip("Presenter", session.ui.bottom, session.ui.bottomPinned)}
-            pressed={session.ui.bottom}
-            onClick={() => onSession((current) => ({ ...current, ui: { ...current.ui, bottom: !current.ui.bottom } }))}
-          >
-            <Icon name="notes" />
-          </IconButton>
+
+          <span className="toolbar-sep" aria-hidden="true" />
+
           <IconButton label={control("open").label} tip={control("open").about} onClick={requestOpen}>
             <Icon name="open" />
           </IconButton>
@@ -786,6 +872,9 @@ export function Shell({
               </div>
             ) : null}
           </div>
+
+          <span className="toolbar-sep" aria-hidden="true" />
+
           <IconButton
             label={control("help").label}
             tip={paneStateTip("Help", session.ui.help, session.ui.helpPinned)}
@@ -957,24 +1046,44 @@ export function Shell({
             onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, help: false } }))}
           />
         ) : null}
-        <SlideView
-          deck={deck}
-          slide={slide}
-          revealed={session.revealed}
-          onOpenSlide={(slideId) => {
-            const index = deck.slides.findIndex((item) => item.id === slideId);
-            if (index >= 0) jump(index);
-          }}
-          laser={laser}
-          caption={caption}
-          onLaserMove={laserOn ? setLaserPoint : undefined}
-          onEditTitle={embed || yamlError ? undefined : onEditTitle}
-          onEditItem={embed || yamlError ? undefined : onEditItem}
-          slideIndex={session.slideIndex}
-          probe={probe}
-          onProbe={embed ? undefined : selectProbe}
-          assets={assets}
-        />
+        <div
+          ref={stageFrameRef}
+          className="stage-frame"
+          data-aspect={aspect}
+          data-zoomed={stageZoom > STAGE_ZOOM_FIT ? "" : undefined}
+          style={
+            {
+              "--page-w": `${pageRef.width}px`,
+              "--page-h": `${pageRef.height}px`,
+              "--view-scale": String(viewScale(pageFit, stageZoom)),
+            } as CSSProperties
+          }
+        >
+          <div className="stage-zoom-space">
+            <div className="stage-page-slot">
+              <div className="stage-page">
+                <SlideView
+                  deck={deck}
+                  slide={slide}
+                  revealed={session.revealed}
+                  onOpenSlide={(slideId) => {
+                    const index = deck.slides.findIndex((item) => item.id === slideId);
+                    if (index >= 0) jump(index);
+                  }}
+                  laser={laser}
+                  caption={caption}
+                  onLaserMove={laserOn ? setLaserPoint : undefined}
+                  onEditTitle={embed || yamlError ? undefined : onEditTitle}
+                  onEditItem={embed || yamlError ? undefined : onEditItem}
+                  slideIndex={session.slideIndex}
+                  probe={probe}
+                  onProbe={embed ? undefined : selectProbe}
+                  assets={assets}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       {!embed && session.ui.yaml && session.ui.yamlPinned ? (
