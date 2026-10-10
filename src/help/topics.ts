@@ -9,8 +9,8 @@ export const TOPICS: readonly Topic[] = [
     id: "start",
     title: "Start here",
     paragraphs: [
-      "Open a YAML talk, a zip package, or a PowerPoint file from the toolbar, or drop one on the window. PowerPoint import keeps each slide's title, bullets, and speaker notes. Pictures, charts, and animations in that file are left out.",
-      "Blank deck starts from one untitled slide. The theme you already loaded stays. Opening a file does not change it.",
+      "Home loads a theme and a presentation separately. Load theme reads a manifest, or a config used only for the theme it names. Load presentation reads a YAML talk, a zip package, or a PowerPoint file. Load config is the shortcut that names both, and opens the talk when the config includes one.",
+      "Blank deck starts from one untitled slide. The theme you already loaded stays. Opening a presentation does not change it.",
       "This browser keeps the deck, the answers, and the notes you take. Nothing is written back to the original file. Download YAML when you want a file that contains the answers and the notes.",
       "The question mark in the toolbar, or ?, opens this pane. Hold the pointer on a control, or tab to it, to read what it does right now.",
     ],
@@ -66,7 +66,7 @@ export const TOPICS: readonly Topic[] = [
     title: "Files",
     paragraphs: [
       "A YAML file is the talk. A zip package has deck.yaml at the root and the images the talk names. It does not contain the mark or the font files. Drop a .yaml file, a .zip package, or a .pptx file anywhere on the window.",
-      "Home leaves the talk and returns to the start screen, where you can open another sample, a recent catalog talk, or a file. Continue returns to the talk you left.",
+      "Home leaves the talk and returns to the start screen. Load a theme, load a presentation, or load a config that names both. Continue returns to the talk you left.",
       "Reset to shipped replaces the slides and the notes you took with the talk this install shipped. Comments in the original are not copied into a YAML download.",
     ],
   },

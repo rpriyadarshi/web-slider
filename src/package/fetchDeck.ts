@@ -5,10 +5,12 @@ export type DeckSource = { url: string; label: string; zip: boolean; baseUrl?: s
 
 export type FetchedDeck = { yaml: string; files: Map<string, Uint8Array>; baseUrl?: string };
 
-/** The talk a config names. A disk path is read through the dev server, which cannot serve its siblings by relative URL. */
+/** The talk a config names. A disk path is read through the dev server, and files named in it are read from that file's directory. */
 export function shippedDeckSource(origin: string, deckPath: string): DeckSource {
   const zip = /\.zip$/i.test(deckPath);
-  if (deckPath.startsWith("/")) return { url: localFileUrl(origin, deckPath), label: deckPath, zip };
+  if (deckPath.startsWith("/")) {
+    return { url: localFileUrl(origin, deckPath), label: deckPath, zip, baseUrl: `disk:${deckPath}` };
+  }
   const url = new URL(deckPath, origin.endsWith("/") ? origin : `${origin}/`);
   return { url: url.href, label: deckPath, zip, baseUrl: new URL("./", url).href };
 }
@@ -29,6 +31,7 @@ export function bootDeckSource(input: {
 }): DeckSource | null {
   if (input.embed) return null;
   const linked = input.deckParam?.trim();
+  if (linked?.startsWith("/")) return shippedDeckSource(input.origin, linked);
   if (linked) return linkedDeckSource(input.pageUrl, linked);
   if (input.deckPath) return shippedDeckSource(input.origin, input.deckPath);
   return null;

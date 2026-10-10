@@ -19,7 +19,7 @@ npm install
 npm run dev -- --config samples/examples/northwind/web-slider.config.yaml
 ```
 
-`npm test` checks the deck schema, navigation, PowerPoint import, and the exporters. `npm run build` produces the static site and copies `samples/` into `dist/samples/`. `npm run dev` and `npm run preview` take the same `--config` flag. With no flag and no `?config=` query, the boot screen asks for one.
+`npm test` checks the deck schema, navigation, PowerPoint import, and the exporters. `npm run build` produces the static site and copies `samples/` into `dist/samples/`. `npm run dev` and `npm run preview` take the same `--config` flag. With no flag and no `?config=` query, Home loads a theme and a presentation separately. A config is the shortcut that names both.
 
 Check a talk on disk, and build its package when it names local images:
 
@@ -37,7 +37,7 @@ That command uses the same deck schema and image checks as the presenter. It wri
 
 ```
 samples/
-  catalog.yaml                # installs on the boot screen, talks on the start screen
+  catalog.yaml                # themes and talks on Home
   themes/
     emporion/                 # product theme; also holds the built-in font files
     harbor/

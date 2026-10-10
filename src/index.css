@@ -94,17 +94,67 @@ button.primary {
 }
 
 .start {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 32px;
+  height: 100%;
+  overflow: auto;
+  padding: 32px 32px 48px;
   background:
     radial-gradient(900px 420px at 50% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
     var(--ground);
 }
 
 .start-card {
-  width: min(720px, 100%);
+  width: min(960px, 100%);
+  margin: 0 auto;
+}
+
+.home-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-chrome {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.home-pane {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+}
+
+.home-pane-wide { grid-column: 1 / -1; }
+
+.home-pane h2 {
+  margin: 0 0 6px;
+  font-family: "Source Serif 4", serif;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.home-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.home-pane .dropzone { margin-top: 8px; padding: 16px; }
+
+@media (max-width: 800px) {
+  .home-grid { grid-template-columns: 1fr; }
+  .home-pane-wide { grid-column: auto; }
 }
 
 .start-card h1 {

@@ -2,15 +2,13 @@
 
 You are here to make a talk and give it. The look of the room is already chosen: the mark, the colors, and the type. Your file is the slides, the words you will say, and the questions you will ask the room.
 
-If the app is asking you to choose a config, pick a theme on that screen. That chooses the look. The talk comes next. The person who runs the install, and the files they edit, are in [admin.md](admin.md). If an agent will write the YAML for you, send it [prompts/generate-deck.md](../prompts/generate-deck.md).
+Home loads a theme and a presentation separately. A config file is the shortcut that names both. The person who runs the install, and the files they edit, are in [admin.md](admin.md). If an agent will write the YAML for you, send it [prompts/generate-deck.md](../prompts/generate-deck.md).
 
 ## Open a talk
 
-After a theme has loaded, the start screen offers three ways in.
-
-- **Open YAML**, or drop a file on the window. A `.yaml` or `.yml` talk, a `.zip` package, or a `.pptx` file. Opening a file replaces the deck on screen. It does not replace the theme.
-- **Blank deck.** One untitled slide, so you can build the talk in the presenter.
-- **Examples.** The talks listed in the catalog: Launch Review, Harbor briefing, Quarterly close, and Incident review. Each one is slides only. It takes the theme you already loaded.
+- **Theme.** Load a manifest, or pick one from the list. That chooses the look. It does not open a talk.
+- **Presentation.** Load a `.yaml` or `.yml` talk, a `.zip` package, or a `.pptx` file. Drop one on that pane. Examples are the talks in the catalog: Launch Review, Harbor briefing, Quarterly close, and Incident review. Blank deck is one untitled slide. Opening a presentation does not replace the theme.
+- **Config.** Load a config when you want the theme and, if the file names one, the talk in one step.
 
 This browser keeps that deck, the widget answers, and the notes you take. Nothing is written back to the original file. Download YAML when you want a file that contains the answers and the notes. That download is a new file. Comments from the original are not copied into it. Opening that download restores the answers and notes into the session.
 

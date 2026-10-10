@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { localFileUrl, resolveYamlRef } from "../model/install";
 import type { Block, Deck } from "../model/schema";
 
 export async function readDeckPackage(data: ArrayBuffer): Promise<{ yaml: string; files: Map<string, Uint8Array> }> {
@@ -63,6 +64,7 @@ export async function bindPackageAssets(
   refs: string[],
   files: Map<string, Uint8Array>,
   baseUrl?: string,
+  origin?: string,
 ): Promise<Map<string, string>> {
   const urls = new Map<string, string>();
   for (const ref of refs) {
@@ -71,6 +73,17 @@ export async function bindPackageAssets(
       const copy = new ArrayBuffer(packed.byteLength);
       new Uint8Array(copy).set(packed);
       urls.set(ref, URL.createObjectURL(new Blob([copy], { type: mimeFor(ref) })));
+      continue;
+    }
+    if (baseUrl?.startsWith("disk:")) {
+      if (!origin) throw new Error(`"${ref}" is named beside a file on disk, and this load has no origin.`);
+      const container = baseUrl.slice("disk:".length);
+      const file = resolveYamlRef(container, ref);
+      if (!file) throw new Error(`Cannot resolve "${ref}" from ${container}.`);
+      const assetUrl = file.startsWith("/") ? localFileUrl(origin, file) : new URL(file, `${origin.endsWith("/") ? origin : `${origin}/`}`).href;
+      const response = await fetch(assetUrl);
+      if (!response.ok) throw new Error(`Asset failed to load (${response.status}): ${file}`);
+      urls.set(ref, URL.createObjectURL(await response.blob()));
       continue;
     }
     if (baseUrl) {
@@ -82,7 +95,7 @@ export async function bindPackageAssets(
       continue;
     }
     throw new Error(
-      `"${ref}" is a package path. Open a .zip that contains it, or embed the file as a data URI in the YAML.`,
+      `"${ref}" is a package path. Open a .zip that contains it, or load the talk by its path so files beside it can be read.`,
     );
   }
   return urls;

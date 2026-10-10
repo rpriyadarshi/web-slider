@@ -15,7 +15,7 @@ One talk file. That file is the YAML pane beside the slide. A free-form canvas i
 You do not write:
 
 - `embed.js`, or anything under `public/`. That directory is the served app.
-- `web-slider.config.yaml`. The config only names a manifest. The person who boots the app supplies it with `--config`, `?config=`, or the boot screen.
+- `web-slider.config.yaml`. The config names a manifest and, when it includes one, a talk. Home loads a theme and a presentation separately. `--config`, `?config=`, and Load config are the shortcut that names both.
 - `manifest.yaml`, marks, or font files. Those are the admin theme. In this repository they ship under `samples/themes/` or `samples/examples/<name>/`. A talk you were asked to write elsewhere does not get a new folder in either place.
 - `manifest.resolved.json`. That is a system cache. People do not edit it.
 - `takenNotes` on a slide, or `answer` on a widget, in a new deck. Those are the presenter session. The browser keeps them until a download or a handout merges them.

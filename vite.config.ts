@@ -7,6 +7,7 @@ import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import { diskContentType, diskKind, openDiskFile } from "./src/dev/localFile";
+import { pickFile } from "./src/dev/pickFile";
 import { shareRoute } from "./src/dev/shareRoute";
 
 const samplesRoot = path.resolve("samples");
@@ -47,6 +48,29 @@ function serveSamples(req: Connect.IncomingMessage, res: ServerResponse, next: C
   createReadStream(file).pipe(res);
 }
 
+function servePick(req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction): void {
+  const url = new URL(req.url ?? "", "http://localhost");
+  if (url.pathname !== "/__slider/pick") {
+    next();
+    return;
+  }
+  const kind = url.searchParams.get("kind") === "talk" ? "talk" : "yaml";
+  void pickFile(kind)
+    .then((filePath) => {
+      if (!filePath) {
+        res.statusCode = 204;
+        res.end();
+        return;
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ path: filePath }));
+    })
+    .catch((error: unknown) => {
+      res.statusCode = 500;
+      res.end(error instanceof Error ? error.message : String(error));
+    });
+}
+
 function serveLocalConfig(req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction): void {
   const url = new URL(req.url ?? "", "http://localhost");
   const kind = diskKind(url.pathname);
@@ -69,10 +93,12 @@ function localConfigPlugin(): Plugin {
   return {
     name: "web-slider-local-config",
     configureServer(server) {
+      server.middlewares.use(servePick);
       server.middlewares.use(serveLocalConfig);
       server.middlewares.use(share());
     },
     configurePreviewServer(server) {
+      server.middlewares.use(servePick);
       server.middlewares.use(serveLocalConfig);
       server.middlewares.use(share());
     },

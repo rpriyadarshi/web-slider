@@ -1,39 +1,90 @@
-import { useState } from "react";
-import { BrandLockup, resolveBrand, resolveChrome, withAssetUrls } from "../brand/kit";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { BrandLockup, resolveBrand, resolveChrome, type ChromeMode, withAssetUrls } from "../brand/kit";
 import { shareBuild } from "../model/build";
-import type { Install } from "../model/install";
+import { pathFromFileUrl, type Install } from "../model/install";
 import { loadRecent } from "../session/recent";
 import { CatalogChoices } from "./CatalogChoices";
+import { Icon, IconButton } from "./IconButton";
+
+const CHROME_KEY = "web-slider-chrome";
+
+function storedMode(): ChromeMode | null {
+  try {
+    const value = localStorage.getItem(CHROME_KEY);
+    return value === "light" || value === "dark" ? value : null;
+  } catch {
+    return null;
+  }
+}
 
 export function StartScreen({
   install,
-  onOpenFile,
-  requestOpen,
+  themeError,
+  deckError,
+  configError,
+  onThemeFile,
+  onThemePath,
+  onDeckFile,
+  onDeckPath,
+  onConfigFile,
+  onConfigPath,
   onBlank,
   onShipped,
-  onExample,
   onContinue,
   continueTitle,
 }: {
-  install: Install;
-  onOpenFile: (file: File) => void;
-  requestOpen: () => void;
+  install: Install | null;
+  themeError: string | null;
+  deckError: string | null;
+  configError: string | null;
+  onThemeFile: (file: File) => void;
+  onThemePath: (path: string) => void;
+  onDeckFile: (file: File) => void;
+  onDeckPath: (path: string) => void;
+  onConfigFile: (file: File) => void;
+  onConfigPath: (path: string) => void;
   onBlank: () => void;
   onShipped?: () => void;
-  onExample: (path: string) => void;
   onContinue?: () => void;
   continueTitle?: string;
 }) {
-  const [dragging, setDragging] = useState(false);
+  const themeInput = useRef<HTMLInputElement>(null);
+  const deckInput = useRef<HTMLInputElement>(null);
+  const configInput = useRef<HTMLInputElement>(null);
+  const [themePath, setThemePath] = useState("");
+  const [configPath, setConfigPath] = useState("");
+  const savedMode = useRef(storedMode());
+  const [mode, setMode] = useState<ChromeMode>(savedMode.current ?? (install?.manifest.theme.chrome === "light" ? "light" : "dark"));
+  useEffect(() => {
+    if (savedMode.current) return;
+    setMode(install?.manifest.theme.chrome === "light" ? "light" : "dark");
+  }, [install]);
+  const brand = install ? withAssetUrls(resolveBrand(install.manifest.brand), install.assetUrls) : null;
+  const palette = resolveChrome(
+    install?.manifest.theme ?? { accent: "#3db892", highlight: "#e4b84a" },
+    mode,
+    brand,
+  );
   const recent = loadRecent();
-  const brand = withAssetUrls(resolveBrand(install.manifest.brand), install.assetUrls);
-  const mode = install.manifest.theme.chrome === "light" ? "light" : "dark";
-  const palette = resolveChrome(install.manifest.theme, mode, brand);
+  const themeName =
+    brand?.wordmark ?? (install ? install.manifestPath : "No theme loaded");
+
+  function chooseMode(next: ChromeMode) {
+    savedMode.current = next;
+    setMode(next);
+    try {
+      localStorage.setItem(CHROME_KEY, next);
+    } catch {
+      // The choice still applies for this view.
+    }
+  }
+
   return (
     <main
       className="start"
-      data-manifest={install.manifestPath}
+      data-manifest={install?.manifestPath}
       style={{
+        colorScheme: mode,
         ["--ground" as string]: palette.ground,
         ["--paper" as string]: palette.paper,
         ["--text" as string]: palette.text,
@@ -45,66 +96,257 @@ export function StartScreen({
     >
       <section className="start-card">
         {brand ? <BrandLockup brand={brand} mode={mode} /> : null}
-        <p className="eyebrow">Web Slider</p>
-        <h1>Present from a YAML deck.</h1>
-        <p className="lede">
-          This install loads {install.manifestPath}. Open a sample or a file to start. From a talk, Home returns here.
-          The toolbar opens the outline, examples, the YAML file, presenter notes, the theme, export, and help.
-        </p>
-        <div className="start-actions">
-          {onContinue ? (
-            <button type="button" className="primary" onClick={onContinue}>
-              Continue{continueTitle ? `: ${continueTitle}` : ""}
-            </button>
-          ) : (
-            <button type="button" className="primary" onClick={requestOpen}>
-              Open YAML
-            </button>
-          )}
-          {onContinue ? (
-            <button type="button" onClick={requestOpen}>
-              Open YAML
-            </button>
-          ) : null}
-          <button type="button" onClick={onBlank}>
-            Blank deck
-          </button>
-          {onShipped ? (
-            <button type="button" onClick={onShipped}>
-              Shipped talk
-            </button>
-          ) : null}
-        </div>
-        {shareBuild ? null : <CatalogChoices list="examples" label="Examples" onChoose={onExample} />}
-        {shareBuild || recent.length === 0 ? null : (
-          <div className="sample-block">
-            <p className="sample-label">Recent</p>
-            <div className="sample-list">
-              {recent.map((entry) => (
-                <button key={entry.path} type="button" onClick={() => onExample(entry.path)}>
-                  {entry.title}
-                </button>
-              ))}
-            </div>
+        <div className="home-head">
+          <div>
+            <p className="eyebrow">Web Slider</p>
+            <h1>Home</h1>
           </div>
-        )}
-        <div
-          className={dragging ? "dropzone dragover" : "dropzone"}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(event) => {
-            event.preventDefault();
-            setDragging(false);
-            const file = event.dataTransfer.files[0];
-            if (file) onOpenFile(file);
-          }}
-        >
-          Drop a .yaml file, a .zip package, or a .pptx file here
+          <div className="home-chrome" role="group" aria-label="Appearance">
+            <IconButton label="Light" pressed={mode === "light"} onClick={() => chooseMode("light")}>
+              <Icon name="light" />
+            </IconButton>
+            <IconButton label="Dark" pressed={mode === "dark"} onClick={() => chooseMode("dark")}>
+              <Icon name="dark" />
+            </IconButton>
+          </div>
         </div>
+        <p className="lede">
+          Load a theme and a presentation separately. A config file is the shortcut that names both.
+        </p>
+        <div className="home-grid">
+          <HomePane
+            title="Theme"
+            status={install ? themeName : "No theme loaded."}
+            error={themeError}
+            action="Load theme"
+            onAction={() => void pickThen("yaml", onThemePath)}
+            dropLabel="Drop a theme manifest, or a config that names one"
+            onFile={onThemeFile}
+            onPath={onThemePath}
+          >
+            {shareBuild ? null : <CatalogChoices list="installs" label="Themes" onChoose={onThemePath} />}
+            <PathForm
+              id="theme-path"
+              label="Path"
+              value={themePath}
+              placeholder="/path/to/manifest.yaml"
+              button="Load theme"
+              onChange={setThemePath}
+              onSubmit={onThemePath}
+            />
+          </HomePane>
+          <HomePane
+            title="Presentation"
+            status={continueTitle ? continueTitle : "No presentation loaded."}
+            error={deckError}
+            action="Load presentation"
+            primary
+            onAction={() => void pickThen("talk", onDeckPath)}
+            dropLabel="Drop a .yaml talk, a .zip package, or a .pptx file"
+            onFile={onDeckFile}
+            onPath={onDeckPath}
+          >
+            <div className="start-actions">
+              {onContinue ? (
+                <button type="button" className="primary" onClick={onContinue}>
+                  Continue
+                </button>
+              ) : null}
+              <button type="button" onClick={onBlank}>
+                Blank deck
+              </button>
+              {onShipped ? (
+                <button type="button" onClick={onShipped}>
+                  Shipped talk
+                </button>
+              ) : null}
+            </div>
+            {shareBuild ? null : <CatalogChoices list="examples" label="Examples" onChoose={onDeckPath} />}
+            {shareBuild || recent.length === 0 ? null : (
+              <div className="sample-block">
+                <p className="sample-label">Recent</p>
+                <div className="sample-list">
+                  {recent.map((entry) => (
+                    <button key={entry.path} type="button" onClick={() => onDeckPath(entry.path)}>
+                      {entry.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </HomePane>
+          <HomePane
+            title="Config"
+            status="Names a theme and, when it includes one, a talk."
+            error={configError}
+            action="Load config"
+            onAction={() => void pickThen("yaml", onConfigPath)}
+            dropLabel="Drop a .yaml config file"
+            onFile={onConfigFile}
+            onPath={onConfigPath}
+            wide
+          >
+            <PathForm
+              id="config-path"
+              label="Path"
+              value={configPath}
+              placeholder="/path/to/web-slider.config.yaml"
+              button="Load config"
+              onChange={setConfigPath}
+              onSubmit={onConfigPath}
+            />
+          </HomePane>
+        </div>
+        <input
+          ref={themeInput}
+          className="file-input"
+          type="file"
+          accept=".yaml,.yml,text/yaml,application/yaml"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onThemeFile(file);
+          }}
+        />
+        <input
+          ref={deckInput}
+          className="file-input"
+          type="file"
+          accept=".yaml,.yml,.zip,.pptx,text/yaml,application/yaml,application/zip,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onDeckFile(file);
+          }}
+        />
+        <input
+          ref={configInput}
+          className="file-input"
+          type="file"
+          accept=".yaml,.yml,text/yaml,application/yaml"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onConfigFile(file);
+          }}
+        />
       </section>
     </main>
+  );
+}
+
+async function pickThen(kind: "yaml" | "talk", onPath: (path: string) => void) {
+  const response = await fetch(`/__slider/pick?kind=${kind}`);
+  if (response.status === 204 || !response.ok) return;
+  const body = (await response.json()) as { path?: unknown };
+  if (typeof body.path === "string" && body.path.startsWith("/")) onPath(body.path);
+}
+
+function PathForm({
+  id,
+  label,
+  value,
+  placeholder,
+  button,
+  onChange,
+  onSubmit,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  button: string;
+  onChange: (value: string) => void;
+  onSubmit: (path: string) => void;
+}) {
+  return (
+    <form
+      className="config-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const path = value.trim();
+        if (path) onSubmit(path);
+      }}
+    >
+      <label className="config-label" htmlFor={id}>
+        {label}
+      </label>
+      <div className="config-row">
+        <input
+          id={id}
+          name={id}
+          value={value}
+          placeholder={placeholder}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button type="submit">{button}</button>
+      </div>
+    </form>
+  );
+}
+
+function HomePane({
+  title,
+  status,
+  error,
+  action,
+  primary,
+  onAction,
+  dropLabel,
+  onFile,
+  onPath,
+  wide,
+  children,
+}: {
+  title: string;
+  status: string;
+  error: string | null;
+  action: string;
+  primary?: boolean;
+  onAction: () => void;
+  dropLabel: string;
+  onFile: (file: File) => void;
+  onPath: (path: string) => void;
+  wide?: boolean;
+  children?: ReactNode;
+}) {
+  const [dragging, setDragging] = useState(false);
+  return (
+    <section className={wide ? "home-pane home-pane-wide" : "home-pane"}>
+      <h2>{title}</h2>
+      <p className="home-status">{status}</p>
+      {error ? <pre className="error-body">{error}</pre> : null}
+      <div className="start-actions">
+        <button type="button" className={primary ? "primary" : undefined} onClick={onAction}>
+          {action}
+        </button>
+      </div>
+      {children}
+      <div
+        className={dragging ? "dropzone dragover" : "dropzone"}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          const listed = pathFromFileUrl(
+            `${event.dataTransfer.getData("text/uri-list")}\n${event.dataTransfer.getData("text/plain")}`,
+          );
+          if (listed) {
+            onPath(listed);
+            return;
+          }
+          const file = event.dataTransfer.files[0];
+          if (file) onFile(file);
+        }}
+      >
+        {dropLabel}
+      </div>
+    </section>
   );
 }

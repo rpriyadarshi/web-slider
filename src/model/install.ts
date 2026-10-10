@@ -183,24 +183,52 @@ export function localFileUrl(origin: string, diskPath: string): string {
   return url.href;
 }
 
+/**
+ * A file named inside a YAML file, resolved against that YAML file's directory.
+ * `https`, `data`, and `samples/` stay as written. A package name is not a file.
+ * A relative name joins the directory. `..` is refused.
+ */
+/** `file:///home/a/manifest.yaml` from a drop, as a disk path. */
+export function pathFromFileUrl(value: string): string | null {
+  const line = value
+    .split(/[\r\n]+/)
+    .map((item) => item.trim())
+    .find((item) => item.startsWith("file:"));
+  if (!line) return null;
+  try {
+    const url = new URL(line);
+    if (url.protocol !== "file:") return null;
+    const path = decodeURIComponent(url.pathname);
+    return path.startsWith("/") ? path : null;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveYamlRef(containerPath: string, ref: string): string | null {
+  if (ref.startsWith("https://") || ref.startsWith("data:") || ref.startsWith("samples/")) return ref;
+  if (ref.startsWith("/") && !ref.includes("\\") && !ref.split("/").includes("..")) return ref;
+  if (isPackageName(ref) || ref.includes("\\") || ref.includes("://") || ref.split("/").includes("..")) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(ref)) return null;
+  const slash = containerPath.lastIndexOf("/");
+  if (slash < 0) return null;
+  return `${containerPath.slice(0, slash + 1)}${ref}`;
+}
+
 /** Manifest named by a config file on disk, resolved beside that config. A package name returns null. */
 export function diskManifestPath(configPath: string, manifest: string): string | null {
-  return diskSiblingPath(configPath, manifest, /\.ya?ml$/);
+  if (!isDiskConfigPath(configPath) || isPackageName(manifest) || manifest.startsWith("samples/") || manifest.startsWith("/")) {
+    return null;
+  }
+  if (!/\.ya?ml$/.test(manifest)) return null;
+  return resolveYamlRef(configPath, manifest);
 }
 
 /** Default talk named by a config file on disk, resolved beside that config. A samples/ path returns null. */
 export function diskDeckPath(configPath: string, deck: string): string | null {
-  return diskSiblingPath(configPath, deck, /\.(ya?ml|zip)$/);
-}
-
-function diskSiblingPath(configPath: string, ref: string, suffix: RegExp): string | null {
-  if (!isDiskConfigPath(configPath)) return null;
-  if (ref.startsWith("samples/") || ref.startsWith("/") || ref.includes("\\") || ref.split("/").includes("..")) {
-    return null;
-  }
-  if (!/^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(ref) || !suffix.test(ref)) return null;
-  const slash = configPath.lastIndexOf("/");
-  return `${configPath.slice(0, slash + 1)}${ref}`;
+  if (!isDiskConfigPath(configPath) || deck.startsWith("samples/") || deck.startsWith("/")) return null;
+  if (!/\.(ya?ml|zip)$/.test(deck)) return null;
+  return resolveYamlRef(configPath, deck);
 }
 
 /** `manifest.resolved.json` beside a manifest that lives on disk. A site path returns null. */
@@ -214,7 +242,7 @@ export type ConfigRequest =
   | { path: string; source?: never; configPath?: never }
   | { source: string; path?: never; configPath?: string };
 
-/** Command-line config, then the `config` query, then the boot screen asks. */
+/** Command-line config, then the `config` query. Neither one leaves Home to load a theme and a talk separately. */
 export function resolveBootConfig(input: { cli?: string | null; query?: string | null }): BootConfig {
   const cli = blank(input.cli);
   if (cli) return { status: "path", path: cli };
@@ -240,12 +268,20 @@ export async function loadInstall(
       ? parseConfig(request.source)
       : await readConfigFile(env, origin, "path" in request && typeof request.path === "string" ? request.path : "");
   const configPath = "configPath" in request && typeof request.configPath === "string" ? request.configPath : null;
-  const beside = configPath ? diskManifestPath(configPath, config.manifest) : null;
+  const container =
+    configPath ??
+    ("path" in request && typeof request.path === "string" && isSiteYamlPath(request.path) ? request.path : "");
+  const beside = container ? diskManifestPath(isDiskConfigPath(container) ? container : "", config.manifest) : null;
+  const siteBeside = !beside && container && !isPackageName(config.manifest) && !config.manifest.startsWith("samples/")
+    ? resolveYamlRef(container, config.manifest)
+    : null;
   const loaded = beside
     ? await loadManifestAt(env, origin, beside, missingManifest)
-    : isPackageName(config.manifest)
-      ? await loadManifestAt(env, origin, packageManifestPath(config.manifest), missingPackage)
-      : await loadManifestAt(env, origin, config.manifest, missingManifest);
+    : siteBeside
+      ? await loadManifestAt(env, origin, siteBeside, missingManifest)
+      : isPackageName(config.manifest)
+        ? await loadManifestAt(env, origin, packageManifestPath(config.manifest), missingPackage)
+        : await loadManifestAt(env, origin, namedFile(container, config.manifest), missingManifest);
   if (!config.deck) return loaded;
   return { ...loaded, deckPath: (configPath ? diskDeckPath(configPath, config.deck) : null) ?? config.deck };
 }
@@ -280,20 +316,99 @@ async function readConfigFile(
   return parseConfig(configBody.text);
 }
 
+/**
+ * A theme manifest, or a config used only for the manifest it names.
+ * `containerPath` is the YAML file itself. Relative names in it are read from that file's directory.
+ * A deck named by a config is not part of the result.
+ */
+export async function loadThemeDocument(
+  env: { fetch: typeof fetch; origin: string },
+  source: string,
+  containerPath = "",
+): Promise<Install> {
+  const install = await loadYamlAsTheme(env, source, containerPath);
+  return { manifestPath: install.manifestPath, manifest: install.manifest, assetUrls: install.assetUrls };
+}
+
+/** Read a theme manifest or a config from a site path or an absolute disk path. */
+export async function loadThemeAt(
+  env: { fetch: typeof fetch; origin: string },
+  filePath: string,
+): Promise<Install> {
+  const path = filePath.trim();
+  if (!isDiskConfigPath(path) && !isSiteYamlPath(path)) {
+    throw new Error(
+      "Theme path must be a .yaml file on disk or a site path such as samples/examples/northwind/web-slider.config.yaml.",
+    );
+  }
+  const origin = env.origin.endsWith("/") ? env.origin : `${env.origin}/`;
+  const source = await readYamlText(env, origin, path);
+  return loadThemeDocument(env, source, path);
+}
+
+async function loadYamlAsTheme(
+  env: { fetch: typeof fetch; origin: string },
+  source: string,
+  containerPath: string,
+): Promise<Install> {
+  let loaded: unknown;
+  try {
+    loaded = YAML.load(source);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid theme YAML:\n${message}`);
+  }
+  if (loaded && typeof loaded === "object" && !Array.isArray(loaded) && "manifest" in loaded && !("brand" in loaded)) {
+    if (isDiskConfigPath(containerPath)) return loadInstall(env, { source, configPath: containerPath });
+    if (containerPath && isSiteYamlPath(containerPath)) return loadInstall(env, { path: containerPath });
+    return loadInstall(env, { source });
+  }
+  const manifest = parseManifest(source);
+  const origin = env.origin.endsWith("/") ? env.origin : `${env.origin}/`;
+  const manifestPath = containerPath || "manifest.yaml";
+  return installParsedManifest(env, origin, manifestPath, source, manifest);
+}
+
+async function readYamlText(
+  env: { fetch: typeof fetch; origin: string },
+  origin: string,
+  filePath: string,
+): Promise<string> {
+  const url = isDiskConfigPath(filePath) ? localFileUrl(origin, filePath) : new URL(filePath, origin).href;
+  const response = await env.fetch(url);
+  if (!response.ok) {
+    const detail = (await response.text()).trim();
+    throw new Error(detail || `File not found: ${filePath}`);
+  }
+  const body = await readBody(response);
+  if (body.html) throw new Error(`File not found: ${filePath}. The server returned HTML instead of the file.`);
+  return body.text;
+}
+
 async function loadManifestAt(
   env: { fetch: typeof fetch; origin: string },
   origin: string,
   manifestPath: string,
   missing: (path: string) => Error,
 ): Promise<Install> {
-  const manifestUrl = manifestFetchUrl(origin, manifestPath);
   const loaded = await readManifestFile(env, origin, manifestPath, missing);
-  const hash = await sourceHash(loaded.yaml);
-  const followed = await followBrand(env, origin, loaded.manifest.brand, manifestPath, loaded.manifest.fonts, [manifestPath]);
-  const assembled = assembleBrand(manifestPath, loaded.manifest.fonts, followed);
+  return installParsedManifest(env, origin, manifestPath, loaded.yaml, loaded.manifest);
+}
+
+async function installParsedManifest(
+  env: { fetch: typeof fetch; origin: string },
+  origin: string,
+  manifestPath: string,
+  yaml: string,
+  manifest: Manifest,
+): Promise<Install> {
+  const manifestUrl = manifestFetchUrl(origin, manifestPath);
+  const hash = await sourceHash(yaml);
+  const followed = await followBrand(env, origin, manifest.brand, manifestPath, manifest.fonts, [manifestPath]);
+  const assembled = assembleBrand(manifestPath, manifest.fonts, followed);
   const resolved = resolveManifest(
     {
-      ...loaded.manifest,
+      ...manifest,
       brand: assembled.brand,
       ...(assembled.fonts ? { fonts: assembled.fonts } : {}),
     },
@@ -373,11 +488,19 @@ function locateFonts(fonts: FontMap | undefined, manifestPath: string): FontMap 
   return located;
 }
 
-function locateRef(ref: string, manifestPath: string): string {
+function namedFile(container: string, ref: string): string {
   if (ref.startsWith("https://") || ref.startsWith("data:") || ref.startsWith("samples/")) return ref;
-  const slash = manifestPath.lastIndexOf("/");
-  const dir = slash === -1 ? "" : manifestPath.slice(0, slash + 1);
-  return `${dir}${ref}`;
+  const resolved = container ? resolveYamlRef(container, ref) : null;
+  if (resolved) return resolved;
+  throw new Error(`"${ref}" is named beside ${container || "this file"}, which has no folder. Load that file by its path.`);
+}
+
+function locateRef(ref: string, manifestPath: string): string {
+  const resolved = resolveYamlRef(manifestPath, ref);
+  if (resolved) return resolved;
+  throw new Error(
+    `"${ref}" is named beside ${manifestPath}, which has no folder. Load that file by its path.`,
+  );
 }
 
 function packageManifestPath(name: string): string {

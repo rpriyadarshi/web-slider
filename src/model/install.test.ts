@@ -6,13 +6,18 @@ import { serializeDeck } from "./serialize";
 import { sessionFromDeck } from "./session";
 import {
   canonicalJson,
+  diskDeckPath,
   diskManifestPath,
   diskResolvedCachePath,
   injectedConfigPath,
   isDiskConfigPath,
   loadInstall,
+  loadThemeAt,
+  loadThemeDocument,
   localFileUrl,
   parseManifest,
+  pathFromFileUrl,
+  resolveYamlRef,
   presentTalk,
   resolveBootConfig,
   resolveManifest,
@@ -78,6 +83,98 @@ function routes(map: Record<string, { status: number; body: string; type?: strin
 }
 
 describe("theme package", () => {
+  it("reads mark.svg from the manifest file's own directory", async () => {
+    const manifestPath = "/home/rohit/src/emporion_ai/Presentation/Themes/emporion/manifest.yaml";
+    const dir = manifestPath.slice(0, manifestPath.lastIndexOf("/") + 1);
+    const manifest = readFileSync(manifestPath, "utf8");
+    expect(resolveYamlRef(manifestPath, "mark.svg")).toBe(`${dir}mark.svg`);
+    expect(resolveYamlRef(manifestPath, "fonts/Inter-Regular.ttf")).toBe(`${dir}fonts/Inter-Regular.ttf`);
+    expect(resolveYamlRef("manifest.yaml", "mark.svg")).toBeNull();
+    expect(pathFromFileUrl("file:///home/rohit/src/emporion_ai/Presentation/Themes/emporion/manifest.yaml\n")).toBe(
+      "/home/rohit/src/emporion_ai/Presentation/Themes/emporion/manifest.yaml",
+    );
+    const files = [
+      "mark.svg",
+      "mark-on-dark.svg",
+      "fonts/Inter-Regular.ttf",
+      "fonts/Inter-SemiBold.ttf",
+      "fonts/SourceSerif4-Regular.ttf",
+      "fonts/SourceSerif4-Semibold.ttf",
+      "fonts/JetBrainsMono-Regular.ttf",
+      "fonts/JetBrainsMono-Bold.ttf",
+    ];
+    const { fetchImpl, calls } = routes({
+      [localFileUrl(origin, manifestPath)]: { status: 200, body: manifest },
+      ...Object.fromEntries(
+        files.map((name) => [
+          localFileUrl(origin, `${dir}${name}`),
+          { status: 200, type: name.endsWith(".svg") ? "image/svg+xml" : "font/ttf", body: name.endsWith(".svg") ? "<svg></svg>" : "ttf" },
+        ]),
+      ),
+    });
+    const install = await loadThemeAt({ fetch: fetchImpl, origin }, manifestPath);
+    expect(install.manifestPath).toBe(manifestPath);
+    expect(install.manifest.brand).toMatchObject({ mark: `${dir}mark.svg`, wordmark: "EMPORION" });
+    expect(calls).toContain(localFileUrl(origin, `${dir}mark.svg`));
+    expect(calls.some((url) => url.endsWith("/mark.svg"))).toBe(false);
+
+    const bare = routes({});
+    await expect(loadThemeDocument({ fetch: bare.fetchImpl, origin }, manifest, "manifest.yaml")).rejects.toThrow(
+      /mark\.svg.*no folder/,
+    );
+    expect(bare.calls).toEqual([]);
+  });
+
+  it("resolves each file from the file that names it, then repeats", async () => {
+    const configPath = "/var/house/web-slider.config.yaml";
+    const manifestPath = "/var/house/theme/manifest.yaml";
+    const markPath = "/var/house/theme/marks/mark.svg";
+    const fontPath = "/var/house/theme/fonts/Inter-Regular.ttf";
+    const fontBold = "/var/house/theme/fonts/Inter-SemiBold.ttf";
+    const manifest = `
+brand:
+  name: House
+  wordmark: HOUSE
+  accent: "#112233"
+  highlight: "#445566"
+  mark: marks/mark.svg
+fonts:
+  Inter:
+    regular: fonts/Inter-Regular.ttf
+    semibold: fonts/Inter-SemiBold.ttf
+`;
+    const { fetchImpl, calls } = routes({
+      [localFileUrl(origin, configPath)]: { status: 200, body: "manifest: theme/manifest.yaml\n" },
+      [localFileUrl(origin, manifestPath)]: { status: 200, body: manifest },
+      [localFileUrl(origin, markPath)]: { status: 200, type: "image/svg+xml", body: "<svg></svg>" },
+      [localFileUrl(origin, fontPath)]: { status: 200, type: "font/ttf", body: "ttf" },
+      [localFileUrl(origin, fontBold)]: { status: 200, type: "font/ttf", body: "ttf" },
+    });
+    const install = await loadThemeAt({ fetch: fetchImpl, origin }, configPath);
+    expect(install.manifestPath).toBe(manifestPath);
+    expect(install.manifest.brand).toMatchObject({ mark: markPath });
+    expect(install.manifest.fonts?.Inter?.regular).toBe(fontPath);
+    expect(calls).toContain(localFileUrl(origin, markPath));
+    expect(calls).not.toContain(localFileUrl(origin, "/var/house/marks/mark.svg"));
+    expect(calls).not.toContain(localFileUrl(origin, "/var/house/fonts/Inter-Regular.ttf"));
+    const deck = diskDeckPath(configPath, "talks/brief.yaml");
+    expect(deck).toBe("/var/house/talks/brief.yaml");
+    expect(resolveYamlRef(deck ?? "", "figures/a.png")).toBe("/var/house/talks/figures/a.png");
+  });
+
+  it("loads the theme named by a config and drops the talk", async () => {
+    const { fetchImpl } = routes({
+      ...packageAssets(),
+      [`${origin}${packageManifestPath.replace("manifest.yaml", "manifest.resolved.json")}`]: { status: 404, body: "" },
+    });
+    const install = await loadThemeDocument(
+      { fetch: fetchImpl, origin },
+      "manifest: emporion\ndeck: talk/deck.zip\n",
+    );
+    expect(install.deckPath).toBeUndefined();
+    expect(install.manifest.brand).toMatchObject({ wordmark: "EMPORION" });
+  });
+
   it("asks for a config when none is injected and the query is empty", async () => {
     expect(resolveBootConfig({ cli: injectedConfigPath(undefined, null), query: null })).toEqual({
       status: "config-required",

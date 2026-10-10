@@ -18,14 +18,14 @@ Four seats share the app. You sit in the second.
 The app will not guess a theme.
 
 1. The software is already there: the page, the schema, and `samples/themes/`.
-2. A config names one manifest. Precedence is the `--config` flag, then the `config` query, then the boot screen asks.
+2. Home loads a theme and a presentation separately. A config names one manifest and, when it includes one, a talk. `--config`, then the `config` query, is the shortcut that loads both. With neither, Home is the screen.
 
    ```bash
    npm run dev -- --config samples/examples/northwind/web-slider.config.yaml
    npm run preview -- --config samples/examples/northwind/web-slider.config.yaml
    ```
 
-   `?config=samples/examples/northwind/web-slider.config.yaml` is the same kind of path. With no flag and no query, the boot screen lists the installs in `samples/catalog.yaml` and also accepts a site path or a dropped config file.
+   `?config=samples/examples/northwind/web-slider.config.yaml` is the same kind of path. With no flag and no query, Home lists themes and presentations separately, and still accepts a config file.
 3. Someone opens a talk. Open loads only that talk, on top of the theme already loaded.
 
 A missing config is not replaced with a theme package. A missing manifest, a brand cycle, a missing mark or font, or invalid YAML stops the app and shows the error. It does not substitute another brand. A site path that contains `..` fails validation. An absolute file path is not a site URL. The dev server reads that file and passes its text. The catalog is not involved.
@@ -75,7 +75,7 @@ samples/
     launch-review.yaml        # the talk for the Northwind install
 ```
 
-`samples/catalog.yaml` is the list the screens read. `installs` are configs. `examples` are talks. Add a line when you add a file, or the boot screen and the start screen will not offer it. Each entry is an `id`, a `title`, and a site `path`.
+`samples/catalog.yaml` is the list Home reads. `installs` are themes (each config names a manifest). `examples` are talks. Add a line when you add a file, or Home will not offer it. Each entry is an `id`, a `title`, and a site `path`. Loading a theme from that list does not open a talk. Load config does, when the config names one.
 
 YAML is for the files you and an author write: the config, the manifest, and the deck. JSON is for artifacts only the system writes: an optional `manifest.resolved.json` beside the manifest, and the session in the browser. This presenter resolves the manifest in memory. If that cache file is present and its hash matches the manifest, it must agree with the resolution. A stale hash is ignored. This browser build does not write the cache file. Do not hand-edit it.
 

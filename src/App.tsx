@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Audience } from "./layout/Audience";
-import { ConfigScreen } from "./layout/ConfigScreen";
 import { ErrorScreen } from "./layout/ErrorScreen";
 import { Shell } from "./layout/Shell";
 import { StartScreen } from "./layout/StartScreen";
 import { blankDeckSource } from "./model/blank";
 import { replaceListItem, replaceSlideTitle } from "./model/edit";
-import { injectedConfigPath, isDiskConfigPath, loadInstall, localConfigUrl, presentTalk, resolveBootConfig, type Install } from "./model/install";
+import { injectedConfigPath, isDiskConfigPath, loadInstall, loadThemeAt, localConfigUrl, presentTalk, resolveBootConfig, type Install } from "./model/install";
 import { parseDeck } from "./model/parse";
 import type { Deck } from "./model/schema";
 import { serializeDeck } from "./model/serialize";
@@ -71,36 +70,47 @@ export function App() {
   const [canReturn, setCanReturn] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   const [storageBroken, setStorageBroken] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydrated, setHydrated] = useState(bootRequest.status === "config-required");
   const [persistError, setPersistError] = useState<string | null>(null);
   const [yamlError, setYamlError] = useState<string | null>(null);
   const [install, setInstall] = useState<Install | null>(null);
+  const [themeError, setThemeError] = useState<string | null>(null);
+  const [deckError, setDeckError] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [bootPhase, setBootPhase] = useState<BootPhase>(
-    bootRequest.status === "config-required" ? { kind: "ask", error: null } : { kind: "loading" },
+    bootRequest.status === "config-required" ? { kind: "ready" } : { kind: "loading" },
   );
   const yamlGen = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const deckRef = useRef<Deck | null>(null);
+  const sourceDeckRef = useRef<Deck | null>(null);
+  const assetUrlsRef = useRef<Map<string, string>>(new Map());
+  const bootHandled = useRef(false);
+  const browsingRef = useRef(false);
   const installRef = useRef<Install | null>(null);
   const openRef = useRef<(source: string, files: Map<string, Uint8Array>, baseUrl?: string) => Promise<void>>(
     async () => undefined,
   );
   deckRef.current = deck;
+  sourceDeckRef.current = sourceDeck;
+  assetUrlsRef.current = assetUrls;
+  browsingRef.current = browsing;
 
   async function prepareDeck(source: string, files: Map<string, Uint8Array>, baseUrl?: string): Promise<PreparedDeck> {
     const loaded = installRef.current;
-    if (!loaded) throw new Error("The theme package is not loaded.");
+    if (!loaded) throw new Error("Load a theme before opening a presentation.");
     const parsed = parseDeck(source);
     const presented = presentTalk(parsed, loaded.manifest);
     const next = sessionFromDeck(presented);
     parseDeck(serializeDeck(parsed, next));
-    const deckUrls = await bindPackageAssets(packageAssetRefs(parsed), files, baseUrl);
+    const deckUrls = await bindPackageAssets(packageAssetRefs(parsed), files, baseUrl, window.location.origin);
     const urls = new Map(loaded.assetUrls);
     for (const [key, value] of deckUrls) urls.set(key, value);
     return { source, parsed, presented: deckWithAssetUrls(presented, urls), files, urls, session: next };
   }
 
   function showPrepared(prepared: PreparedDeck) {
+    sourceDeckRef.current = prepared.parsed;
     setSourceDeck(prepared.parsed);
     setDeck(prepared.presented);
     setDeckYaml(prepared.source);
@@ -120,12 +130,22 @@ export function App() {
     setError(null);
   }
 
+  function failOpen(caught: unknown) {
+    const message = messageOf(caught);
+    if (deckRef.current && !browsingRef.current) {
+      setError(message);
+      setCanReturn(true);
+      return;
+    }
+    setDeckError(message);
+  }
+
   async function openPrepared(source: string, files: Map<string, Uint8Array>, baseUrl?: string) {
     try {
       showPrepared(await prepareDeck(source, files, baseUrl));
+      setDeckError(null);
     } catch (caught) {
-      setError(messageOf(caught));
-      setCanReturn(deckRef.current !== null);
+      failOpen(caught);
     }
   }
   openRef.current = openPrepared;
@@ -214,27 +234,67 @@ export function App() {
     };
   }, []);
 
-  async function loadConfigPath(path: string) {
-    setBootPhase({ kind: "loading" });
+  function applyInstall(loaded: Install, keepDeckPath: boolean) {
+    const next = keepDeckPath ? loaded : { manifestPath: loaded.manifestPath, manifest: loaded.manifest, assetUrls: loaded.assetUrls };
+    installRef.current = next;
+    setInstall(next);
+    const parsed = sourceDeckRef.current;
+    if (!parsed) return;
+    const urls = new Map(next.assetUrls);
+    for (const [key, value] of assetUrlsRef.current) {
+      if (!next.assetUrls.has(key)) urls.set(key, value);
+    }
+    setAssetUrls(urls);
+    setDeck(deckWithAssetUrls(presentTalk(parsed, next.manifest), urls));
+  }
+
+  async function openDeckAt(path: string) {
+    const source = bootDeckSource({
+      embed: false,
+      deckParam: path,
+      deckPath: undefined,
+      origin: window.location.origin,
+      pageUrl: window.location.href,
+    });
+    if (!source) throw new Error(`Presentation not found: ${path}`);
+    const pack = await fetchDeck((input, init) => window.fetch(input, init), source);
+    const prepared = await prepareDeck(pack.yaml, pack.files, pack.baseUrl);
+    rememberRecent({ title: prepared.parsed.title, path });
+    showPrepared(prepared);
+    setDeckError(null);
+  }
+
+  async function loadThemePath(path: string) {
+    setThemeError(null);
     try {
-      const loaded = await loadNamedConfig(path);
-      installRef.current = loaded;
-      setInstall(loaded);
-      setBootPhase({ kind: "ready" });
+      applyInstall(await loadThemeAt(browserEnv(), path), false);
     } catch (caught) {
-      setBootPhase({ kind: "ask", error: messageOf(caught) });
+      setThemeError(messageOf(caught));
     }
   }
 
-  async function loadConfigSource(source: string) {
-    setBootPhase({ kind: "loading" });
+  async function loadThemeFile(file: File) {
     try {
-      const loaded = await loadInstall(browserEnv(), { source });
-      installRef.current = loaded;
-      setInstall(loaded);
-      setBootPhase({ kind: "ready" });
+      const diskPath = diskPathOf(file);
+      if (!diskPath) throw new Error(`"${file.name}" has no folder, so files named beside it cannot be read.`);
+      const loaded = await loadThemeAt(browserEnv(), diskPath);
+      applyInstall(loaded, false);
+      setThemeError(null);
     } catch (caught) {
-      setBootPhase({ kind: "ask", error: messageOf(caught) });
+      setThemeError(messageOf(caught));
+    }
+  }
+
+  async function loadConfigPath(path: string) {
+    setConfigError(null);
+    try {
+      const loaded = await loadNamedConfig(path);
+      applyInstall(loaded, true);
+      setBootPhase({ kind: "ready" });
+      if (loaded.deckPath) await openDeckAt(loaded.deckPath);
+    } catch (caught) {
+      setConfigError(messageOf(caught));
+      setBootPhase({ kind: "ready" });
     }
   }
 
@@ -280,6 +340,12 @@ export function App() {
       return () => window.removeEventListener("message", onMessage);
     }
 
+    if (bootHandled.current) return;
+    bootHandled.current = true;
+    if (bootRequest.status !== "path" && !deckParam) {
+      setHydrated(true);
+      return;
+    }
     const boot = bootDeckSource({
       embed,
       deckParam,
@@ -314,11 +380,13 @@ export function App() {
         const next = normalizeSession(presented, saved.session);
         parseDeck(serializeDeck(parsed, next));
         const urls = new Map(install.assetUrls);
+        sourceDeckRef.current = parsed;
         setSourceDeck(parsed);
         setDeck(deckWithAssetUrls(presented, urls));
         setDeckYaml(saved.deckYaml);
         setAssetUrls(urls);
         setSession(next);
+        setBrowsing(true);
       }
     } catch (caught) {
       setError(messageOf(caught));
@@ -365,39 +433,36 @@ export function App() {
   }, [persistError]);
 
   function openFile(file: File) {
+    const diskPath = diskPathOf(file);
     const name = file.name.toLowerCase();
+    if (diskPath && (name.endsWith(".yaml") || name.endsWith(".yml") || name.endsWith(".zip"))) {
+      void openDeckAt(diskPath).catch((caught: unknown) => failOpen(caught));
+      return;
+    }
     if (name.endsWith(".pptx")) {
       void file
         .arrayBuffer()
         .then((buffer) => importPptx(buffer, file.name))
         .then((yaml) => openPrepared(yaml, new Map()))
-        .catch((caught: unknown) => {
-          setError(messageOf(caught));
-          setCanReturn(deckRef.current !== null);
-        });
+        .catch((caught: unknown) => failOpen(caught));
       return;
     }
     if (name.endsWith(".zip")) {
       void file.arrayBuffer().then(
         (buffer) => readDeckPackage(buffer).then((pack) => openPrepared(pack.yaml, pack.files)),
-        (caught: unknown) => {
-          setError(messageOf(caught));
-          setCanReturn(deckRef.current !== null);
-        },
+        (caught: unknown) => failOpen(caught),
       );
       return;
     }
     void file.text().then(
       (text) => openPrepared(text, new Map()),
-      (caught: unknown) => {
-        setError(messageOf(caught));
-        setCanReturn(deckRef.current !== null);
-      },
+      (caught: unknown) => failOpen(caught),
     );
   }
 
   function discardStored() {
     clearPersisted();
+    sourceDeckRef.current = null;
     setDeck(null);
     setSourceDeck(null);
     setDeckYaml("");
@@ -412,20 +477,9 @@ export function App() {
 
   async function openExample(path: string) {
     try {
-      const response = await fetch(new URL(path, window.location.origin));
-      if (!response.ok) {
-        throw new Error(`Example failed to load (${response.status}): ${path}`);
-      }
-      const text = await response.text();
-      const start = text.trimStart().slice(0, 20).toLowerCase();
-      if (start.startsWith("<!doctype") || start.startsWith("<html")) {
-        throw new Error(`Example not found: ${path}. The server returned HTML instead of the deck.`);
-      }
-      const prepared = await prepareDeck(text, new Map());
-      rememberRecent({ title: prepared.parsed.title, path });
-      showPrepared(prepared);
+      await openDeckAt(path);
     } catch (caught) {
-      setError(messageOf(caught));
+      setDeckError(messageOf(caught));
       setCanReturn(deckRef.current !== null);
     }
   }
@@ -444,29 +498,16 @@ export function App() {
     />
   );
 
-  if (!install) {
-    if (bootPhase.kind === "ask") {
-      return (
-        <ConfigScreen
-          error={bootPhase.error}
-          onPath={(path) => void loadConfigPath(path)}
-          onSource={(source) => void loadConfigSource(source)}
-          onFailure={(message) => setBootPhase({ kind: "ask", error: message })}
-        />
-      );
-    }
-    if (bootPhase.kind === "loading") {
-      return (
-        <main className="start" data-boot="loading">
-          <p>Loading the theme.</p>
-        </main>
-      );
-    }
-    throw new Error("The theme package is not loaded.");
+  if (!install && bootPhase.kind === "loading") {
+    return (
+      <main className="start" data-boot="loading">
+        <p>Loading the theme.</p>
+      </main>
+    );
   }
-  if (audienceId) return <Audience deckId={audienceId} install={install} />;
+  if (audienceId && install) return <Audience deckId={audienceId} install={install} />;
   if (!hydrated) {
-    if (!embed && (deckParam || install.deckPath)) {
+    if (!embed && install && (deckParam || install.deckPath)) {
       return (
         <main className="start" data-boot="loading">
           <p>Loading the talk.</p>
@@ -490,7 +531,7 @@ export function App() {
       </>
     );
   }
-  if (browsing || !deck || !session) {
+  if (!install || browsing || !deck || !session) {
     if (embed) {
       return (
         <main className="start">
@@ -503,15 +544,26 @@ export function App() {
         {fileInput}
         <StartScreen
           install={install}
-          onOpenFile={openFile}
-          requestOpen={() => inputRef.current?.click()}
+          themeError={themeError}
+          deckError={deckError}
+          configError={configError}
+          onThemeFile={(file) => void loadThemeFile(file)}
+          onThemePath={(path) => void loadThemePath(path)}
+          onDeckFile={openFile}
+          onDeckPath={(path) => void openExample(path)}
+          onConfigFile={(file) => {
+            const diskPath = diskPathOf(file);
+            if (!diskPath) {
+              setConfigError(`"${file.name}" has no folder, so files named beside it cannot be read.`);
+              return;
+            }
+            void loadConfigPath(diskPath);
+          }}
+          onConfigPath={(path) => void loadConfigPath(path)}
           onBlank={() => {
             void openPrepared(blankDeckSource(), new Map());
           }}
-          onShipped={install.deckPath ? () => void openShipped() : undefined}
-          onExample={(path) => {
-            void openExample(path);
-          }}
+          onShipped={install?.deckPath ? () => void openShipped() : undefined}
           onContinue={deck && session ? () => setBrowsing(false) : undefined}
           continueTitle={deck?.title}
         />
@@ -552,4 +604,9 @@ export function App() {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function diskPathOf(file: File): string | null {
+  const path = (file as File & { path?: string }).path;
+  return typeof path === "string" && path.startsWith("/") ? path : null;
 }

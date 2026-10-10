@@ -34,7 +34,7 @@ const CONTROL_LIST = [
   { id: "help", label: "Help", icon: "help", group: "panes", shortcut: "help", about: "Open this guide. It follows the slide, block, or question you select." },
   { id: "pin", label: "Pin", icon: "pin", group: "panes", about: "Dock the pane beside the slide. Unpin to float it over the slide. Esc closes a floating pane and leaves a docked pane open." },
   { id: "hide", label: "Hide", icon: "hide", group: "panes", about: "Close the pane. Open it again from the toolbar or the corner of the slide." },
-  { id: "home", label: "Home", icon: "home", group: "files", about: "Leave this talk and return to the start screen. It sits beside the brand. Open another sample, a recent talk, or a file. Continue returns to this talk." },
+  { id: "home", label: "Home", icon: "home", group: "files", about: "Leave this talk and return to Home. Load a theme, load a presentation, or load a config that names both. Continue returns to this talk." },
   { id: "open", label: "Open", icon: "open", group: "files", about: "Open a YAML talk, a zip package, or a PowerPoint file. The theme stays as it is." },
   { id: "shipped", label: "Reset to shipped", icon: "shipped", group: "files", about: "Replace the current slides and the notes you took with the talk this install shipped." },
   { id: "theme", label: "Theme", icon: "theme", group: "files", about: "Switch the shell between light and dark for this session. This does not edit the theme file." },

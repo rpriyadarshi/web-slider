@@ -35,7 +35,7 @@ This section applies only after [AGENTS.md](../AGENTS.md) has already allowed yo
 
 1. If the look is new, write the theme with the admin contract. A product theme goes in `samples/themes/<name>/`. An admin who only recolors a product brand goes in `samples/examples/<name>/manifest.yaml` and sets `brand` to the package name. Northwind does this with `brand: emporion`.
 2. Write the talk with the author contract. Put it beside that example's config. A talk on the built-in theme can sit at `samples/examples/<talk>.yaml`, as Launch Review does.
-3. Add the config under `installs` in `samples/catalog.yaml`, and the talk under `examples`. The boot screen lists `installs`. The start screen lists `examples`. A path that is not in the catalog does not appear. A missing or invalid catalog is an error on those screens. It is not replaced with a built-in list.
+3. Add the config under `installs` in `samples/catalog.yaml`, and the talk under `examples`. Home lists `installs` as themes and `examples` as presentations. A path that is not in the catalog does not appear. A missing or invalid catalog is an error on that screen. It is not replaced with a built-in list.
 
 The catalog entries are `id`, `title`, and `path`. The path is a site path such as `samples/examples/harbor/briefing.yaml`. It is not an absolute filesystem path, and it contains no `..`.
 

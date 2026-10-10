@@ -42,13 +42,20 @@ describe("boot talk", () => {
     });
     expect(bootDeckSource({ embed: false, deckParam: " ", deckPath: undefined, origin, pageUrl: page })).toBeNull();
     expect(bootDeckSource({ embed: true, deckParam: "x.zip", deckPath: "talk/deck.zip", origin, pageUrl: page })).toBeNull();
+    expect(bootDeckSource({ embed: false, deckParam: "/home/author/theme/talk.yaml", deckPath: undefined, origin, pageUrl: page })).toEqual({
+      url: localFileUrl(origin, "/home/author/theme/talk.yaml"),
+      label: "/home/author/theme/talk.yaml",
+      zip: false,
+      baseUrl: "disk:/home/author/theme/talk.yaml",
+    });
   });
 
-  it("reads a talk beside a disk config through the dev server, with no folder for siblings", () => {
+  it("reads a talk on disk and resolves files from that talk, not from its parent", () => {
     expect(shippedDeckSource(origin, "/home/author/theme/talk.zip")).toEqual({
       url: localFileUrl(origin, "/home/author/theme/talk.zip"),
       label: "/home/author/theme/talk.zip",
       zip: true,
+      baseUrl: "disk:/home/author/theme/talk.zip",
     });
   });
 
