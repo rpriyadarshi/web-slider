@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { loadCatalog, type Catalog } from "../model/catalog";
+import { tipProps } from "./IconButton";
 
 export function CatalogChoices({
   list,
@@ -32,12 +33,14 @@ export function CatalogChoices({
 
   return (
     <div className="sample-block">
-      <p className="sample-label">{label}</p>
+      <p className="sample-label" {...tipProps(label, "Each name is a file. The tip shows its path.")}>
+        {label}
+      </p>
       {error ? <pre className="error-body">{error}</pre> : null}
       {catalog ? (
         <div className="sample-list">
           {catalog[list].map((entry) => (
-            <button key={entry.id} type="button" onClick={() => onChoose(entry.path)}>
+            <button key={entry.id} type="button" {...tipProps(entry.title, entry.path)} onClick={() => onChoose(entry.path)}>
               {entry.title}
             </button>
           ))}

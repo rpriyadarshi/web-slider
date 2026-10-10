@@ -1310,7 +1310,7 @@ aside.pane.docked { grid-column: 4; }
 .tip {
   position: fixed;
   z-index: 30;
-  max-width: 280px;
+  max-width: min(440px, calc(100vw - 16px));
   padding: 8px 10px;
   background: var(--paper);
   color: var(--text);
