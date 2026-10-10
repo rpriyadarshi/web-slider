@@ -15,7 +15,7 @@ One talk file. That file is the YAML pane beside the slide. A free-form canvas i
 You do not write:
 
 - `embed.js`, or anything under `public/`. That directory is the served app.
-- `web-slider.config.yaml`. The config names a manifest and, when it includes one, a talk. Home loads a theme and a presentation separately. `--config`, `?config=`, and Load config are the shortcut that names both.
+- `web-slider.config.yaml`. That file is the admin seat. It names `manifest` and `deck`, both relative to the config. Home can still load a theme and a presentation separately. `--config` and Load config open the deck the file names.
 - `manifest.yaml`, marks, or font files. Those are the admin theme. In this repository they ship under `samples/themes/` or `samples/examples/<name>/`. A talk you were asked to write elsewhere does not get a new folder in either place.
 - `manifest.resolved.json`. That is a system cache. People do not edit it.
 - `takenNotes` on a slide, or `answer` on a widget, in a new deck. Those are the presenter session. The browser keeps them until a download or a handout merges them.
@@ -29,7 +29,7 @@ A talk does not carry brand, theme, or fonts. `samples/examples/launch-review.ya
 - **Author deck.** The file you write.
 - **Presenter session.** Answers and taken notes. Leave them out of a new deck.
 
-Boot order is the base install, then a config names a manifest, then someone opens the deck YAML. If the config is missing, or a manifest, brand reference, or mark file is missing, the presenter shows the error and does not substitute another theme.
+Boot order is the base install, then a config names a manifest and a deck. Loading that config opens the deck. If the config is missing, or a manifest, brand reference, mark file, or the deck it names is missing, the presenter shows the error and does not substitute another theme or another talk.
 
 The lockup is the mark plus the wordmark. The presenter draws it in the footer of every slide, including the audience window, and in PDF, Word, and PowerPoint, from the loaded theme. Do not add an image block that repeats the logo. Do not put type sizes, chrome, or a brand on a slide or on the deck.
 

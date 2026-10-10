@@ -70,13 +70,15 @@ const stepField = z.number().int().nonnegative().optional();
 
 export const assetRefSchema = z.string().refine((src) => isAssetRef(src), {
   message:
-    "must be an https URL, a data URI, or a package path such as brand/mark.svg. A filesystem path or ../ cannot be read.",
+    "must be an https URL, a data URI, or a path relative to the file that names it, such as brand/mark.svg. A leading / cannot be read.",
 });
 
 export function isAssetRef(src: string): boolean {
   if (src.startsWith("https://") || src.startsWith("data:")) return true;
-  if (src.startsWith("/") || src.includes("\\") || src.split("/").includes("..")) return false;
-  return /^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(src);
+  if (src.startsWith("/") || src.includes("\\") || src.includes("://")) return false;
+  const parts = src.split("/");
+  if (parts.length === 0 || parts.some((part) => part === "")) return false;
+  return parts.every((part) => part === "." || part === ".." || /^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(part));
 }
 
 const idSchema = z

@@ -104,7 +104,7 @@ slides:
     layout: content
     blocks:
       - type: image
-        src: ../local.png
+        src: /local.png
 `),
     ).toThrow(/package path|cannot be read/);
     expect(() =>

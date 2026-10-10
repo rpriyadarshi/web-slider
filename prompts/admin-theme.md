@@ -16,13 +16,23 @@ Pick one of these. A product theme and an admin overlay are different files.
 
 **Admin overlay.** A folder `samples/examples/<name>/` with `web-slider.config.yaml` and `manifest.yaml`. The manifest sets `brand` to a package name and then sets its own slide colors. Northwind does this: `brand: emporion`, and the config points at `samples/examples/northwind/manifest.yaml`. This is how an admin recolors a product brand without becoming a second product theme. Do not put this folder under `samples/themes/`.
 
-**Config only.** When the install uses a product theme with no color overlay, the config is the whole admin file:
+**Config.** The config names the manifest and the deck. Both values are paths relative to the config file, unless `manifest` is a package name.
+
+```yaml
+manifest: manifest.yaml
+deck: briefing.yaml
+```
+
+`deck` is the talk: a `.yaml`, `.yml`, or `.zip` beside the config. Loading the config opens that talk. Files named inside the manifest are read from the manifest's directory. Files named inside the deck are read from the deck's directory.
+
+A product theme with no color overlay can still use a package name for the manifest, and still names the deck:
 
 ```yaml
 manifest: harbor
+deck: briefing.yaml
 ```
 
-That file is `samples/examples/<name>/web-slider.config.yaml`. It is the path passed to `--config` and the path listed in the catalog.
+That file is `web-slider.config.yaml` beside the talk, or `samples/examples/<name>/web-slider.config.yaml` for a shipped sample. It is the path passed to `--config`.
 
 **Catalog.** `samples/catalog.yaml` lists every install and every talk the screens show. Add an `installs` entry for a config you add. Add an `examples` entry only when you also added a talk, and write that talk with [generate-deck.md](generate-deck.md), not with this file.
 
@@ -35,15 +45,14 @@ You do not write:
 
 ## Config
 
-The config has one key.
+The config has two keys. `manifest` is required. `deck` is required when this config should open a talk.
 
 ```yaml
-manifest: harbor
-# or a site path, when the manifest is an admin overlay:
-# manifest: samples/examples/northwind/manifest.yaml
+manifest: manifest.yaml
+deck: briefing.yaml
 ```
 
-A value with no slash is a package name and loads `samples/themes/<name>/manifest.yaml`. A value with a slash is a site path to a manifest. A filesystem path, a leading `/`, or a `..` segment is rejected. Unknown keys are rejected.
+`manifest: harbor` is a package name and loads `samples/themes/harbor/manifest.yaml`. Any other manifest value, and every `deck` value, is a path relative to this config file: `manifest.yaml`, `briefing.yaml`, `talk/deck.zip`, or `../../../Presentation/Themes/emporion/manifest.yaml`. `.` and `..` are steps in that path. A path cannot start with `/`. Unknown keys are rejected. The config does not inline colors, marks, or fonts.
 
 ## Manifest
 
@@ -72,7 +81,7 @@ brand:
   markDark: mark-on-dark.svg
 ```
 
-`name`, `wordmark`, `accent`, `highlight`, and `mark` are required. `tail` and `markDark` are optional. A mark or font file is an `https` URL, a `data` URI, or a path relative to the manifest that declares it, such as `mark.svg`. A path cannot start with `/` or contain `..`. A path that already starts with `samples/` is kept as a site path, which is how Harbor names `samples/themes/emporion/fonts/Inter-Regular.ttf`.
+`name`, `wordmark`, `accent`, `highlight`, and `mark` are required. `tail` and `markDark` are optional. A mark or font file is an `https` URL, a `data` URI, or a path relative to the manifest that declares it, such as `mark.svg` or `../emporion/fonts/Inter-Regular.ttf`. `.` and `..` are steps in that path. A path cannot start with `/`.
 
 `brand: emporion` does not copy the brand object into your file. The app loads `samples/themes/emporion/manifest.yaml` and uses that package's brand. If that package is missing, the app stops. It does not substitute another brand. A cycle of package names stops the same way.
 
@@ -97,17 +106,17 @@ The lockup is the mark plus the wordmark. The presenter draws it. Do not also dr
 ```yaml
 fonts:
   Inter:
-    regular: samples/themes/emporion/fonts/Inter-Regular.ttf
-    semibold: samples/themes/emporion/fonts/Inter-SemiBold.ttf
+    regular: fonts/Inter-Regular.ttf
+    semibold: fonts/Inter-SemiBold.ttf
   Source Serif 4:
-    regular: samples/themes/emporion/fonts/SourceSerif4-Regular.ttf
-    semibold: samples/themes/emporion/fonts/SourceSerif4-Semibold.ttf
+    regular: fonts/SourceSerif4-Regular.ttf
+    semibold: fonts/SourceSerif4-Semibold.ttf
   JetBrains Mono:
-    regular: samples/themes/emporion/fonts/JetBrainsMono-Regular.ttf
-    semibold: samples/themes/emporion/fonts/JetBrainsMono-Bold.ttf
+    regular: fonts/JetBrainsMono-Regular.ttf
+    semibold: fonts/JetBrainsMono-Bold.ttf
 ```
 
-A product theme shipped in this repository whose `brand` is an object must name these three families, or PDF export cannot load them. The shipped themes point `regular` and `semibold` at the files above.
+A product theme shipped in this repository whose `brand` is an object must name these three families, or PDF export cannot load them. Emporion names `fonts/Inter-Regular.ttf` beside its own manifest. Harbor, Ledger, and Meridian name `../emporion/fonts/Inter-Regular.ttf`, which is the same file relative to their manifest. A path in a file is relative to that file. `..` is a step. The next file repeats the rule from its own directory.
 
 A theme written for another workspace does not use those paths. Its `fonts` entries are files beside its own manifest.
 
@@ -134,7 +143,7 @@ Ids are unique inside each list and use letters, numbers, hyphens, or underscore
 
 Before you finish, confirm:
 
-- The config has only `manifest`.
+- The config names `manifest` and, when it opens a talk, `deck`. Both paths are relative to the config file, except a package name such as `manifest: harbor`.
 - A product theme lives under `samples/themes/<name>/` and its brand is an object with a mark file that exists.
 - An admin overlay lives under `samples/examples/<name>/`, sets `brand` to a package name, and is not a second copy of that package's mark.
 - A theme outside this repository has its own font files. It does not point into `samples/themes/`. A theme shipped in this repository may.

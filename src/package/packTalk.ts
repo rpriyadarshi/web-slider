@@ -3,6 +3,7 @@ import path from "node:path";
 import { rasterFromBytes, rasterFromDeclaredSource } from "../export/images";
 import { highlightLanguageError } from "../highlight";
 import { parseDeck } from "../model/parse";
+import { resolvePath } from "../model/resolvePath";
 import { isAssetRef, type Block, type Deck } from "../model/schema";
 import { checkPackageFiles, packageAssetRefs, readDeckPackage, writeDeckPackage } from "./deckPackage";
 
@@ -47,11 +48,10 @@ export async function packDeckFile(deckPath: string, outPath?: string): Promise<
     problems.push("deck.yaml is the talk inside the package. An image cannot use that path.");
   }
 
-  const talkDir = path.dirname(talk);
   const files = new Map<string, Uint8Array>();
   for (const ref of refs) {
     if (ref === "deck.yaml") continue;
-    const read = await readPackageFile(talkDir, ref);
+    const read = await readPackageFile(talk, ref);
     if ("problem" in read) {
       problems.push(read.problem);
       continue;
@@ -138,19 +138,17 @@ function codeLanguageProblem(slideId: string, block: Block): string | null {
   return problem ? `${slideId}: ${problem}` : null;
 }
 
-async function readPackageFile(talkDir: string, ref: string): Promise<{ bytes: Uint8Array } | { problem: string }> {
+async function readPackageFile(talkFile: string, ref: string): Promise<{ bytes: Uint8Array } | { problem: string }> {
   if (!isAssetRef(ref) || ref.startsWith("https://") || ref.startsWith("data:")) {
     return { problem: `"${ref}" is not a package path the presenter can carry.` };
   }
+  const lexical = resolvePath(talkFile, ref);
+  if (!lexical) return { problem: `Cannot resolve "${ref}" from ${talkFile}.` };
   let root: string;
   try {
-    root = await realpath(talkDir);
+    root = path.dirname(await realpath(talkFile));
   } catch (error) {
-    return { problem: fileError(talkDir, error) };
-  }
-  const lexical = path.resolve(root, ref);
-  if (outside(root, lexical)) {
-    return { problem: `"${ref}" is outside the talk directory.` };
+    return { problem: fileError(talkFile, error) };
   }
   let canonical: string;
   try {
@@ -158,7 +156,7 @@ async function readPackageFile(talkDir: string, ref: string): Promise<{ bytes: U
   } catch {
     return { problem: `The talk names a file that is not beside it: ${ref}.` };
   }
-  if (outside(root, canonical)) {
+  if (!outside(root, lexical) && outside(root, canonical)) {
     return { problem: `"${ref}" is outside the talk directory.` };
   }
   try {

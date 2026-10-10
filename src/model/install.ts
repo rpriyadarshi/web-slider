@@ -1,5 +1,6 @@
 import YAML from "js-yaml";
 import { ZodError, z } from "zod";
+import { resolvePath } from "./resolvePath";
 import {
   brandSchema,
   packageNameSchema,
@@ -18,15 +19,15 @@ import {
 const manifestPathSchema = z
   .string()
   .min(1)
-  .refine((value) => isPackageName(value) || isSiteYamlPath(value), {
-    message: "must be a package name or a site path such as samples/examples/northwind/manifest.yaml",
+  .refine((value) => isPackageName(value) || isRelativeFile(value, /\.ya?ml$/), {
+    message: "must be a package name or a path to a .yaml manifest, relative to this config. A leading / cannot be read.",
   });
 
 const deckPathSchema = z
   .string()
   .min(1)
-  .refine((value) => isSiteDeckPath(value), {
-    message: "must be a site path to a .yaml, .yml, or .zip talk such as talk/deck.zip. A filesystem path or ../ cannot be read.",
+  .refine((value) => isRelativeFile(value, /\.(ya?ml|zip)$/), {
+    message: "must be a path to a .yaml, .yml, or .zip talk, relative to this config. A leading / cannot be read.",
   });
 
 export const configSchema = z
@@ -183,11 +184,6 @@ export function localFileUrl(origin: string, diskPath: string): string {
   return url.href;
 }
 
-/**
- * A file named inside a YAML file, resolved against that YAML file's directory.
- * `https`, `data`, and `samples/` stay as written. A package name is not a file.
- * A relative name joins the directory. `..` is refused.
- */
 /** `file:///home/a/manifest.yaml` from a drop, as a disk path. */
 export function pathFromFileUrl(value: string): string | null {
   const line = value
@@ -206,18 +202,20 @@ export function pathFromFileUrl(value: string): string | null {
 }
 
 export function resolveYamlRef(containerPath: string, ref: string): string | null {
-  if (ref.startsWith("https://") || ref.startsWith("data:") || ref.startsWith("samples/")) return ref;
-  if (ref.startsWith("/") && !ref.includes("\\") && !ref.split("/").includes("..")) return ref;
-  if (isPackageName(ref) || ref.includes("\\") || ref.includes("://") || ref.split("/").includes("..")) return null;
-  if (!/^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(ref)) return null;
-  const slash = containerPath.lastIndexOf("/");
-  if (slash < 0) return null;
-  return `${containerPath.slice(0, slash + 1)}${ref}`;
+  if (isPackageName(ref)) return null;
+  return resolvePath(containerPath, ref);
+}
+
+function isRelativeFile(value: string, suffix: RegExp): boolean {
+  if (!value || value.startsWith("/") || value.includes("\\") || value.includes("://") || !suffix.test(value)) return false;
+  const parts = value.split("/");
+  if (parts.some((part) => part === "")) return false;
+  return parts.every((part) => part === "." || part === ".." || /^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(part));
 }
 
 /** Manifest named by a config file on disk, resolved beside that config. A package name returns null. */
 export function diskManifestPath(configPath: string, manifest: string): string | null {
-  if (!isDiskConfigPath(configPath) || isPackageName(manifest) || manifest.startsWith("samples/") || manifest.startsWith("/")) {
+  if (!isDiskConfigPath(configPath) || isPackageName(manifest) || manifest.startsWith("/")) {
     return null;
   }
   if (!/\.ya?ml$/.test(manifest)) return null;
@@ -226,7 +224,7 @@ export function diskManifestPath(configPath: string, manifest: string): string |
 
 /** Default talk named by a config file on disk, resolved beside that config. A samples/ path returns null. */
 export function diskDeckPath(configPath: string, deck: string): string | null {
-  if (!isDiskConfigPath(configPath) || deck.startsWith("samples/") || deck.startsWith("/")) return null;
+  if (!isDiskConfigPath(configPath) || deck.startsWith("/")) return null;
   if (!/\.(ya?ml|zip)$/.test(deck)) return null;
   return resolveYamlRef(configPath, deck);
 }
@@ -272,7 +270,7 @@ export async function loadInstall(
     configPath ??
     ("path" in request && typeof request.path === "string" && isSiteYamlPath(request.path) ? request.path : "");
   const beside = container ? diskManifestPath(isDiskConfigPath(container) ? container : "", config.manifest) : null;
-  const siteBeside = !beside && container && !isPackageName(config.manifest) && !config.manifest.startsWith("samples/")
+  const siteBeside = !beside && container && !isPackageName(config.manifest)
     ? resolveYamlRef(container, config.manifest)
     : null;
   const loaded = beside
@@ -489,9 +487,12 @@ function locateFonts(fonts: FontMap | undefined, manifestPath: string): FontMap 
 }
 
 function namedFile(container: string, ref: string): string {
-  if (ref.startsWith("https://") || ref.startsWith("data:") || ref.startsWith("samples/")) return ref;
-  const resolved = container ? resolveYamlRef(container, ref) : null;
-  if (resolved) return resolved;
+  if (container.includes("/")) {
+    const resolved = resolveYamlRef(container, ref);
+    if (resolved) return resolved;
+  } else if (!ref.startsWith(".") && !ref.split("/").includes("..")) {
+    return ref;
+  }
   throw new Error(`"${ref}" is named beside ${container || "this file"}, which has no folder. Load that file by its path.`);
 }
 

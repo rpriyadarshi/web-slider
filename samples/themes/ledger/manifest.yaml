@@ -9,14 +9,14 @@ brand:
   markDark: mark-on-dark.svg
 fonts:
   Inter:
-    regular: samples/themes/emporion/fonts/Inter-Regular.ttf
-    semibold: samples/themes/emporion/fonts/Inter-SemiBold.ttf
+    regular: ../emporion/fonts/Inter-Regular.ttf
+    semibold: ../emporion/fonts/Inter-SemiBold.ttf
   Source Serif 4:
-    regular: samples/themes/emporion/fonts/SourceSerif4-Regular.ttf
-    semibold: samples/themes/emporion/fonts/SourceSerif4-Semibold.ttf
+    regular: ../emporion/fonts/SourceSerif4-Regular.ttf
+    semibold: ../emporion/fonts/SourceSerif4-Semibold.ttf
   JetBrains Mono:
-    regular: samples/themes/emporion/fonts/JetBrainsMono-Regular.ttf
-    semibold: samples/themes/emporion/fonts/JetBrainsMono-Bold.ttf
+    regular: ../emporion/fonts/JetBrainsMono-Regular.ttf
+    semibold: ../emporion/fonts/JetBrainsMono-Bold.ttf
 aspect: "16:9"
 showSlideNumber: true
 theme:

@@ -68,8 +68,12 @@ describe("default talk", () => {
 
   it("refuses a deck that is not a site path to a .yaml, .yml, or .zip", () => {
     expect(parseConfig("manifest: emporion\ndeck: talk/deck.yml\n")).toEqual({ manifest: "emporion", deck: "talk/deck.yml" });
-    for (const deck of ["../deck.zip", "/home/author/deck.zip", "talk/deck.pptx", "https://example.com/deck.zip", "talk\\deck.zip"]) {
-      expect(() => parseConfig(`manifest: emporion\ndeck: "${deck.replace(/\\/g, "\\\\")}"\n`)).toThrow(/deck: must be a site path/);
+    expect(parseConfig("manifest: ../../../Presentation/Themes/emporion/manifest.yaml\ndeck: pd-dv.yaml\n")).toEqual({
+      manifest: "../../../Presentation/Themes/emporion/manifest.yaml",
+      deck: "pd-dv.yaml",
+    });
+    for (const deck of ["/home/author/deck.zip", "talk/deck.pptx", "https://example.com/deck.zip", "talk\\deck.zip"]) {
+      expect(() => parseConfig(`manifest: emporion\ndeck: "${deck.replace(/\\/g, "\\\\")}"\n`)).toThrow(/deck:/);
     }
   });
 

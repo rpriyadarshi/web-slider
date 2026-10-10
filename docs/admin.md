@@ -30,20 +30,22 @@ The app will not guess a theme.
 
 A missing config is not replaced with a theme package. A missing manifest, a brand cycle, a missing mark or font, or invalid YAML stops the app and shows the error. It does not substitute another brand. A site path that contains `..` fails validation. An absolute file path is not a site URL. The dev server reads that file and passes its text. The catalog is not involved.
 
-The config is only this:
+The config names the manifest and the deck. Both paths are relative to the config file:
 
 ```yaml
-manifest: samples/examples/northwind/manifest.yaml
+manifest: manifest.yaml
+deck: briefing.yaml
 ```
 
-A name with no slash, such as `manifest: emporion` or `manifest: harbor`, loads `samples/themes/<name>/manifest.yaml`.
+A name with no slash, such as `manifest: emporion` or `manifest: harbor`, loads `samples/themes/<name>/manifest.yaml`. `deck` is still the talk beside the config, or a `.zip` of that talk. Files named inside the manifest are read from the manifest's directory. Files named inside the deck are read from the deck's directory.
 
 ## Two ways to dress the room
 
-**Use a product theme as it ships.** Emporion, Harbor, Ledger, and Meridian are folders under `samples/themes/`. Each has a manifest, a mark, and a dark mark. Your config names the package:
+**Use a product theme as it ships.** Emporion, Harbor, Ledger, and Meridian are folders under `samples/themes/`. Each has a manifest, a mark, and a dark mark. Your config names the package and the talk:
 
 ```yaml
 manifest: harbor
+deck: briefing.yaml
 ```
 
 The sample file for that line is `samples/examples/harbor/web-slider.config.yaml`. Emporion with no color overlay is `samples/examples/emporion/web-slider.config.yaml`.
@@ -142,7 +144,7 @@ npm run share -- \
 
 The package carries `app/talk/web-slider.config.yaml` with `manifest: talk/manifest.yaml` and `deck: talk/deck.zip`. It also carries the marks, the fonts, and the font licences the manifest names, plus the talk. It does not carry `samples/`. The manifest must sit beside the config and carry its own marks; a brand package name is refused. A talk that names a file it does not carry is refused.
 
-`deck:` is optional in any config. When a config sets it, boot opens that talk instead of the stored session, and `?deck=` outranks it. Open, drop, and Blank deck still load other talks under the same theme. Reset to shipped in the toolbar reads the config's talk again and discards edits, notes, and answers in this browser. A reload or a new start also opens the shipped talk, so recipients keep their notes with Export → YAML.
+A config that should open a talk includes `deck`. Boot then opens that talk instead of the stored session, and `?deck=` outranks it. Open, drop, and Blank deck still load other talks under the same theme. Reset to shipped in the toolbar reads the config's talk again and discards edits, notes, and answers in this browser. A reload or a new start also opens the shipped talk, so recipients keep their notes with Export → YAML.
 
 A fresh session shows Examples open and YAML closed. The YAML button is still in the toolbar.
 

@@ -162,6 +162,40 @@ fonts:
     expect(resolveYamlRef(deck ?? "", "figures/a.png")).toBe("/var/house/talks/figures/a.png");
   });
 
+  it("resolves a config path with .. from that config, then the manifest's own files from the manifest", async () => {
+    const configPath = "/a/b/c/d/foo.yaml";
+    const manifestPath = "/a/Presentation/Themes/emporion/manifest.yaml";
+    const fontPath = "/a/Presentation/Themes/emporion/fonts/Inter-Regular.ttf";
+    const fontBold = "/a/Presentation/Themes/emporion/fonts/Inter-SemiBold.ttf";
+    const markPath = "/a/Presentation/Themes/emporion/mark.svg";
+    const manifest = `
+brand:
+  name: Emporion
+  wordmark: EMPORION
+  accent: "#112233"
+  highlight: "#445566"
+  mark: mark.svg
+fonts:
+  Inter:
+    regular: fonts/Inter-Regular.ttf
+    semibold: fonts/Inter-SemiBold.ttf
+`;
+    const { fetchImpl, calls } = routes({
+      [localFileUrl(origin, configPath)]: { status: 200, body: "manifest: ../../../Presentation/Themes/emporion/manifest.yaml\ndeck: pd-dv.yaml\n" },
+      [localFileUrl(origin, manifestPath)]: { status: 200, body: manifest },
+      [localFileUrl(origin, markPath)]: { status: 200, type: "image/svg+xml", body: "<svg></svg>" },
+      [localFileUrl(origin, fontPath)]: { status: 200, type: "font/ttf", body: "ttf" },
+      [localFileUrl(origin, fontBold)]: { status: 200, type: "font/ttf", body: "ttf" },
+    });
+    const install = await loadThemeAt({ fetch: fetchImpl, origin }, configPath);
+    expect(install.manifestPath).toBe(manifestPath);
+    expect(diskDeckPath(configPath, "pd-dv.yaml")).toBe("/a/b/c/d/pd-dv.yaml");
+    expect(install.manifest.brand).toMatchObject({ mark: markPath });
+    expect(install.manifest.fonts?.Inter?.regular).toBe(fontPath);
+    expect(calls).toContain(localFileUrl(origin, fontPath));
+    expect(calls).not.toContain(localFileUrl(origin, "/a/b/c/d/fonts/Inter-Regular.ttf"));
+  });
+
   it("loads the theme named by a config and drops the talk", async () => {
     const { fetchImpl } = routes({
       ...packageAssets(),
@@ -231,7 +265,7 @@ fonts:
   });
 
   it("loads the sample admin config, resolves brand: emporion through samples/themes/emporion/, and the sample talk does not copy them", async () => {
-    expect(shippedConfig).toContain("manifest: samples/examples/northwind/manifest.yaml");
+    expect(shippedConfig).toContain("manifest: manifest.yaml");
     expect(shippedManifest).toContain("brand: emporion");
     const { fetchImpl, calls } = routes({
       [configUrl]: { status: 200, body: shippedConfig },
@@ -433,7 +467,7 @@ brand:
       /failed validation|filesystem path/,
     );
     await expect(loadInstall({ fetch: outside.fetchImpl, origin }, { source: "manifest: ../secret.yaml\n" })).rejects.toThrow(
-      /failed validation|must be/,
+      /no folder/,
     );
     expect(outside.calls).toEqual([]);
 
@@ -513,9 +547,14 @@ brand:
     const cachePath = "/var/talks/acme/manifest.resolved.json";
     expect(diskManifestPath(file, "manifest.yaml")).toBe(manifestPath);
     expect(diskManifestPath(file, "emporion")).toBeNull();
-    expect(diskManifestPath(file, "../secret.yaml")).toBeNull();
+    expect(diskManifestPath(file, "../secret.yaml")).toBe("/var/talks/secret.yaml");
+    expect(diskManifestPath("/home/rohit/src/emporion_ai/Go-To-Market/Customers/socionext/web-slider.config.yaml", "../../../Presentation/Themes/emporion/manifest.yaml")).toBe(
+      "/home/rohit/src/emporion_ai/Presentation/Themes/emporion/manifest.yaml",
+    );
     expect(diskManifestPath(file, "/etc/manifest.yaml")).toBeNull();
-    expect(diskManifestPath(file, "samples/themes/emporion/manifest.yaml")).toBeNull();
+    expect(diskManifestPath(file, "samples/themes/emporion/manifest.yaml")).toBe(
+      "/var/talks/acme/samples/themes/emporion/manifest.yaml",
+    );
     expect(diskResolvedCachePath(manifestPath)).toBe(cachePath);
     expect(diskResolvedCachePath(packageManifestPath)).toBeNull();
     const { fetchImpl, calls } = routes(acmeRoutes(acmeManifest));

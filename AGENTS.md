@@ -10,9 +10,16 @@ You do not add or edit `samples/`, `src/`, `docs/`, `prompts/`, `public/`, or an
 
 Write the talk in the workspace that owns the work, in the directory the user named. If they did not name a directory, ask. Do not choose `samples/` because this repo contains examples. Do not name or guess another workspace's directories.
 
-If that talk needs its own look, the theme is the admin seat: [prompts/admin-theme.md](prompts/admin-theme.md). Prefer a house theme the workspace already keeps for briefings when one exists. Otherwise build the theme beside the talk: `web-slider.config.yaml`, `manifest.yaml`, the mark files, and the font files. Those files belong with the talk. They are not a new product theme in this repository, and they are not an alias of a theme shipped here. Do not set `brand` or font paths at `samples/themes/` in this repository.
+If that talk needs its own look, the theme is the admin seat: [prompts/admin-theme.md](prompts/admin-theme.md). Prefer a house theme the workspace already keeps for briefings when one exists. Otherwise build the theme beside the talk: `web-slider.config.yaml`, `manifest.yaml`, the mark files, and the font files. The config names both files, relative to itself:
 
-The admin seat boots that config with its absolute path. The dev server reads a `.yaml` path that starts with `/`. The browser does not fetch it as a site URL, and `samples/catalog.yaml` is not involved.
+```yaml
+manifest: manifest.yaml
+deck: briefing.yaml
+```
+
+`briefing.yaml` is the talk. Files named inside the manifest are read from the manifest's directory. Files named inside the deck are read from the deck's directory. Those files belong with the talk. They are not a new product theme in this repository, and they are not an alias of a theme shipped here. Do not set `brand` or font paths at `samples/themes/` in this repository.
+
+The admin seat boots that config with its absolute path. The dev server reads a `.yaml` path that starts with `/`. The browser does not fetch it as a site URL, and `samples/catalog.yaml` is not involved. Boot opens the deck the config names.
 
 ```bash
 npm run dev -- --config /absolute/path/to/web-slider.config.yaml

@@ -21,7 +21,7 @@ The human versions of the same seats are [admin.md](admin.md) and [make-slides.m
 
 A talk file holds slides, the speaker script, and questions. The presenter rejects `brand`, `theme`, and `fonts` on that file.
 
-A manifest holds the brand, the colors, the type scale, chrome, and fonts. A config file only names that manifest. A talk does not name a manifest.
+A manifest holds the brand, the colors, the type scale, chrome, and fonts. A config names that manifest and the deck. A relative path in the config is read from the config's directory. A relative path in the manifest is read from the manifest's directory. A relative path in the deck is read from the deck's directory. A talk does not name a manifest.
 
 `public/embed.js` is the served app. Neither seat writes it.
 
@@ -48,7 +48,7 @@ These are the mistakes that make the presenter reject the work, or that put a se
 - A sample admin placed under `samples/themes/`. That directory is product themes. Northwind is an admin and lives under `samples/examples/northwind/`.
 - A talk, theme, config, or catalog line added here because someone asked for slides in another workspace.
 - A theme whose `brand` is a package shipped under `samples/themes/`, or whose font paths point into that directory, so a shipped theme stands in for one that was never built.
-- A config that inlines colors. The config's only key is `manifest`.
+- A config that inlines colors, or that names a manifest and leaves out `deck` when the config is meant to open a talk. The keys are `manifest` and `deck`.
 - A second schema, written in prose or in a new parser, that disagrees with `src/model/schema.ts`.
 - A Mermaid flowchart or sequence pre-rendered to PNG on an `image` block when `type: mermaid` would do. Prefer the native block.
 - A content slide that stacks several visuals (chart + Mermaid + video, or a diagram beside a code block and a callout). The body has room for one visual. A diagram whose labels would fall below the theme footer type is unreadable; split the slide and rebuild the deck. The presenter will not draw it.
@@ -59,4 +59,4 @@ Author checklist: the end of [prompts/generate-deck.md](../prompts/generate-deck
 
 Admin checklist: the end of [prompts/admin-theme.md](../prompts/admin-theme.md).
 
-If you changed both a theme and a talk, confirm the talk still has no brand of its own and that the config points at the manifest you wrote.
+If you changed both a theme and a talk, confirm the talk still has no brand of its own and that the config's `manifest` and `deck` are paths relative to that config file.
