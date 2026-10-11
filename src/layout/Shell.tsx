@@ -6,6 +6,7 @@ import { ExportDownloaded, downloadExportFile, exportFile, hideScratchPath, save
 import { deckToYaml } from "../export/yaml";
 import { shareBuild } from "../model/build";
 import { editParsed, insertBlock, insertSlide, insertWidget, removeParsed } from "../model/insert";
+import { layoutNames } from "../model/regions";
 import { caretSelection, locateProbe, removableNode, selectionTarget, slideIndexInProbe, type ProbePath } from "../model/probe";
 import { resolveTheme, type Block, type Deck, type Widget } from "../model/schema";
 import { clampPane, formatSessionBlock, type DeckSession, type PaneSize, type WidgetAnswer } from "../model/session";
@@ -180,9 +181,9 @@ export function Shell({
     setProbeSelection(null);
   }
 
-  function insertSlideAfterCaret() {
+  function insertSlideAfterCaret(layout = "content") {
     const after = structureSlideIndex();
-    applyInsert((source) => insertSlide(source, after));
+    applyInsert((source) => insertSlide(source, after, layout));
   }
 
   function insertBlockOnSlide(place: "blocks" | "side", type: Block["type"]) {
@@ -1018,6 +1019,7 @@ export function Shell({
             onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: true } }))}
             onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
             onInsertSlide={insertSlideAfterCaret}
+            layouts={layoutNames(deck.theme)}
             onInsertBlock={insertBlockOnSlide}
             onInsertWidget={insertWidgetOnSlide}
             onRemove={removeSelected}
@@ -1104,6 +1106,7 @@ export function Shell({
           onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: false } }))}
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
           onInsertSlide={insertSlideAfterCaret}
+          layouts={layoutNames(deck.theme)}
           onInsertBlock={insertBlockOnSlide}
           onInsertWidget={insertWidgetOnSlide}
           onRemove={removeSelected}

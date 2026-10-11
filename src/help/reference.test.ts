@@ -22,7 +22,8 @@ describe("talk reference", () => {
     expect(TALK.slide.map((field) => field.name)).toEqual(Object.keys(slideSchema.shape));
     const layout = TALK.slide.find((field) => field.name === "layout");
     expect(layout?.optional).toBe(false);
-    expect(layout?.values).toEqual(["title", "section", "content", "quote"]);
+    expect(layout?.about).toMatch(/title, section, content, and quote/);
+    expect(TALK.slide.find((field) => field.name === "regions")?.optional).toBe(true);
     expect(TALK.slide.find((field) => field.name === "subtitle")?.optional).toBe(true);
     const aspect = TALK.deck.find((field) => field.name === "aspect");
     expect(aspect?.values).toEqual(["16:9", "4:3"]);

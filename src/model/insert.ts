@@ -66,16 +66,17 @@ export function usedIds(deck: Deck): Set<string> {
   return ids;
 }
 
-export function insertSlide(source: string, afterIndex: number): InsertResult {
+export function insertSlide(source: string, afterIndex: number, layout = "content"): InsertResult {
   const deck = parseDeck(source);
   if (!Number.isInteger(afterIndex) || afterIndex < 0 || afterIndex >= deck.slides.length) {
     throw new Error("There is no slide at that position.");
   }
+  if (!/^[a-z][a-z0-9-]{0,31}$/.test(layout)) throw new Error("That layout name cannot be used.");
   const index = afterIndex + 1;
   const yaml = insertYamlAt(source, ["slides"], index, {
     id: freshId(usedIds(deck), "slide"),
     title: "Untitled",
-    layout: "content",
+    layout,
   });
   return { yaml, path: ["slides", index] };
 }

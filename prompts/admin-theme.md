@@ -98,8 +98,41 @@ All of these are optional. Colors are `#rrggbb`.
 - `chrome`: `light` or `dark`.
 - `chromeLight` and `chromeDark`: shell colors `ground`, `paper`, `text`, `muted`, `line`. These color the app chrome. They are not slide colors.
 - `type`, in px: `title`, `section`, `slide`, `body`, `sub`, `author`, `table`, `footer`, `wordmark`, `mark`, `caption`. Each is a positive number within the schema maximum. Omitted sizes are title 58, section 52, slide 36, body 22, sub 20, author 16, table 18, footer 14, wordmark 12, mark 22, caption 18.
+- `layouts`: the collection of page maps. Omit it and the presenter uses the default collection below. Manual insert lists every name you define, plus those defaults.
 
 The lockup is the mark plus the wordmark. The presenter draws it. Do not also draw it as an image on a slide. Slide type sizes come from this manifest. The toolbar and the buttons do not.
+
+## Layouts
+
+A layout is a named map of boxes. A box is a percentage of the page: `x`, `y`, `w`, and `h`, each from 0 to 100, and `x + w` and `y + h` stay within 100. Boxes on one layout do not overlap. The footer box and the body box do not share space. A theme may add names (two-column, image-left). A name is letters, numbers, and hyphens.
+
+A theme that omits `layouts` gets this collection. The footer band is the same box on every layout, so the lockup does not move.
+
+- `title` — opening page. Title, subtitle, and author, centered. Footer band.
+- `section` — section break. Centered section title. Footer band.
+- `content` — ordinary page. Title across the top, body in the middle, footer band.
+- `quote` — one-line close, also used as the end page. Centered line and attribution. Footer band.
+
+```yaml
+layouts:
+  title:
+    title: { x: 8, y: 22, w: 84, h: 16 }
+    subtitle: { x: 8, y: 40, w: 84, h: 10 }
+    author: { x: 8, y: 52, w: 84, h: 8 }
+    footer: { x: 6, y: 88, w: 88, h: 8 }
+  section:
+    title: { x: 8, y: 36, w: 84, h: 16 }
+    footer: { x: 6, y: 88, w: 88, h: 8 }
+  content:
+    title: { x: 6, y: 5, w: 88, h: 14 }
+    body: { x: 6, y: 20, w: 88, h: 66 }
+    footer: { x: 6, y: 88, w: 88, h: 8 }
+  quote:
+    body: { x: 10, y: 24, w: 80, h: 52 }
+    footer: { x: 6, y: 88, w: 88, h: 8 }
+```
+
+Region names the presenter places are `title`, `subtitle`, `author`, `body`, `side`, and `footer`. The presenter scales type and graphics inside a box only when the content does not fit, from 1 down to 0.65, then clips. Authors are told to fit at scale 1. Do not build a layout that only works after that shrink.
 
 ## Fonts
 
@@ -149,5 +182,6 @@ Before you finish, confirm:
 - A theme outside this repository has its own font files. It does not point into `samples/themes/`. A theme shipped in this repository may.
 - Every color is `#rrggbb`. Every asset path is `https`, `data`, or a relative path with no `..` and no leading `/`.
 - A new family has a `fonts` entry with a `regular` file.
+- `layouts`, if set, uses percentage boxes that stay on the page and do not overlap. Omitting `layouts` leaves the default title, section, content, and quote maps.
 - `samples/catalog.yaml` has an `installs` entry for the config, and an `examples` entry only for a talk that exists.
 - You did not put `brand`, `theme`, or `fonts` on a talk, and you did not write `embed.js`.

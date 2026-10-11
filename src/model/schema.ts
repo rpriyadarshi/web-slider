@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { boxesOverlap } from "./regions";
 
 export const FONT_NAMES = ["Inter", "Source Serif 4", "JetBrains Mono"] as const;
 export type FontName = (typeof FONT_NAMES)[number];
@@ -35,6 +36,45 @@ const fontNameSchema = z
   .max(80)
   .refine((name) => !/["'<>\n]/.test(name), "font name cannot contain quotes");
 
+const regionNameSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]{0,31}$/, "must be a name of letters, numbers, and hyphens");
+
+export const regionBoxSchema = z
+  .object({
+    x: z.number().min(0).max(100),
+    y: z.number().min(0).max(100),
+    w: z.number().positive().max(100),
+    h: z.number().positive().max(100),
+  })
+  .strict()
+  .superRefine((box, ctx) => {
+    if (box.x + box.w > 100) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "extends past the right edge of the page" });
+    }
+    if (box.y + box.h > 100) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "extends past the bottom edge of the page" });
+    }
+  });
+
+export const regionMapSchema = z.record(regionNameSchema, regionBoxSchema).superRefine((map, ctx) => {
+  const entries = Object.entries(map);
+  if (entries.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "needs at least one region" });
+  }
+  for (let i = 0; i < entries.length; i += 1) {
+    for (let j = i + 1; j < entries.length; j += 1) {
+      const left = entries[i];
+      const right = entries[j];
+      if (left && right && boxesOverlap(left[1], right[1])) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${left[0]} overlaps ${right[0]}` });
+      }
+    }
+  }
+});
+
+export const layoutsSchema = z.record(regionNameSchema, regionMapSchema);
+
 export const themeSchema = colorsSchema
   .extend({
     fontHeading: fontNameSchema.optional(),
@@ -63,6 +103,7 @@ export const themeSchema = colorsSchema
     chrome: z.enum(["light", "dark"]).optional(),
     chromeLight: chromeColorsSchema.optional(),
     chromeDark: chromeColorsSchema.optional(),
+    layouts: layoutsSchema.optional(),
   })
   .strict();
 
@@ -231,7 +272,8 @@ export const slideSchema = z
   .object({
     id: idSchema,
     title: z.string().min(1),
-    layout: z.enum(["title", "section", "content", "quote"]),
+    layout: regionNameSchema,
+    regions: regionMapSchema.optional(),
     subtitle: z.string().optional(),
     notes: z.string().optional(),
     takenNotes: z.string().optional(),
@@ -468,7 +510,7 @@ export type ResolvedTheme = {
   type: { [Key in keyof typeof DEFAULT_TYPE]: number };
 };
 
-export function titleSize(theme: ResolvedTheme, layout: "title" | "section" | "content" | "quote"): number {
+export function titleSize(theme: ResolvedTheme, layout: string): number {
   const base = layout === "title" ? theme.type.title : layout === "section" ? theme.type.section : theme.type.slide;
   return base * theme.headingScale;
 }

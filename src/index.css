@@ -529,9 +529,7 @@ button.primary {
 }
 
 .slide {
-  /* Two regions: body, then the footer. Media cannot paint into the footer row. */
-  --slide-pad-x: 8%;
-  --slide-pad-top: 6%;
+  /* Regions are percentage boxes on the page. They do not overlap, and each clips its own content. */
   position: relative;
   width: 100%;
   height: 100%;
@@ -539,28 +537,43 @@ button.primary {
   border-radius: var(--slide-radius, 16px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   box-sizing: border-box;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  padding: var(--slide-pad-top) var(--slide-pad-x) 0;
+  padding: 0;
 }
 
-.slide-copy {
-  grid-row: 1;
-  min-height: 0;
-  min-width: 0;
+.region {
+  position: absolute;
   overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  --region-scale: 1;
+}
+
+.region-fit {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   animation: rise 180ms ease;
 }
 
-.slide > .captions,
-.slide > .laser {
-  grid-row: 1;
-}
+.region[data-align="center"] { text-align: center; }
+.region[data-align="center"] .bullets { display: inline-block; text-align: left; }
 
-/* Body region fills the row above the footer; stretch blocks share what's left. */
-.layout-content .slide-copy {
+.layout-title .region-fit,
+.layout-section .region-fit,
+.layout-quote .region-fit {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.layout-content .region[data-region="body"] > .region-fit,
+.layout-content .region[data-region="side"] > .region-fit {
+  display: flex;
+  flex-direction: column;
+}
+
+.region .block-slot {
+  max-height: calc(100% * var(--region-scale, 1));
 }
 
 .layout-content .blocks {
@@ -588,7 +601,7 @@ button.primary {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slide-copy { animation: none; }
+  .region-fit { animation: none; }
 }
 
 .slide-title {
@@ -598,51 +611,41 @@ button.primary {
   margin: 0 0 0.3em;
 }
 
-.layout-title .slide-title { font-size: calc(var(--type-title) * var(--heading-scale, 1)); }
-.layout-section .slide-title { font-size: calc(var(--type-section) * var(--heading-scale, 1)); }
-.layout-content .slide-title, .layout-quote .slide-title { font-size: calc(var(--type-slide) * var(--heading-scale, 1)); }
-
-.slide[data-align="center"] .slide-copy { text-align: center; }
-.slide[data-align="center"] .bullets { display: inline-block; text-align: left; }
+.layout-title .slide-title { font-size: calc(var(--type-title) * var(--heading-scale, 1) * var(--region-scale, 1)); }
+.layout-section .slide-title { font-size: calc(var(--type-section) * var(--heading-scale, 1) * var(--region-scale, 1)); }
+.layout-content .slide-title, .layout-quote .slide-title { font-size: calc(var(--type-slide) * var(--heading-scale, 1) * var(--region-scale, 1)); }
 
 .slide-sub, .slide-author {
   margin: 0 0 0.6em;
   color: var(--slide-muted);
   font-family: var(--slide-body), sans-serif;
-  font-size: var(--type-sub);
+  font-size: calc(var(--type-sub) * var(--region-scale, 1));
 }
 
-.slide-author { font-size: var(--type-author); }
+.slide-author { font-size: calc(var(--type-author) * var(--region-scale, 1)); }
 
 .layout-section .slide-title, .layout-title .slide-title, .layout-quote .slide-title {
   position: relative;
 }
 
-.layout-section .slide-copy,
-.layout-title .slide-copy,
-.layout-quote .slide-copy {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: grid;
-  align-content: center;
-}
-
 .blocks { display: grid; gap: 14px; }
 .paragraph, .bullets, .quote p, .callout, .pull-quote p {
   font-family: var(--slide-body), sans-serif;
-  font-size: var(--type-body);
+  font-size: calc(var(--type-body) * var(--region-scale, 1));
   line-height: 1.35;
   margin: 0;
 }
 
 .bullets, .numbered { padding-left: 1.2em; }
 .bullets li + li, .numbered li + li { margin-top: 0.35em; }
+/* A button computes as inline-block, and that box's baseline is its last line, so the marker was landing there. */
+.bullets .text-edit, .numbered .text-edit { display: block; width: 100%; text-align: inherit; }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--slide-body), sans-serif;
-  font-size: var(--type-table);
+  font-size: calc(var(--type-table) * var(--region-scale, 1));
 }
 
 .data-table th, .data-table td {
@@ -664,7 +667,7 @@ button.primary {
 .chart rect { fill: var(--slide-accent); }
 .chart text {
   fill: var(--slide-muted);
-  font-size: var(--type-footer);
+  font-size: calc(var(--type-footer) * var(--region-scale, 1));
   font-family: var(--slide-body), sans-serif;
 }
 .figure video {
@@ -699,7 +702,7 @@ button.primary {
   background: var(--slide-surface);
   color: var(--slide-text);
   font-family: var(--slide-body), sans-serif;
-  font-size: var(--type-caption);
+  font-size: calc(var(--type-caption) * var(--region-scale, 1));
   line-height: 1.35;
 }
 
@@ -718,25 +721,26 @@ button.primary {
   border: none;
   padding: 0;
   font: inherit;
-  font-size: var(--type-body);
+  font-size: calc(var(--type-body) * var(--region-scale, 1));
   text-decoration: underline;
   width: auto;
 }
 
 .slide-footer {
-  grid-row: 2;
-  position: static;
-  height: auto;
   margin: 0;
-  padding: 0.45em 0 0.7em;
+  padding: 0;
+  font-family: var(--slide-body), sans-serif;
+  font-size: calc(var(--type-footer) * var(--region-scale, 1));
+  color: var(--slide-muted);
+  pointer-events: none;
+}
+
+.region.slide-footer > .region-fit {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  font-family: var(--slide-body), sans-serif;
-  font-size: var(--type-footer);
-  color: var(--slide-muted);
-  pointer-events: none;
 }
 
 .slide-footer a,
@@ -752,10 +756,10 @@ button.primary {
   min-width: 0;
 }
 
-.slide-footer .lockup img { width: var(--type-mark); height: var(--type-mark); }
+.slide-footer .lockup img { width: calc(var(--type-mark) * var(--region-scale, 1)); height: calc(var(--type-mark) * var(--region-scale, 1)); }
 .slide-footer .wordmark {
   font-family: var(--slide-body), sans-serif;
-  font-size: var(--type-wordmark);
+  font-size: calc(var(--type-wordmark) * var(--region-scale, 1));
   color: var(--slide-text);
 }
 
@@ -789,7 +793,7 @@ button.primary {
   box-shadow: none;
   overflow: hidden;
 }
-.next-preview .slide-copy { animation: none; }
+.next-preview .region-fit { animation: none; }
 
 .audience { height: 100dvh; background: #000; }
 .audience .stage {
@@ -811,7 +815,7 @@ button.primary {
 .quote footer, .pull-quote footer, .figure figcaption {
   margin-top: 8px;
   color: var(--slide-muted);
-  font-size: var(--type-footer);
+  font-size: calc(var(--type-footer) * var(--region-scale, 1));
   font-family: var(--slide-body), sans-serif;
 }
 
@@ -824,7 +828,7 @@ button.primary {
 
 .pull-quote p {
   font-family: var(--slide-heading), serif;
-  font-size: calc(var(--type-slide) * var(--heading-scale, 1));
+  font-size: calc(var(--type-slide) * var(--heading-scale, 1) * var(--region-scale, 1));
   line-height: 1.2;
 }
 
@@ -876,7 +880,7 @@ button.primary {
   text-align: center;
   color: var(--slide-text);
   font-family: var(--slide-body), sans-serif;
-  font-size: var(--type-body);
+  font-size: calc(var(--type-body) * var(--region-scale, 1));
   background: var(--slide-bg, transparent);
 }
 .layout-content .mermaid-figure {
@@ -909,7 +913,7 @@ button.primary {
   flex: 0 0 auto;
   margin: 0;
   max-width: 100%;
-  font-size: var(--type-caption, 14px);
+  font-size: calc(var(--type-caption, 14px) * var(--region-scale, 1));
   color: var(--slide-muted);
 }
 
@@ -917,7 +921,7 @@ button.primary {
   margin: 0;
   text-align: left;
   font-family: var(--slide-mono), monospace;
-  font-size: 14px;
+  font-size: calc(14px * var(--region-scale, 1));
   line-height: 1.45;
   background: var(--slide-surface) !important;
   color: var(--slide-text);

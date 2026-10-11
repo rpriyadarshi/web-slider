@@ -63,7 +63,7 @@ describe("yaml key docs", () => {
     expect(yamlKeyDoc(source, source.indexOf("autoAdvance") + 3)?.text).toMatch(/Optional/);
 
     const layout = yamlKeyDoc(source, source.indexOf("layout"));
-    expect(layout?.text).toMatch(/One of: title, section, content, quote/);
+    expect(layout?.text).toMatch(/title, section, content, and quote/);
     expect(layout?.text).toMatch(/Required/);
 
     expect(yamlKeyDoc(source, source.indexOf("step"))?.text).toMatch(/build/);

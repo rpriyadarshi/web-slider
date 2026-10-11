@@ -84,7 +84,11 @@ footer: Launch Review      # optional line beside the lockup
 slides:
   - id: intro
     title: Welcome
-    layout: title          # title, section, content, quote
+    layout: title          # a name from the theme's layout collection
+    # regions:             # optional; this slide's own boxes, percentages of the page
+    #   title: { x: 6, y: 5, w: 88, h: 14 }
+    #   body: { x: 6, y: 20, w: 88, h: 66 }
+    #   footer: { x: 6, y: 88, w: 88, h: 8 }
     subtitle: Optional
     notes: Speaker script, shown read-only.
     hidden: false          # true keeps the slide in the outline but out of the talk and exports
@@ -98,7 +102,7 @@ slides:
 
 Every object is strict. An unknown key rejects the file. Slide ids are unique in the deck. Widget ids are unique on that slide. At least one slide.
 
-The manifest, which you do not write, supplies the brand, the type scale, chrome, the default aspect (`16:9` or `4:3`), and fonts. Every slide is that aspect. Content that does not fit is clipped; the page does not grow into a taller ratio. Built-in faces are Inter, Source Serif 4, and JetBrains Mono. The package's `fonts` map names the files. The shipped files are in `samples/themes/emporion/fonts/`. A font family that is not built in needs a `fonts` entry with a `regular` file on the manifest. That is an admin file, not the deck.
+The manifest, which you do not write, supplies the brand, the type scale, chrome, the layout collection, the default aspect (`16:9` or `4:3`), and fonts. Every slide is that aspect. Use a theme layout, or set `regions` on that slide when the page needs its own arrangement. `regions` is placement, not a second theme: you still do not set colors, type sizes, or chrome. Write so the type and the graphic fit those boxes at scale 1. Do not depend on autoscale. The presenter will shrink a region if the page is too full, down to 0.65, and then clip what still overflows. The page does not grow into a taller ratio. Built-in faces are Inter, Source Serif 4, and JetBrains Mono. The package's `fonts` map names the files. The shipped files are in `samples/themes/emporion/fonts/`. A font family that is not built in needs a `fonts` entry with a `regular` file on the manifest. That is an admin file, not the deck.
 
 Colors are `#rrggbb`. A slide `theme` may set only `background`, `surface`, `text`, `muted`, and `accent`.
 
@@ -137,7 +141,9 @@ Keep prompts short. One decision per slide is enough. Use `notes` for the speake
 
 Five to twelve slides. Open with `layout: title`, use `section` as a break, and put the ask on a `content` slide with a widget. Side content is a short reference or a short code block, not a second essay.
 
-The page has three regions, and they do not share height. The title sits at the top of the body. One visual fills the rest of the body: one chart, or one Mermaid diagram, or one image, or one video. The footer is the lockup and the slide number; the presenter draws it from the theme. A short paragraph, callout, or caption may sit with that visual. A second visual goes on the next slide, or in `side` when it is only reference.
+Pick a layout from the theme (`title`, `section`, `content`, `quote`, or another name that theme defines), or set `regions` on the slide. A box is `x`, `y`, `w`, and `h`, each a percentage of the page from 0 to 100. Boxes on one slide do not overlap. The footer box and the body box do not share space. One visual fills the body: one chart, or one Mermaid diagram, or one image, or one video. The footer is the lockup and the slide number; the presenter draws it from the theme. A short paragraph, callout, or caption may sit with that visual. A second visual goes on the next slide, or in `side` when it is only reference.
+
+Write the slide so it fits at scale 1. The presenter scales a region down only when the content does not fit, and it stops at 0.65. That shrink is a safety net, not a layout tool. Do not fill a box and expect the type to be reduced for you.
 
 A diagram is readable when its labels stay at least as large as the theme footer type. The presenter will not draw a smaller one — that is an icon, not a figure. When the labels would shrink below that, split the slide and rebuild the deck. Do not stack a diagram with a code block and a callout and expect the diagram to survive. If the slide would need a scrollbar, it is too dense: cut or split.
 
@@ -152,7 +158,7 @@ Before you finish, confirm:
 - `npm run pack -- --deck` on this talk exited 0. You did not write a zip script of your own.
 - When pack prints a package path, that zip is what you open. When it says no zip was written, the YAML is what you open.
 - Diagrams that Mermaid can draw use `type: mermaid` with `source`. You did not pre-render those to PNG. Other diagram tools use PNG or JPEG on `image` blocks.
-- Every slide fits the theme aspect without relying on scroll. Each content slide has one visual in the body region. A diagram's labels stay at least as large as the theme footer type. When they would not, the slide was split instead of shrunk.
+- Every slide uses a theme layout, or its own `regions` map. The type and the graphic fit those boxes at scale 1. You did not rely on autoscale. Each content slide has one visual in the body region. A diagram's labels stay at least as large as the theme footer type. When they would not, the slide was split instead of shrunk.
 - Every video src and every link href is `https://`.
 - Every link has either an href or a slide id, not both, and the slide id exists.
 - Every chart has one value per label, and every table row has one cell per header.

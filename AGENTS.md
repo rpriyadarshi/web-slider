@@ -39,7 +39,7 @@ That command is the presenter's check. It parses the talk with `deckSchema`, and
 
 ### Aspect
 
-The theme manifest sets `aspect` (`16:9` or `4:3`). Every slide shares that page. The page has three regions: the title, one visual that fills the rest of the body, and the footer the presenter draws. Do not write decks that need a taller or scrolling stage to show the content. One primary visual per content slide; put a second visual on the next slide or in `side`. A Mermaid diagram whose labels would render smaller than the theme footer type does not fit: split the slide. The presenter will not draw that diagram. Author checklist: [prompts/generate-deck.md](prompts/generate-deck.md).
+The theme manifest sets `aspect` (`16:9` or `4:3`). Every slide shares that page. Theme agents build the layout collection: named maps of percentage boxes. Deck agents either pick a layout or set `regions` on that slide. Both write so the type and the graphic fit at scale 1. The presenter shrinks a region only when they miss, down to 0.65. Do not write decks that need a taller or scrolling stage to show the content. One primary visual per content slide; put a second visual on the next slide or in `side`. A Mermaid diagram whose labels would render smaller than the theme footer type does not fit: split the slide. The presenter will not draw that diagram. Author checklist: [prompts/generate-deck.md](prompts/generate-deck.md). Theme checklist: [prompts/admin-theme.md](prompts/admin-theme.md).
 
 ### Diagrams
 

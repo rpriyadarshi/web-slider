@@ -1,10 +1,12 @@
 import { BrandLockup, resolveBrand, withAssetUrls } from "../brand/kit";
 import type { Deck, Slide } from "../model/schema";
 import { resolveTheme } from "../model/schema";
+import { slideRegions } from "../model/regions";
 import { isRevealed, visibleIndexes, visibleNumber } from "../model/steps";
 import { isDarkHex } from "../highlight";
 import { bindProbe, type ProbePath } from "../model/probe";
 import { Blocks, EditableText } from "./Blocks";
+import { Region } from "./Region";
 
 export function SlideView({
   deck,
@@ -40,11 +42,16 @@ export function SlideView({
   const quoteCandidate = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
   const quote = quoteCandidate && isRevealed(quoteCandidate.step, revealed) ? quoteCandidate : undefined;
   const dark = isDarkHex(theme.background);
+  const regions = slideRegions(deck.theme, slide);
+  const layoutClass = slide.layout === "title" || slide.layout === "section" || slide.layout === "quote" ? slide.layout : "content";
+  const align = layoutClass === "content" ? theme.align : "center";
+  const titleInBody = !regions.title;
 
   return (
     <article
-      className={`slide layout-${slide.layout}`}
-      data-align={slide.layout === "content" ? theme.align : "center"}
+      className={`slide layout-${layoutClass}`}
+      data-layout={slide.layout}
+      data-align={align}
       data-aspect={deck.aspect ?? "16:9"}
       onPointerMove={
         onLaserMove
@@ -85,58 +92,94 @@ export function SlideView({
         ...(brand ? { ["--highlight" as string]: brand.highlight } : {}),
       }}
     >
-      <div className="slide-copy" key={slide.id}>
-        <h1 className="slide-title" {...bindProbe(["slides", slideIndex, "title"], probe, onProbe)}>
-          <EditableText
-            text={slide.title}
-            onSelect={onProbe ? () => onProbe(["slides", slideIndex, "title"]) : undefined}
-            onCommit={onEditTitle}
-          />
-        </h1>
-        {slide.subtitle ? (
+      {regions.title ? (
+        <Region name="title" box={regions.title} align={align}>
+          <h1 className="slide-title" {...bindProbe(["slides", slideIndex, "title"], probe, onProbe)}>
+            <EditableText
+              text={slide.title}
+              onSelect={onProbe ? () => onProbe(["slides", slideIndex, "title"]) : undefined}
+              onCommit={onEditTitle}
+            />
+          </h1>
+          {!regions.subtitle && slide.subtitle ? (
+            <p className="slide-sub" {...bindProbe(["slides", slideIndex, "subtitle"], probe, onProbe)}>
+              {slide.subtitle}
+            </p>
+          ) : null}
+          {!regions.author && slide.layout === "title" && deck.author ? (
+            <p className="slide-author" {...bindProbe(["author"], probe, onProbe)}>
+              {deck.author}
+            </p>
+          ) : null}
+        </Region>
+      ) : null}
+      {regions.subtitle && slide.subtitle ? (
+        <Region name="subtitle" box={regions.subtitle} align={align}>
           <p className="slide-sub" {...bindProbe(["slides", slideIndex, "subtitle"], probe, onProbe)}>
             {slide.subtitle}
           </p>
-        ) : null}
-        {slide.layout === "title" && deck.author ? (
+        </Region>
+      ) : null}
+      {regions.author && slide.layout === "title" && deck.author ? (
+        <Region name="author" box={regions.author} align={align}>
           <p className="slide-author" {...bindProbe(["author"], probe, onProbe)}>
             {deck.author}
           </p>
-        ) : null}
-        {quote && quote.type === "quote" ? (
-          <blockquote
-            className="pull-quote"
-            {...bindProbe(["slides", slideIndex, "blocks", slide.blocks?.indexOf(quote) ?? 0], probe, onProbe)}
-          >
-            <p>{quote.text}</p>
-            {quote.attribution ? <footer>{quote.attribution}</footer> : null}
-          </blockquote>
-        ) : null}
-        <Blocks
-          blocks={slide.blocks}
-          skip={quote}
-          revealed={revealed}
-          dark={dark}
-          onOpenSlide={onOpenSlide}
-          onEditItem={onEditItem}
-          slideIndex={slideIndex}
-          probe={probe}
-          onProbe={onProbe}
-        />
-      </div>
-      {caption ? <p className="captions">{caption}</p> : null}
+        </Region>
+      ) : null}
+      {regions.body ? (
+        <Region name="body" box={regions.body} align={align}>
+          {titleInBody ? (
+            <h1 className="slide-title" {...bindProbe(["slides", slideIndex, "title"], probe, onProbe)}>
+              <EditableText
+                text={slide.title}
+                onSelect={onProbe ? () => onProbe(["slides", slideIndex, "title"]) : undefined}
+                onCommit={onEditTitle}
+              />
+            </h1>
+          ) : null}
+          {quote && quote.type === "quote" ? (
+            <blockquote
+              className="pull-quote"
+              {...bindProbe(["slides", slideIndex, "blocks", slide.blocks?.indexOf(quote) ?? 0], probe, onProbe)}
+            >
+              <p>{quote.text}</p>
+              {quote.attribution ? <footer>{quote.attribution}</footer> : null}
+            </blockquote>
+          ) : null}
+          <Blocks
+            blocks={slide.blocks}
+            skip={quote}
+            revealed={revealed}
+            dark={dark}
+            onOpenSlide={onOpenSlide}
+            onEditItem={onEditItem}
+            slideIndex={slideIndex}
+            probe={probe}
+            onProbe={onProbe}
+          />
+          {caption ? <p className="captions">{caption}</p> : null}
+        </Region>
+      ) : null}
+      {regions.side && slide.side?.length ? (
+        <Region name="side" box={regions.side} align={layoutClass === "content" ? theme.align : "left"}>
+          <Blocks blocks={slide.side} revealed={revealed} dark={dark} onOpenSlide={onOpenSlide} slideIndex={slideIndex} />
+        </Region>
+      ) : null}
       {laser ? <span className="laser" style={{ left: `${laser.x * 100}%`, top: `${laser.y * 100}%` }} /> : null}
-      <footer className="slide-footer">
-        <span className="slide-brand">
-          {brand ? <BrandLockup brand={brand} mode={dark ? "dark" : "light"} /> : null}
-          {deck.footer ? <span {...bindProbe(["footer"], probe, onProbe)}>{deck.footer}</span> : null}
-        </span>
-        {deck.showSlideNumber === false ? null : (
-          <span>
-            {visibleNumber(deck, deck.slides.indexOf(slide)) ?? ""} / {visibleIndexes(deck).length}
+      {regions.footer ? (
+        <Region name="footer" box={regions.footer} align="left" className="slide-footer">
+          <span className="slide-brand">
+            {brand ? <BrandLockup brand={brand} mode={dark ? "dark" : "light"} /> : null}
+            {deck.footer ? <span {...bindProbe(["footer"], probe, onProbe)}>{deck.footer}</span> : null}
           </span>
-        )}
-      </footer>
+          {deck.showSlideNumber === false ? null : (
+            <span>
+              {visibleNumber(deck, deck.slides.indexOf(slide)) ?? ""} / {visibleIndexes(deck).length}
+            </span>
+          )}
+        </Region>
+      ) : null}
     </article>
   );
 }

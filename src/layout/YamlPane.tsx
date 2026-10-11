@@ -116,6 +116,7 @@ export function YamlPane({
   onPin,
   onHide,
   onInsertSlide,
+  layouts,
   onInsertBlock,
   onInsertWidget,
   onRemove,
@@ -139,7 +140,8 @@ export function YamlPane({
   onCaret: (offset: number, jump: boolean) => void;
   onPin: () => void;
   onHide: () => void;
-  onInsertSlide: () => void;
+  onInsertSlide: (layout: string) => void;
+  layouts: string[];
   onInsertBlock: (place: "blocks" | "side", type: Block["type"]) => void;
   onInsertWidget: (type: Widget["type"]) => void;
   onRemove: () => void;
@@ -320,9 +322,12 @@ export function YamlPane({
             </IconButton>
             {menuOpen ? (
               <div className="insert-menu" role="menu" aria-label="Insert">
-                <button type="button" role="menuitem" {...menuItem("Slide", slideTip, insertBlocked, onInsertSlide)}>
-                  Slide
-                </button>
+                <p className="insert-label">Slides</p>
+                {layouts.map((name) => (
+                  <button key={name} type="button" role="menuitem" {...menuItem(name, `${slideTip} Uses the ${name} layout.`, insertBlocked, () => onInsertSlide(name))}>
+                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                  </button>
+                ))}
                 <p className="insert-label">Blocks</p>
                 {BLOCK_KINDS.map((type) => (
                   <button key={`blocks-${type}`} type="button" role="menuitem" {...menuItem(BLOCK_LABEL[type], `${blockDoc(type).about} Adds it to the slide.`, insertBlocked, () => onInsertBlock("blocks", type))}>

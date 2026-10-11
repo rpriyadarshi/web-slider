@@ -61,7 +61,8 @@ const DECK: { [K in keyof DeckTalk]: string } = {
 const SLIDE: { [K in keyof Slide]: string } = {
   id: `${ID} Unique in the talk.`,
   title: "The heading on the slide.",
-  layout: "How the slide is arranged.",
+  layout: "The theme layout for this slide. Built-in names are title, section, content, and quote. A theme may add more.",
+  regions: "This slide's own boxes, as percentages of the page. Each box is x, y, w, and h from 0 to 100. Boxes do not overlap. Leave it out to use the theme layout.",
   subtitle: "A second line under the title.",
   notes: "The speaker script. Shown to you, not on the audience window.",
   takenNotes: "Notes taken during the talk. Leave this out of a new talk. A download puts it back.",
@@ -248,7 +249,7 @@ function describeField(name: string, schema: z.ZodTypeAny, about: string): Field
     doc.values = [String(inner.value)];
   } else if (inner instanceof z.ZodEnum) {
     doc.values = [...inner.options];
-  } else if (inner instanceof z.ZodString || inner instanceof z.ZodNumber || inner instanceof z.ZodBoolean) {
+  } else if (inner instanceof z.ZodString || inner instanceof z.ZodNumber || inner instanceof z.ZodBoolean || inner instanceof z.ZodRecord) {
     return doc;
   } else if (inner instanceof z.ZodObject) {
     const fields = NESTED[name];

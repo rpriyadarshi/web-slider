@@ -15,6 +15,7 @@ import {
   type FontMap,
   type ThemeInput,
 } from "./schema";
+import { resolveLayouts } from "./regions";
 
 const manifestPathSchema = z
   .string()
@@ -94,6 +95,7 @@ export function completeTheme(theme: ThemeInput | undefined): ThemeInput {
     headingScale: theme?.headingScale ?? DEFAULT_THEME.headingScale,
     radius: theme?.radius ?? DEFAULT_THEME.radius,
     type: { ...DEFAULT_THEME.type, ...definedFields(theme?.type) },
+    layouts: resolveLayouts(theme),
   };
   return {
     ...resolved,
