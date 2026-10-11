@@ -571,15 +571,17 @@ export function Shell({
           </IconButton>
         </div>
         <div className="toolbar-actions" hidden={embed}>
-          <p className="timer" aria-label="Clock" {...tipProps(control("clock").label, control("clock").about)}>
-            {clock}
-          </p>
-          <p className="timer" aria-label="Elapsed time" {...tipProps(control("elapsed").label, control("elapsed").about)}>
-            {formatElapsed(elapsed)}
-          </p>
-          <IconButton label={control("restart").label} tip={control("restart").about} onClick={restart}>
-            <Icon name="restart" />
-          </IconButton>
+          <div className="timer-cluster">
+            <p className="timer timer-clock" aria-label="Clock" {...tipProps(control("clock").label, control("clock").about)}>
+              {clock}
+            </p>
+            <p className="timer timer-elapsed" aria-label="Elapsed time" {...tipProps(control("elapsed").label, control("elapsed").about)}>
+              {formatElapsed(elapsed)}
+            </p>
+            <IconButton label={control("restart").label} tip={control("restart").about} onClick={restart}>
+              <Icon name="restart" />
+            </IconButton>
+          </div>
           {blank ? (
             <p className="timer" {...tipProps(`Audience is ${blank}`, blankTip(blank))}>
               Audience is {blank}

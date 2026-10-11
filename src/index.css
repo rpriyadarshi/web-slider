@@ -338,6 +338,27 @@ button.primary {
   font-size: 13px;
 }
 
+.timer-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.timer-clock, .timer-elapsed {
+  flex: 0 0 auto;
+  box-sizing: content-box;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+  overflow: hidden;
+}
+
+/* Wide enough for "12:00 PM" and "100:00" so the toolbar wrap does not move. */
+.timer-clock { width: 9ch; }
+.timer-elapsed { width: 6ch; }
+
 .font-limit { margin: 0; max-width: 220px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 
 .progress {
