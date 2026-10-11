@@ -58,6 +58,24 @@ describe("runnable package", () => {
     await expect(readFile(path.join(app, "talk/fonts/Unused-Regular.ttf"))).rejects.toThrow();
   });
 
+  it("reads a manifest the config names with ..", async () => {
+    const house = path.join(dir, "Presentation", "Themes", "emporion");
+    const talk = path.join(dir, "Go-To-Market", "Customers", "socionext");
+    await mkdir(path.join(house, "fonts"), { recursive: true });
+    await mkdir(talk, { recursive: true });
+    await writeFile(
+      path.join(house, "manifest.yaml"),
+      ["brand:", "  name: Test", "  mark: mark.svg", "fonts:", "  Inter:", "    regular: fonts/Inter-Regular.ttf", ""].join("\n"),
+    );
+    await writeFile(path.join(house, "mark.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");
+    await writeFile(path.join(house, "fonts", "Inter-Regular.ttf"), "font");
+    const config = path.join(talk, "web-slider.config.yaml");
+    await writeFile(config, "manifest: ../../../Presentation/Themes/emporion/manifest.yaml\ndeck: pd-dv.yaml\n");
+    const theme = await readTheme(config);
+    expect(theme.manifestDir).toBe(house);
+    expect(theme.files).toEqual(expect.arrayContaining(["mark.svg", "fonts/Inter-Regular.ttf"]));
+  });
+
   it("requires the built index to carry the staged config path", () => {
     expect(() => checkIndex(`<html data-slider-config="${STAGED_CONFIG}" lang="en">`)).not.toThrow();
     expect(() => checkIndex(`<html lang="en">`)).toThrow(/data-slider-config/);

@@ -51,12 +51,12 @@ export async function readTheme(configPath) {
   const config = readMapping(await readFile(configPath, "utf8"), configPath);
   const extra = Object.keys(config).filter((key) => key !== "manifest" && key !== "deck");
   if (extra.length > 0) throw new Error(`Config ${configPath} has keys a config does not carry: ${extra.join(", ")}.`);
-  if (typeof config.manifest !== "string" || !besideRef(config.manifest) || !/\.ya?ml$/.test(config.manifest)) {
+  if (typeof config.manifest !== "string" || !relativeManifest(config.manifest)) {
     throw new Error(
-      `Config ${configPath}: manifest must name a manifest beside the config. A package name or a samples/ path is not carried into a runnable package.`,
+      `Config ${configPath}: manifest must be a path to a .yaml manifest, relative to this config. A package name or a samples/ path is not carried into a runnable package.`,
     );
   }
-  const manifestPath = path.join(path.dirname(configPath), config.manifest);
+  const manifestPath = path.resolve(path.dirname(configPath), config.manifest);
   const manifestYaml = await readFile(manifestPath, "utf8");
   const manifest = readMapping(manifestYaml, manifestPath);
   if (!manifest.brand || typeof manifest.brand !== "object" || Array.isArray(manifest.brand)) {
@@ -238,6 +238,19 @@ function readMapping(text, label) {
 
 function isPackedRef(value) {
   return typeof value === "string" && value !== "" && !value.startsWith("https://") && !value.startsWith("data:");
+}
+
+function relativeManifest(ref) {
+  return (
+    typeof ref === "string" &&
+    ref.trim() === ref &&
+    !ref.startsWith("/") &&
+    !ref.startsWith("samples/") &&
+    !ref.includes("\\") &&
+    !ref.includes("://") &&
+    /\.ya?ml$/.test(ref) &&
+    ref.split("/").every((part) => part === "." || part === ".." || part.length > 0)
+  );
 }
 
 function besideRef(ref) {

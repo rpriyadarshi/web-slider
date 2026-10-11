@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { hideScratchPath } from "../export/saveFile";
 import { SHARE_COMMAND_HEADER, shareCommand } from "../export/runnable";
+import { openDiskFile } from "./localFile";
 
 export const SHARE_ROUTE = "/__slider/share";
 
@@ -34,13 +35,23 @@ export function shareRoute(options: ShareRouteOptions) {
       reply(res, 415, "Runnable package takes the open talk as application/zip.");
       return;
     }
-    const refused = shareRefusal(options.configPath, url.searchParams.get("name"));
+    const requested = (url.searchParams.get("config") ?? "").trim();
+    let configPath = options.configPath;
+    if (requested) {
+      const opened = openDiskFile("config", requested);
+      if (!opened.ok) {
+        reply(res, opened.status, opened.message);
+        return;
+      }
+      configPath = opened.path;
+    }
+    const refused = shareRefusal(configPath, url.searchParams.get("name"));
     if (refused) {
       reply(res, 400, refused);
       return;
     }
     const name = `${url.searchParams.get("name")}-presenter`;
-    void buildShare(req, name, options).then(
+    void buildShare(req, name, { ...options, configPath }).then(
       (built) => {
         res.statusCode = 200;
         res.setHeader("Content-Type", "application/zip");
@@ -62,9 +73,8 @@ export function exportErrorText(message: string): string {
 }
 
 export function shareRefusal(configPath: string, name: string | null): string | null {
-  if (!path.isAbsolute(configPath) || !/\.ya?ml$/.test(configPath)) {
-    const started = configPath ? `--config ${configPath}` : "no --config";
-    return `Runnable package needs a theme on disk. Start the server with --config /absolute/path/to/web-slider.config.yaml; this one was started with ${started}.`;
+  if (!path.isAbsolute(configPath) || !/\.ya?ml$/.test(configPath) || configPath.split("/").includes("..")) {
+    return "Runnable package needs the loaded theme's config on disk. Load that web-slider.config.yaml, or start the server with --config /absolute/path/to/web-slider.config.yaml.";
   }
   if (!name || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) {
     return `Runnable package needs the talk id as its name; "${name ?? ""}" is not a file name.`;

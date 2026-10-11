@@ -77,6 +77,8 @@ export type Install = {
   manifestPath: string;
   manifest: ResolvedManifest;
   assetUrls: Map<string, string>;
+  /** Absolute config on disk that named this theme, when one was loaded. */
+  configPath?: string;
   /** The talk the config opens by default: a site path, or a disk path beside a config on disk. */
   deckPath?: string;
 };
@@ -282,8 +284,15 @@ export async function loadInstall(
       : isPackageName(config.manifest)
         ? await loadManifestAt(env, origin, packageManifestPath(config.manifest), missingPackage)
         : await loadManifestAt(env, origin, namedFile(container, config.manifest), missingManifest);
-  if (!config.deck) return loaded;
-  return { ...loaded, deckPath: (configPath ? diskDeckPath(configPath, config.deck) : null) ?? config.deck };
+  const onDisk =
+    configPath && isDiskConfigPath(configPath)
+      ? configPath
+      : "path" in request && typeof request.path === "string" && isDiskConfigPath(request.path)
+        ? request.path
+        : "";
+  const themed = onDisk ? { ...loaded, configPath: onDisk } : loaded;
+  if (!config.deck) return themed;
+  return { ...themed, deckPath: (configPath ? diskDeckPath(configPath, config.deck) : null) ?? config.deck };
 }
 
 async function readConfigFile(
@@ -327,7 +336,12 @@ export async function loadThemeDocument(
   containerPath = "",
 ): Promise<Install> {
   const install = await loadYamlAsTheme(env, source, containerPath);
-  return { manifestPath: install.manifestPath, manifest: install.manifest, assetUrls: install.assetUrls };
+  return {
+    manifestPath: install.manifestPath,
+    manifest: install.manifest,
+    assetUrls: install.assetUrls,
+    ...(install.configPath ? { configPath: install.configPath } : {}),
+  };
 }
 
 /** Read a theme manifest or a config from a site path or an absolute disk path. */

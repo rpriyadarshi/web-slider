@@ -126,7 +126,7 @@ The iframe uses the theme the slider was booted with. Start that site with `--co
 
 A runnable package is one zip: the presenter, your theme, and one talk. The person you send it to needs no Node and no config path. They unpack it and double-click `Start.command` (macOS) or `Start.bat` (Windows), or run `./start.sh` (Linux). A bundled server starts on `127.0.0.1`, prints the link, and opens the browser on the talk. The window stays open while they present.
 
-Build it from the running app. Boot with your theme on disk, open the talk, and choose Export → Runnable package:
+Build it from the running app. Load the config that names the theme (Home, or `--config`), open the talk, and choose Export → Runnable package. The loaded config is the theme the package carries:
 
 ```bash
 npm run dev -- --config /absolute/path/to/web-slider.config.yaml
@@ -144,7 +144,7 @@ npm run share -- \
 
 `npm run pack` is the talk check. It writes `talk.zip` only when the talk names a local image; otherwise pass the YAML to `--deck` when share accepts a bare talk. When the talk names package paths, pass the zip pack wrote. The author story is [make-slides.md](make-slides.md#check-the-talk-on-disk).
 
-The package carries `app/talk/web-slider.config.yaml` with `manifest: talk/manifest.yaml` and `deck: talk/deck.zip`. It also carries the marks, the fonts, and the font licences the manifest names, plus the talk. It does not carry `samples/`. The manifest must sit beside the config and carry its own marks; a brand package name is refused. A talk that names a file it does not carry is refused.
+The package carries `app/talk/web-slider.config.yaml` with `manifest: talk/manifest.yaml` and `deck: talk/deck.zip`. It also carries the marks, the fonts, and the font licences the manifest names, plus the talk. It does not carry `samples/`. The manifest is a path relative to the config, including `..`. Marks and fonts sit beside that manifest. A brand package name is refused. A talk that names a file it does not carry is refused.
 
 A config that should open a talk includes `deck`. Boot then opens that talk instead of the stored session, and `?deck=` outranks it. Open, drop, and Blank deck still load other talks under the same theme. Reset to shipped in the toolbar reads the config's talk again and discards edits, notes, and answers in this browser. A reload or a new start also opens the shipped talk, so recipients keep their notes with Export → YAML.
 

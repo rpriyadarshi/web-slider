@@ -6,8 +6,8 @@ import { exportErrorText, shareRefusal } from "./shareRoute";
 describe("runnable package route", () => {
   it("builds only for a server started with an absolute config and a talk id that is a file name", () => {
     expect(shareRefusal("/home/author/theme/web-slider.config.yaml", "pd-dv")).toBeNull();
-    expect(shareRefusal("", "pd-dv")).toMatch(/started with no --config/);
-    expect(shareRefusal("samples/examples/northwind/web-slider.config.yaml", "pd-dv")).toMatch(/theme on disk/);
+    expect(shareRefusal("", "pd-dv")).toMatch(/config on disk/);
+    expect(shareRefusal("samples/examples/northwind/web-slider.config.yaml", "pd-dv")).toMatch(/--config/);
     expect(shareRefusal("/home/author/theme/web-slider.config.yaml", "../pd-dv")).toMatch(/not a file name/);
     expect(shareRefusal("/home/author/theme/web-slider.config.yaml", null)).toMatch(/talk id/);
   });

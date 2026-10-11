@@ -54,6 +54,7 @@ export function Shell({
   assets,
   embed = false,
   manifestPath,
+  configPath,
   exportDeck,
   packageFiles,
   sourceYaml = "",
@@ -73,6 +74,7 @@ export function Shell({
   assets?: Map<string, string>;
   embed?: boolean;
   manifestPath?: string;
+  configPath?: string;
   exportDeck?: Deck;
   packageFiles?: Map<string, Uint8Array>;
   sourceYaml?: string;
@@ -836,7 +838,7 @@ export function Shell({
                         const talk = await writeDeckPackage(sourceYaml, packageFiles ?? new Map());
                         const fetchImpl: typeof fetch = (input, init) => window.fetch(input, init);
                         try {
-                          const packed = await requestRunnablePackage(fetchImpl, window.location.origin, talk, portable.id);
+                          const packed = await requestRunnablePackage(fetchImpl, window.location.origin, talk, portable.id, configPath);
                           command.text = packed.command;
                           return packed.blob;
                         } catch (error) {

@@ -74,9 +74,11 @@ export async function requestRunnablePackage(
   origin: string,
   deckPackage: Blob,
   deckId: string,
+  configPath?: string,
 ): Promise<RunnablePackage> {
   const url = new URL(SHARE_ROUTE, origin.endsWith("/") ? origin : `${origin}/`);
   url.searchParams.set("name", deckId);
+  if (configPath) url.searchParams.set("config", configPath);
   const response = await fetchImpl(url, { method: "POST", headers: { "Content-Type": "application/zip" }, body: deckPackage });
   const command = response.headers.get(SHARE_COMMAND_HEADER) ?? "";
   const type = response.headers.get("content-type") ?? "";

@@ -235,7 +235,14 @@ export function App() {
   }, []);
 
   function applyInstall(loaded: Install, keepDeckPath: boolean) {
-    const next = keepDeckPath ? loaded : { manifestPath: loaded.manifestPath, manifest: loaded.manifest, assetUrls: loaded.assetUrls };
+    const next = keepDeckPath
+      ? loaded
+      : {
+          manifestPath: loaded.manifestPath,
+          manifest: loaded.manifest,
+          assetUrls: loaded.assetUrls,
+          ...(loaded.configPath ? { configPath: loaded.configPath } : {}),
+        };
     installRef.current = next;
     setInstall(next);
     const parsed = sourceDeckRef.current;
@@ -577,6 +584,7 @@ export function App() {
         key={deck.id}
         deck={deck}
         manifestPath={install.manifestPath}
+        configPath={install.configPath}
         exportDeck={sourceDeck ?? deck}
         session={session}
         assets={assetUrls}

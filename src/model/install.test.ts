@@ -189,6 +189,8 @@ fonts:
     });
     const install = await loadThemeAt({ fetch: fetchImpl, origin }, configPath);
     expect(install.manifestPath).toBe(manifestPath);
+    expect(install.configPath).toBe(configPath);
+    expect(install.deckPath).toBeUndefined();
     expect(diskDeckPath(configPath, "pd-dv.yaml")).toBe("/a/b/c/d/pd-dv.yaml");
     expect(install.manifest.brand).toMatchObject({ mark: markPath });
     expect(install.manifest.fonts?.Inter?.regular).toBe(fontPath);
