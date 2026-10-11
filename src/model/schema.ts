@@ -273,7 +273,6 @@ export const slideSchema = z
     id: idSchema,
     title: z.string().min(1),
     layout: regionNameSchema,
-    regions: regionMapSchema.optional(),
     subtitle: z.string().optional(),
     notes: z.string().optional(),
     takenNotes: z.string().optional(),

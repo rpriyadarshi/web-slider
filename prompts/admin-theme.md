@@ -98,13 +98,13 @@ All of these are optional. Colors are `#rrggbb`.
 - `chrome`: `light` or `dark`.
 - `chromeLight` and `chromeDark`: shell colors `ground`, `paper`, `text`, `muted`, `line`. These color the app chrome. They are not slide colors.
 - `type`, in px: `title`, `section`, `slide`, `body`, `sub`, `author`, `table`, `footer`, `wordmark`, `mark`, `caption`. Each is a positive number within the schema maximum. Omitted sizes are title 58, section 52, slide 36, body 22, sub 20, author 16, table 18, footer 14, wordmark 12, mark 22, caption 18.
-- `layouts`: the collection of page maps. Omit it and the presenter uses the default collection below. Manual insert lists every name you define, plus those defaults.
+- `layouts`: the collection of page maps. This is the only place boxes are defined. A talk chooses a name from this collection. It does not draw its own boxes. Omit `layouts` and the presenter uses the default collection below. Manual insert lists every name you define, plus those defaults.
 
 The lockup is the mark plus the wordmark. The presenter draws it. Do not also draw it as an image on a slide. Slide type sizes come from this manifest. The toolbar and the buttons do not.
 
 ## Layouts
 
-A layout is a named map of boxes. A box is a percentage of the page: `x`, `y`, `w`, and `h`, each from 0 to 100, and `x + w` and `y + h` stay within 100. Boxes on one layout do not overlap. The footer box and the body box do not share space. A theme may add names (two-column, image-left). A name is letters, numbers, and hyphens.
+A layout is a named map of boxes. A box is a percentage of the page: `x`, `y`, `w`, and `h`, each from 0 to 100, and `x + w` and `y + h` stay within 100. Boxes on one layout do not overlap. The footer box and the body box do not share space. Add a name when a talk needs an arrangement the collection does not have (a diagram page, a quadrant, a tall brief). The talk then sets `layout` to that name. A name is letters, numbers, and hyphens.
 
 A theme that omits `layouts` gets this collection. The footer band is the same box on every layout, so the lockup does not move.
 
@@ -182,6 +182,6 @@ Before you finish, confirm:
 - A theme outside this repository has its own font files. It does not point into `samples/themes/`. A theme shipped in this repository may.
 - Every color is `#rrggbb`. Every asset path is `https`, `data`, or a relative path with no `..` and no leading `/`.
 - A new family has a `fonts` entry with a `regular` file.
-- `layouts`, if set, uses percentage boxes that stay on the page and do not overlap. Omitting `layouts` leaves the default title, section, content, and quote maps.
+- `layouts` names the slide maps. Boxes stay on the page and do not overlap. A shipped sample theme writes title, section, content, and quote. A sample talk has no `regions` key.
 - `samples/catalog.yaml` has an `installs` entry for the config, and an `examples` entry only for a talk that exists.
 - You did not put `brand`, `theme`, or `fonts` on a talk, and you did not write `embed.js`.

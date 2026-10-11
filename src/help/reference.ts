@@ -61,8 +61,7 @@ const DECK: { [K in keyof DeckTalk]: string } = {
 const SLIDE: { [K in keyof Slide]: string } = {
   id: `${ID} Unique in the talk.`,
   title: "The heading on the slide.",
-  layout: "The theme layout for this slide. Built-in names are title, section, content, and quote. A theme may add more.",
-  regions: "This slide's own boxes, as percentages of the page. Each box is x, y, w, and h from 0 to 100. Boxes do not overlap. Leave it out to use the theme layout.",
+  layout: "The theme layout for this slide. The theme defines the boxes. Built-in names are title, section, content, and quote. A theme may add more.",
   subtitle: "A second line under the title.",
   notes: "The speaker script. Shown to you, not on the audience window.",
   takenNotes: "Notes taken during the talk. Leave this out of a new talk. A download puts it back.",

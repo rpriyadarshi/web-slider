@@ -58,12 +58,11 @@ export function layoutNames(theme?: { layouts?: Record<string, RegionMap> } | nu
   return [...preferred.filter((name) => name in layouts), ...rest];
 }
 
-/** The boxes for this slide: its own map, or the theme layout of the same name. */
+/** The boxes for this slide: the theme layout of the same name. */
 export function slideRegions(
   theme: { layouts?: Record<string, RegionMap> } | undefined,
-  slide: { layout: string; regions?: RegionMap },
+  slide: { layout: string },
 ): RegionMap {
-  if (slide.regions && Object.keys(slide.regions).length > 0) return slide.regions;
   const layouts = resolveLayouts(theme);
   return layouts[slide.layout] ?? layouts.content ?? DEFAULT_LAYOUTS.content;
 }

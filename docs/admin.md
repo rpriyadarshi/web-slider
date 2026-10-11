@@ -91,6 +91,8 @@ The lockup is the mark plus the wordmark, with the tail in the highlight color. 
 
 `theme.type` is the slide type, in px: `title`, `section`, `slide`, `body`, `sub`, `author`, `table`, `footer`, `wordmark`, `mark`, and `caption`. Omitted sizes are title 58, section 52, slide 36, body 22, sub 20, author 16, table 18, footer 14, wordmark 12, mark 22, caption 18. `headingScale` (a positive number, at most 3) multiplies `title`, `section`, and `slide`. The slide and the exports use these sizes. The toolbar, panes, and buttons are the app shell. They are not in the manifest and they are not in the deck.
 
+`theme.layouts` is the collection of slide maps. Each name is a set of boxes, and each box is `x`, `y`, `w`, and `h` as percentages of the page. A talk chooses one of those names with `layout`. A talk cannot define regions. Omit `layouts` and the presenter supplies title, section, content, and quote. Add a name when a talk needs another arrangement.
+
 `theme.chrome` is `light` or `dark`. `chromeLight` and `chromeDark` set the shell colors `ground`, `paper`, `text`, `muted`, and `line`. `align` is `left` or `center`. `radius` is from 0 to 48. Slide colors are `background`, `surface`, `text`, `muted`, and `accent`. Colors are `#rrggbb`.
 
 Built-in font names are Inter, Source Serif 4, and JetBrains Mono. Any other family needs a `fonts` entry with a `regular` file, and an optional `semibold` file, on the manifest that names the family. A product theme that carries its own brand object names all three built-in families so PDF export can embed them. Point those entries at `samples/themes/emporion/fonts/`.

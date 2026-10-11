@@ -1,3 +1,4 @@
+# Layout names come from the loaded theme. This file does not define regions.
 id: launch-review
 title: Launch Review
 author: Northwind

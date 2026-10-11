@@ -23,7 +23,6 @@ export function serializeDeck(deck: Deck, session: DeckSession): string {
       id: slide.id,
       title: slide.title,
       layout: slide.layout,
-      regions: slide.regions,
       subtitle: slide.subtitle,
       hidden: slide.hidden ? true : undefined,
       autoAdvance: slide.autoAdvance,

@@ -45,13 +45,13 @@ describe("layout maps", () => {
     expect(content?.body && content.footer && boxesOverlap(content.body, content.footer)).toBe(false);
   });
 
-  it("uses a slide's own map instead of the theme layout", () => {
-    const own = {
-      title: { x: 0, y: 0, w: 100, h: 20 },
-      body: { x: 0, y: 20, w: 100, h: 68 },
-      footer: { x: 0, y: 88, w: 100, h: 8 },
+  it("uses the layout the slide names", () => {
+    const brief = {
+      title: { x: 4, y: 0, w: 92, h: 10 },
+      body: { x: 4, y: 12, w: 92, h: 80 },
+      footer: { x: 4, y: 93, w: 92, h: 7 },
     };
-    expect(slideRegions({ layouts: DEFAULT_LAYOUTS }, { layout: "content", regions: own })).toEqual(own);
+    expect(slideRegions({ layouts: { brief } }, { layout: "brief" })).toEqual(brief);
     expect(slideRegions(undefined, { layout: "content" })).toEqual(DEFAULT_LAYOUTS.content);
   });
 
@@ -92,8 +92,9 @@ describe("layout maps", () => {
     ).toThrow(/right edge/);
   });
 
-  it("accepts a slide regions override and a theme with no layouts key", () => {
-    const deck = parseDeck(`
+  it("rejects boxes on a slide and still loads defaults when a theme omits layouts", () => {
+    expect(() =>
+      parseDeck(`
 id: deck
 title: Talk
 slides:
@@ -102,9 +103,8 @@ slides:
     layout: content
     regions:
       body: { x: 5, y: 5, w: 90, h: 80 }
-      footer: { x: 5, y: 88, w: 90, h: 8 }
-`);
-    expect(deck.slides[0]?.regions?.body).toEqual({ x: 5, y: 5, w: 90, h: 80 });
+`),
+    ).toThrow(/regions/);
     const manifest = parseManifest("brand:\n  name: N\n  wordmark: N\n  accent: \"#112233\"\n  highlight: \"#AABBCC\"\n  mark: mark.svg\n");
     expect(manifest.theme).toBeUndefined();
     expect(resolveLayouts(manifest.theme).quote).toEqual(DEFAULT_LAYOUTS.quote);

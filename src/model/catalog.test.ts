@@ -80,6 +80,19 @@ describe("sample catalog", () => {
       const loaded = YAML.load(readSite(relative));
       if (!loaded || typeof loaded !== "object" || Array.isArray(loaded) || !("slides" in loaded)) continue;
       expect(listed.has(relative)).toBe(true);
+      expect(readSite(relative)).not.toMatch(/^ {2,}regions:/m);
+    }
+  });
+
+  it("gives every sample theme a layout collection and no sample talk a region map", () => {
+    const manifests = [
+      ...yamlFiles(path.join(root, "samples/themes")).filter((file) => file.endsWith(`${path.sep}manifest.yaml`)),
+      path.join(root, "samples/examples/northwind/manifest.yaml"),
+    ];
+    for (const file of manifests) {
+      const loaded = YAML.load(readFileSync(file, "utf8")) as { theme?: { layouts?: Record<string, unknown> } };
+      const names = Object.keys(loaded.theme?.layouts ?? {});
+      expect(names, file).toEqual(expect.arrayContaining(["title", "section", "content", "quote"]));
     }
   });
 });

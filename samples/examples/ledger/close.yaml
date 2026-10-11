@@ -1,3 +1,4 @@
+# Layout names come from the loaded theme. This file does not define regions.
 id: quarterly-close
 title: Quarterly Close
 author: Ledger

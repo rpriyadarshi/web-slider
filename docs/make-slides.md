@@ -80,7 +80,7 @@ A read-only session block in the same pane shows the notes and answers recorded 
 
 ## The shape of a talk
 
-Five to twelve slides is enough. Open with `layout: title`. Use `section` as a break. Put the question on a `content` slide. `quote` is for one line.
+Five to twelve slides is enough. Open with `layout: title`. Use `section` as a break. Put the question on a `content` slide. `quote` is for one line. The name is a layout the loaded theme defines. You do not put region boxes on a slide.
 
 Ids use letters, numbers, hyphens, or underscores, and start with a letter or number. Slide ids are unique in the talk. Widget ids are unique on that slide.
 

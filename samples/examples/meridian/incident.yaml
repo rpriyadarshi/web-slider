@@ -1,3 +1,4 @@
+# Layout names come from the loaded theme. This file does not define regions.
 id: incident-review
 title: Incident Review
 author: Meridian
