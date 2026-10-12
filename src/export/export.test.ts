@@ -38,6 +38,23 @@ describe("exporters", () => {
     expect(Buffer.from(bytes.subarray(0, 5)).toString("utf8")).toBe("%PDF-");
   });
 
+  it("fits a slide whose speaker script is longer than the page", async () => {
+    const long = parseDeck(`
+id: deck
+title: Talk
+slides:
+  - id: peers
+    title: Your peers, in their own words
+    layout: content
+    notes: ${"The speaker script is long. ".repeat(80)}
+    blocks:
+      - type: paragraph
+        text: A short line on the slide.
+`);
+    const bytes = await buildPdf(long, sessionFromDeck(long), fontFiles());
+    expect(Buffer.from(bytes.subarray(0, 5)).toString("utf8")).toBe("%PDF-");
+  });
+
   it("builds a PowerPoint package", async () => {
     const blob = await buildPptx(deck, session);
     const bytes = new Uint8Array(await blob.arrayBuffer());

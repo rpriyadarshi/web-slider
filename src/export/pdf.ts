@@ -126,9 +126,6 @@ async function paintSlide(
       below.text(widgetToText(widget, session.answers[slide.id]?.[widget.id]), body, 12 * scale, colors.text, false, 4);
     }
   }
-  if (slide.notes) below.text(`Script: ${slide.notes}`, body, 11 * scale, colors.muted, false, 3);
-  const taken = session.notes[slide.id];
-  if (taken) below.text(`Taken notes: ${taken}`, body, 11 * scale, colors.muted, false, 3);
   if (below.failed) return false;
 
   let footerX = MARGIN;

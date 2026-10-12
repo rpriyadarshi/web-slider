@@ -139,7 +139,7 @@ Laser, captions, the blank screen, and the audience window are controls. They ar
 Export writes a new file. The original you opened is unchanged.
 
 - **YAML** merges the answers and the notes into the talk so you can open them again.
-- **PDF** uses the theme's type and the talk's aspect, and embeds Inter, Source Serif 4, and JetBrains Mono.
+- **PDF** is the slides, one page each. It uses the theme's type and the talk's aspect, and embeds Inter, Source Serif 4, and JetBrains Mono. The speaker script is not on the page. It is in the handout.
 - **Word** and **PowerPoint** name those fonts and the same sizes. A machine without the fonts installed will substitute. A chart becomes its labels and values. A video becomes its title and address.
 - **Handout** is a Word file: each visible slide, then its script, the questions with the recorded answers, and the notes taken on that slide.
 - **Package** is a zip of `deck.yaml` and the images the talk names. The same zip on disk comes from `npm run pack` in [Check the talk on disk](#check-the-talk-on-disk).
