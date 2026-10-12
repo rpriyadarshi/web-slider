@@ -78,27 +78,28 @@ async function sectionForSlide(deck: Deck, slide: Slide, session: DeckSession, h
     );
   }
 
-  paragraphs.push(...(await blockParagraphs(slide.blocks ?? [], theme)));
+  const body: Array<Paragraph | Table> = [...paragraphs];
+  body.push(...(await blockPieces(slide.blocks ?? [], theme)));
   if (slide.side?.length) {
-    paragraphs.push(paragraph("Examples", theme.fontHeading, 16, theme.accent, true));
-    paragraphs.push(...(await blockParagraphs(slide.side, theme)));
+    body.push(paragraph("Examples", theme.fontHeading, 16, theme.accent, true));
+    body.push(...(await blockPieces(slide.side, theme)));
   }
   if (slide.widgets?.length) {
-    paragraphs.push(paragraph("Decisions", theme.fontHeading, 16, theme.accent, true));
+    body.push(paragraph("Decisions", theme.fontHeading, 16, theme.accent, true));
     for (const widget of slide.widgets) {
-      paragraphs.push(
+      body.push(
         ...lines(widgetToText(widget, session.answers[slide.id]?.[widget.id]), theme.fontBody, 14, theme.text, false),
       );
     }
   }
   if (slide.notes || handout) {
-    paragraphs.push(paragraph("Script", theme.fontHeading, 14, theme.accent, true));
-    paragraphs.push(...lines(slide.notes || "No script.", theme.fontBody, 13, theme.muted, false));
+    body.push(paragraph("Script", theme.fontHeading, 14, theme.accent, true));
+    body.push(...lines(slide.notes || "No script.", theme.fontBody, 13, theme.muted, false));
   }
   const taken = session.notes[slide.id];
   if (taken || handout) {
-    paragraphs.push(paragraph("Taken notes", theme.fontHeading, 14, theme.accent, true));
-    paragraphs.push(...lines(taken || "No notes taken.", theme.fontBody, 13, theme.text, false));
+    body.push(paragraph("Taken notes", theme.fontHeading, 14, theme.accent, true));
+    body.push(...lines(taken || "No notes taken.", theme.fontBody, 13, theme.text, false));
   }
 
   const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
@@ -113,7 +114,7 @@ async function sectionForSlide(deck: Deck, slide: Slide, session: DeckSession, h
             shading: { type: ShadingType.CLEAR, fill: plain(theme.background) },
             margins: { top: 120, bottom: 120, left: 160, right: 160 },
             borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-            children: paragraphs,
+            children: body,
           }),
         ],
       }),
@@ -131,9 +132,13 @@ async function sectionForSlide(deck: Deck, slide: Slide, session: DeckSession, h
   };
 }
 
-async function blockParagraphs(blocks: Block[], theme: ResolvedTheme): Promise<Paragraph[]> {
-  const paragraphs: Paragraph[] = [];
+async function blockPieces(blocks: Block[], theme: ResolvedTheme): Promise<Array<Paragraph | Table>> {
+  const paragraphs: Array<Paragraph | Table> = [];
   for (const block of blocks) {
+    if (block.type === "table") {
+      paragraphs.push(dataTable(block, theme));
+      continue;
+    }
     if (block.type === "image") {
       let image;
       try {
@@ -194,6 +199,29 @@ async function blockParagraphs(blocks: Block[], theme: ResolvedTheme): Promise<P
     paragraphs.push(...lines(text, font, block.type === "quote" ? 20 : 16, theme.text, false));
   }
   return paragraphs;
+}
+
+function dataTable(block: Extract<Block, { type: "table" }>, theme: ResolvedTheme): Table {
+  const border = { style: BorderStyle.SINGLE, size: 4, color: plain(theme.muted) };
+  const borders = { top: border, bottom: border, left: border, right: border };
+  const width = Math.floor(100 / block.headers.length);
+  const cell = (text: string, header: boolean) =>
+    new TableCell({
+      width: { size: width, type: WidthType.PERCENTAGE },
+      shading: { type: ShadingType.CLEAR, fill: plain(header ? theme.surface : theme.background) },
+      margins: { top: 60, bottom: 60, left: 80, right: 80 },
+      borders,
+      children: [new Paragraph({ children: [run(text || " ", theme.fontBody, 12, theme.text, header)] })],
+    });
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, children: block.headers.map((header) => cell(header, true)) }),
+      ...block.rows.map(
+        (row) => new TableRow({ children: block.headers.map((_, index) => cell(row[index] ?? "", false)) }),
+      ),
+    ],
+  });
 }
 
 function paragraph(text: string, font: string, points: number, color: string, bold: boolean): Paragraph {

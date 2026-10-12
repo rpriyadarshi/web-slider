@@ -57,6 +57,10 @@ describe("handout", () => {
     expect(xml).toContain("Say this.");
     expect(xml).toContain("They said yes.");
     expect(xml).toContain("Ship?");
+    expect(xml).toContain("Option");
+    expect(xml).toContain("Friday");
+    expect(xml).not.toContain("Option | Owner");
+    expect((xml?.match(/<w:tbl>/g) ?? []).length).toBeGreaterThan(1);
     expect(xml).not.toContain("Hidden appendix");
     expect(xml).not.toContain("Do not print.");
   });
