@@ -49,7 +49,7 @@ describe("runnable package", () => {
     const app = path.join(dir, "app");
     await stageTalk({ theme: await readTheme(await themeConfig()), talk: await readTalk(await talkZip(true)), appDir: app });
     expect(parseConfig(await readFile(path.join(app, STAGED_CONFIG), "utf8"))).toEqual({
-      manifest: "talk/manifest.yaml",
+      manifest: "manifest.yaml",
       deck: "talk/deck.zip",
     });
     for (const file of ["talk/manifest.yaml", "talk/mark.svg", "talk/fonts/Inter-Regular.ttf", "talk/fonts/Inter-LICENSE.txt", "talk/deck.zip"]) {

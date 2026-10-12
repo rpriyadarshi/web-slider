@@ -123,7 +123,9 @@ export function talkRefs(deck) {
 }
 
 export function stagedConfig(deck) {
-  return `# Written by npm run share. The presenter loads this theme and opens the shipped talk.\nmanifest: talk/manifest.yaml\ndeck: ${deck}\n`;
+  // The config file is written at talk/web-slider.config.yaml, so manifest is beside it.
+  // deck stays a site path from the app root, which is how a site config names its talk.
+  return `# Written by npm run share. The presenter loads this theme and opens the shipped talk.\nmanifest: manifest.yaml\ndeck: ${deck}\n`;
 }
 
 export async function stageTalk({ theme, talk, appDir }) {

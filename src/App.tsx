@@ -227,7 +227,10 @@ export function App() {
       })
       .catch((caught: unknown) => {
         if (cancel) return;
-        setBootPhase({ kind: "ask", error: messageOf(caught) });
+        const message = messageOf(caught);
+        setBootPhase({ kind: "ask", error: message });
+        setError(message);
+        setHydrated(true);
       });
     return () => {
       cancel = true;

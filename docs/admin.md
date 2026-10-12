@@ -144,7 +144,7 @@ npm run share -- \
 
 `npm run pack` is the talk check. It writes `talk.zip` only when the talk names a local image; otherwise pass the YAML to `--deck` when share accepts a bare talk. When the talk names package paths, pass the zip pack wrote. The author story is [make-slides.md](make-slides.md#check-the-talk-on-disk).
 
-The package carries `app/talk/web-slider.config.yaml` with `manifest: talk/manifest.yaml` and `deck: talk/deck.zip`. It also carries the marks, the fonts, and the font licences the manifest names, plus the talk. It does not carry `samples/`. The manifest is a path relative to the config, including `..`. Marks and fonts sit beside that manifest. A brand package name is refused. A talk that names a file it does not carry is refused.
+The package carries `app/talk/web-slider.config.yaml` with `manifest: manifest.yaml` and `deck: talk/deck.zip`. It also carries the marks, the fonts, and the font licences the manifest names, plus the talk. It does not carry `samples/`. The manifest is a path relative to the config, including `..`. Marks and fonts sit beside that manifest. A brand package name is refused. A talk that names a file it does not carry is refused.
 
 A config that should open a talk includes `deck`. Boot then opens that talk instead of the stored session, and `?deck=` outranks it. Open, drop, and Blank deck still load other talks under the same theme. Reset to shipped in the toolbar reads the config's talk again and discards edits, notes, and answers in this browser. A reload or a new start also opens the shipped talk, so recipients keep their notes with Export → YAML.
 
