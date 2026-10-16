@@ -21,7 +21,7 @@ const CONTROL_LIST = [
   { id: "restart", label: "Restart timer", icon: "restart", group: "present", about: "Set the elapsed timer back to zero. The clock does not change." },
   { id: "laser", label: "Laser pointer", icon: "laser", group: "present", shortcut: "laser", about: "Turn on a pointer. Move over the slide. The audience window follows." },
   { id: "captions", label: "Captions", icon: "captions", group: "present", shortcut: "captions", about: "Turn on live captions from the microphone. They show on this window and the audience window." },
-  { id: "audience", label: "Audience window", icon: "audience", group: "present", about: "Open a second window that follows this one: the slide, the build, a blank screen, the laser, and captions. It does not show notes or questions." },
+  { id: "audience", label: "Audience window", icon: "audience", group: "present", about: "Open a second window that follows this one: the slide, the build, a blank screen, the laser, and captions. It does not show notes, questions, or edit marks. Edit marks appear there only when that window can change the slide." },
   { id: "overview", label: "Overview", icon: "overview", group: "present", shortcut: "overview", about: "Show every slide and jump to one." },
   { id: "zoom-out", label: "Zoom out", icon: "zoomOut", group: "present", shortcut: "zoom-out", about: "Make the slide smaller on the stage." },
   { id: "zoom-in", label: "Zoom in", icon: "zoomIn", group: "present", shortcut: "zoom-in", about: "Make the slide larger on the stage. Scroll when it exceeds the window." },

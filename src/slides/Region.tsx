@@ -24,12 +24,24 @@ export function Region({
   box,
   align,
   className,
+  tableRow,
+  tableCol,
+  emphasis,
+  comparison,
+  arrow,
+  media,
   children,
 }: {
   name: string;
   box: RegionBox;
   align: "left" | "center";
   className?: string;
+  tableRow?: number;
+  tableCol?: number;
+  emphasis?: boolean;
+  comparison?: boolean;
+  arrow?: boolean;
+  media?: boolean;
   children: ReactNode;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -41,19 +53,36 @@ export function Region({
     if (!frame || !fit) return;
 
     const apply = () => {
+      const padOf = () => {
+        const style = getComputedStyle(fit);
+        return (Number.parseFloat(style.paddingTop) || 0) + (Number.parseFloat(style.paddingBottom) || 0);
+      };
       const available = frame.clientHeight;
       if (!(available > 0)) return;
       frame.style.setProperty("--region-scale", "1");
-      let next = regionScale(neededHeight(fit), available);
+      let pad = padOf();
+      let next = regionScale(neededHeight(fit) + pad, available);
       frame.style.setProperty("--region-scale", String(next));
-      if (next < 1) {
+      for (let pass = 0; pass < 4 && next > REGION_SCALE_MIN; pass += 1) {
+        pad = padOf();
         const needed = neededHeight(fit);
-        if (needed > available + 4) {
-          next = Math.max(REGION_SCALE_MIN, Math.round(next * (available / needed) * 1000) / 1000);
-          frame.style.setProperty("--region-scale", String(next));
-        }
+        if (needed + pad <= available + 4) break;
+        const room = Math.max(1, available - pad);
+        const corrected = Math.max(REGION_SCALE_MIN, Math.round(next * (room / needed) * 1000) / 1000);
+        if (corrected >= next) break;
+        next = corrected;
+        frame.style.setProperty("--region-scale", String(next));
       }
       frame.dataset.regionScale = String(next);
+      const row = frame.dataset.tableRow;
+      if (row == null) return;
+      const peers = [...(frame.parentElement?.querySelectorAll<HTMLElement>(`:scope > .region[data-table-row="${row}"]`) ?? [])];
+      if (peers.length < 2) return;
+      const scale = Math.min(...peers.map((peer) => Number(peer.dataset.regionScale) || 1));
+      for (const peer of peers) {
+        peer.style.setProperty("--region-scale", String(scale));
+        peer.dataset.regionScale = String(scale);
+      }
     };
 
     apply();
@@ -72,7 +101,26 @@ export function Region({
       className={className ? `region ${className}` : "region"}
       data-region={name}
       data-align={align}
-      style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`, height: `${box.h}%` }}
+      data-table-row={tableRow}
+      data-table-col={tableCol}
+      data-emphasis={emphasis ? "recommended" : undefined}
+      data-table={comparison ? "comparison" : undefined}
+      data-tone={box.tone}
+      data-ground={box.ground ? "true" : undefined}
+      data-shape={box.shape}
+      data-faint={box.faint ? "true" : undefined}
+      data-ink={box.ink}
+      data-anchor={box.anchor}
+      data-arrow={arrow ? "true" : undefined}
+      data-media={media ? "true" : undefined}
+      style={{
+        left: `${box.x}%`,
+        top: `${box.y}%`,
+        width: `${box.w}%`,
+        height: `${box.h}%`,
+        ...(box.size ? { ["--source-size" as string]: `${box.size}px` } : {}),
+      }}
+      data-size={box.size ? "true" : undefined}
     >
       <div ref={fitRef} className="region-fit">
         {children}

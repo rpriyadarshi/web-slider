@@ -1,8 +1,8 @@
-import type { Deck, Slide } from "./schema";
+import { slidePieces, type Deck, type Slide } from "./schema";
 
 export function revealThresholds(slide: Slide): number[] {
   const steps = new Set<number>();
-  for (const block of slide.blocks ?? []) {
+  for (const block of slidePieces(slide)) {
     if (block.step && block.step > 0) steps.add(block.step);
     if (block.type === "bullets" || block.type === "numbered") {
       for (const item of block.items) {

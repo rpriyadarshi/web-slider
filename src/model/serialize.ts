@@ -31,6 +31,7 @@ export function serializeDeck(deck: Deck, session: DeckSession): string {
       theme: slide.theme,
       blocks: slide.blocks,
       side: slide.side,
+      slots: slide.slots,
       widgets,
     });
   });
@@ -42,6 +43,7 @@ export function serializeDeck(deck: Deck, session: DeckSession): string {
     footer: deck.footer,
     showSlideNumber: deck.showSlideNumber,
     aspect: deck.aspect,
+    layouts: deck.layouts,
     slides,
   });
 

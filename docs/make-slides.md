@@ -14,7 +14,7 @@ This browser keeps that deck, the widget answers, and the notes you take. Nothin
 
 A `.zip` package has `deck.yaml` at the root and the files the deck names. Download one from the package icon in Export, or build one on disk with the check below. A bare YAML file cannot resolve a local image path; open the zip after the theme has loaded. The package does not contain the mark or the font files.
 
-A `.pptx` import keeps each slide's title, bullets, and speaker notes. Pictures, charts, and animations in that file are left out.
+A `.pptx` dropped on the window keeps each text box, the fills behind it, and the pictures. Charts and animations are left out. To write the talk and its pictures to a directory, run `npm run import-pptx -- --pptx <file.pptx> --out <directory>` from this repository, then pack the yaml it prints.
 
 ## Check the talk on disk
 
@@ -80,7 +80,7 @@ A read-only session block in the same pane shows the notes and answers recorded 
 
 ## The shape of a talk
 
-Five to twelve slides is enough. Open with `layout: title`. Use `section` as a break. Put the question on a `content` slide. `quote` is for one line. The name is a layout the loaded theme defines. You do not put region boxes on a slide.
+Five to twelve slides is enough. Open with `layout: title`. Use `section` as a break. Put the question on a `content` slide. `quote` is for one line. The name is a layout the loaded theme defines, or a name in this talk's `layouts`. A slide does not carry its own boxes. Other regions on that layout are filled with `slots`. Columns that line up are one table: a row uses one type size, the recommended labels use the theme accent, and a second emphasis uses the theme highlight.
 
 Ids use letters, numbers, hyphens, or underscores, and start with a letter or number. Slide ids are unique in the talk. Widget ids are unique on that slide.
 
@@ -124,7 +124,7 @@ Arrow keys, space, and page up or down move through builds and then slides, skip
 
 `B` blanks the audience window in black and `W` blanks it in white. Any other navigation key clears the blank and does not move. `L` toggles a laser pointer on the slide and sends it to the audience window. `C` toggles live captions from the microphone. If this browser has no speech recognition, or the microphone is blocked, captions stop and say why.
 
-The notes band shows the script and a preview of the next slide. The audience icon opens a second window that follows this one: the slide, the build, the blank color, the laser, and the caption. That window does not show notes or questions. The toolbar shows the clock beside the elapsed timer, and a restart icon resets the timer.
+The notes band shows the script and a preview of the next slide. The audience icon opens a second window that follows this one: the slide, the build, the blank color, the laser, and the caption. That window does not show notes, questions, or edit marks. Edit marks appear there only when that window can change the slide. The toolbar shows the clock beside the elapsed timer, and a restart icon resets the timer.
 
 The theme icon switches the shell between light and dark for this session. It does not edit the theme file. Export and the insert menu close with Escape. The outline, examples, YAML, presenter strip, and help each have a pin and a close button. Esc closes a floating pane and leaves a docked pane open.
 

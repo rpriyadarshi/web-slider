@@ -10,6 +10,7 @@ import {
 } from "../mermaid/fit";
 import { renderMermaidSvg } from "../mermaid/render";
 import { bindProbe, type ProbePath } from "../model/probe";
+import { isColumnLabel } from "../model/regions";
 import type { Block } from "../model/schema";
 import { isRevealed } from "../model/steps";
 
@@ -23,6 +24,8 @@ export function Blocks({
   slideIndex = 0,
   probe = null,
   onProbe,
+  at = ["blocks"],
+  labels = false,
 }: {
   blocks: Block[] | undefined;
   revealed: number;
@@ -33,6 +36,8 @@ export function Blocks({
   slideIndex?: number;
   probe?: ProbePath | null;
   onProbe?: (path: ProbePath) => void;
+  at?: ProbePath;
+  labels?: boolean;
 }) {
   const visible = (blocks ?? []).flatMap((block, blockIndex) =>
     block !== skip && isRevealed(block.step, revealed) ? [{ block, blockIndex }] : [],
@@ -52,6 +57,8 @@ export function Blocks({
           slideIndex={slideIndex}
           probe={probe}
           onProbe={onProbe}
+          at={at}
+          labels={labels}
         />
       ))}
     </div>
@@ -68,6 +75,8 @@ function BlockView({
   slideIndex,
   probe,
   onProbe,
+  at,
+  labels,
 }: {
   block: Block;
   blockIndex: number;
@@ -78,12 +87,36 @@ function BlockView({
   slideIndex: number;
   probe: ProbePath | null;
   onProbe?: (path: ProbePath) => void;
+  at: ProbePath;
+  labels: boolean;
 }) {
-  const blockPath: ProbePath = ["slides", slideIndex, "blocks", blockIndex];
+  const blockPath: ProbePath = ["slides", slideIndex, ...at, blockIndex];
   if (block.type === "paragraph") {
+    const label = labels && isColumnLabel(block.text);
+    const className = [
+      "block paragraph",
+      label ? "label" : "",
+      block.bold ? "bold" : "",
+      block.italic ? "italic" : "",
+      block.display ? "display" : "",
+      block.tone ? `tone-${block.tone}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const sized = (points?: number) => (points ? { fontSize: `calc(${points}px * var(--region-scale, 1))` } : undefined);
     return (
-      <p className="block paragraph" {...bindProbe(blockPath, probe, onProbe)}>
-        {block.text}
+      <p className={className} style={sized(block.size)} {...bindProbe(blockPath, probe, onProbe)}>
+        {block.runs?.length
+          ? block.runs.map((run, index) => (
+              <span
+                key={`${run.text}-${index}`}
+                className={[run.bold ? "bold" : "", run.italic ? "italic" : "", run.tone ? `tone-${run.tone}` : ""].filter(Boolean).join(" ") || undefined}
+                style={sized(run.size)}
+              >
+                {run.text}
+              </span>
+            ))
+          : block.text}
       </p>
     );
   }

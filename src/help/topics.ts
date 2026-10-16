@@ -28,7 +28,7 @@ export const TOPICS: readonly Topic[] = [
     id: "present",
     title: "Present to a room",
     paragraphs: [
-      "The audience icon opens a second window that follows this one: the slide, the build, a blank screen, the laser, and captions. It does not show notes or questions.",
+      "The audience icon opens a second window that follows this one: the slide, the build, a blank screen, the laser, and captions. It does not show notes, questions, or edit marks. Edit marks appear there only when that window can change the slide.",
       "B blanks that window black and W blanks it white. Any other key brings the slide back and does not move. L toggles a pointer. Move over the slide and the audience window follows.",
       "C toggles live captions from the microphone. If this browser has no speech recognition, or the microphone is blocked, captions stop and say why.",
       "The toolbar shows the clock beside the elapsed timer. Restart sets the elapsed timer back to zero and leaves the clock alone.",

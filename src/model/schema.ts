@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { boxesOverlap } from "./regions";
+import { boxesOverlap, FIELD_REGIONS } from "./regions";
 
 export const FONT_NAMES = ["Inter", "Source Serif 4", "JetBrains Mono"] as const;
 export type FontName = (typeof FONT_NAMES)[number];
@@ -46,6 +46,14 @@ export const regionBoxSchema = z
     y: z.number().min(0).max(100),
     w: z.number().positive().max(100),
     h: z.number().positive().max(100),
+    tone: z.enum(["inverse", "accent", "highlight", "deep", "wash", "band"]).optional(),
+    ground: z.boolean().optional(),
+    shape: z.enum(["round", "circle", "rule"]).optional(),
+    faint: z.boolean().optional(),
+    size: z.number().positive().max(200).optional(),
+    ink: z.enum(["inverse", "accent", "highlight", "deep"]).optional(),
+    anchor: z.enum(["middle"]).optional(),
+    align: z.enum(["center"]).optional(),
   })
   .strict()
   .superRefine((box, ctx) => {
@@ -66,7 +74,7 @@ export const regionMapSchema = z.record(regionNameSchema, regionBoxSchema).super
     for (let j = i + 1; j < entries.length; j += 1) {
       const left = entries[i];
       const right = entries[j];
-      if (left && right && boxesOverlap(left[1], right[1])) {
+      if (left && right && !left[1].ground && !right[1].ground && boxesOverlap(left[1], right[1])) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${left[0]} overlaps ${right[0]}` });
       }
     }
@@ -134,8 +142,31 @@ const bulletItemSchema = z
   })
   .strict();
 
+const textToneSchema = z.enum(["accent", "highlight", "muted", "inverse"]);
+const textRunSchema = z
+  .object({
+    text: z.string().min(1),
+    bold: z.boolean().optional(),
+    italic: z.boolean().optional(),
+    size: z.number().positive().max(200).optional(),
+    tone: textToneSchema.optional(),
+  })
+  .strict();
+
 export const blockSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("paragraph"), text: z.string().min(1), step: stepField }).strict(),
+  z
+    .object({
+      type: z.literal("paragraph"),
+      text: z.string().min(1),
+      bold: z.boolean().optional(),
+      italic: z.boolean().optional(),
+      display: z.boolean().optional(),
+      size: z.number().positive().max(200).optional(),
+      tone: textToneSchema.optional(),
+      runs: z.array(textRunSchema).min(1).optional(),
+      step: stepField,
+    })
+    .strict(),
   z
     .object({
       type: z.literal("bullets"),
@@ -281,6 +312,7 @@ export const slideSchema = z
     theme: colorsSchema.optional(),
     blocks: z.array(blockSchema).optional(),
     side: z.array(blockSchema).optional(),
+    slots: z.record(regionNameSchema, z.array(blockSchema).min(1)).optional(),
     widgets: z.array(widgetSchema).optional(),
   })
   .strict();
@@ -320,65 +352,99 @@ export const deckSchema = z
     footer: z.string().optional(),
     showSlideNumber: z.boolean().optional(),
     aspect: z.enum(["16:9", "4:3"]).optional(),
+    layouts: layoutsSchema.optional(),
     slides: z.array(slideSchema).min(1),
   })
   .strict()
   .superRefine((deck, ctx) => {
     deck.slides.forEach((slide, slideIndex) => {
-      (["blocks", "side"] as const).forEach((place) => {
-      slide[place]?.forEach((block, blockIndex) => {
-        if (block.type === "link") {
-          const hasHref = block.href !== undefined;
-          const hasSlide = block.slide !== undefined;
-          if (hasHref === hasSlide) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["slides", slideIndex, place, blockIndex],
-              message: "link needs either an https href or a slide id",
-            });
-          }
-          if (block.href !== undefined && !block.href.startsWith("https://")) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["slides", slideIndex, place, blockIndex, "href"],
-              message: "href must be an https URL",
-            });
-          }
-          if (block.slide !== undefined && !deck.slides.some((candidate) => candidate.id === block.slide)) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["slides", slideIndex, place, blockIndex, "slide"],
-              message: `unknown slide id "${block.slide}"`,
-            });
-          }
-        }
-        if (block.type === "video" && !block.src.startsWith("https://")) {
+      const layout = deck.layouts?.[slide.layout];
+      if (slide.slots) {
+        if (!layout) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ["slides", slideIndex, place, blockIndex, "src"],
-            message: "video src must be an https URL",
+            path: ["slides", slideIndex, "slots"],
+            message: `slots need layout "${slide.layout}" declared on the talk`,
           });
-        }
-        if (block.type === "chart" && block.labels.length !== block.values.length) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["slides", slideIndex, place, blockIndex, "values"],
-            message: `chart has ${block.values.length} values but ${block.labels.length} labels`,
-          });
-        }
-        if (block.type === "table") {
-          block.rows.forEach((row, rowIndex) => {
-            if (row.length !== block.headers.length) {
+        } else {
+          for (const name of Object.keys(slide.slots)) {
+            const path = ["slides", slideIndex, "slots", name];
+            if ((FIELD_REGIONS as readonly string[]).includes(name)) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                path: ["slides", slideIndex, place, blockIndex, "rows", rowIndex],
-                message: `row has ${row.length} cells but the table has ${block.headers.length} headers`,
+                path,
+                message: `${name} is a slide field. A slot is any other region on the layout.`,
+              });
+            } else if (!layout[name]) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path,
+                message: `${name} is not a region on layout ${slide.layout}`,
               });
             }
-          });
+          }
         }
-      });
-      });
+      }
+      const groups: { path: Array<string | number>; blocks: typeof slide.blocks }[] = [
+        { path: ["blocks"], blocks: slide.blocks },
+        { path: ["side"], blocks: slide.side },
+      ];
+      for (const [name, blocks] of Object.entries(slide.slots ?? {})) groups.push({ path: ["slots", name], blocks });
+      for (const group of groups) {
+        group.blocks?.forEach((block, blockIndex) => {
+          const path = ["slides", slideIndex, ...group.path, blockIndex];
+          if (block.type === "link") {
+            const hasHref = block.href !== undefined;
+            const hasSlide = block.slide !== undefined;
+            if (hasHref === hasSlide) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path,
+                message: "link needs either an https href or a slide id",
+              });
+            }
+            if (block.href !== undefined && !block.href.startsWith("https://")) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [...path, "href"],
+                message: "href must be an https URL",
+              });
+            }
+            if (block.slide !== undefined && !deck.slides.some((candidate) => candidate.id === block.slide)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [...path, "slide"],
+                message: `unknown slide id "${block.slide}"`,
+              });
+            }
+          }
+          if (block.type === "video" && !block.src.startsWith("https://")) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...path, "src"],
+              message: "video src must be an https URL",
+            });
+          }
+          if (block.type === "chart" && block.labels.length !== block.values.length) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...path, "values"],
+              message: `chart has ${block.values.length} values but ${block.labels.length} labels`,
+            });
+          }
+          if (block.type === "table") {
+            block.rows.forEach((row, rowIndex) => {
+              if (row.length !== block.headers.length) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: [...path, "rows", rowIndex],
+                  message: `row has ${row.length} cells but the table has ${block.headers.length} headers`,
+                });
+              }
+            });
+          }
+        });
+      }
     });
 
     const slideIds = new Set<string>();
@@ -431,6 +497,15 @@ export const deckSchema = z
 export type Colors = z.infer<typeof colorsSchema>;
 export type ThemeInput = z.infer<typeof themeSchema>;
 export type Block = z.infer<typeof blockSchema>;
+
+/** Body, side, and every slot, in that order. */
+export function slidePieces(slide: {
+  blocks?: Block[];
+  side?: Block[];
+  slots?: Record<string, Block[] | undefined>;
+}): Block[] {
+  return [...(slide.blocks ?? []), ...(slide.side ?? []), ...Object.values(slide.slots ?? {}).flatMap((blocks) => blocks ?? [])];
+}
 export type BulletItem = z.infer<typeof bulletItemSchema>;
 export type Widget = z.infer<typeof widgetSchema>;
 export type Slide = z.infer<typeof slideSchema>;

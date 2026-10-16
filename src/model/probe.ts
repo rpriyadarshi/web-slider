@@ -63,6 +63,11 @@ export function probeContains(element: ProbePath, probe: ProbePath | null): bool
   return !probeMatches(element, probe);
 }
 
+/** A click on the selected text, or in the YAML editor, keeps the selection. Anywhere else clears it. */
+export function clickKeepsSelection(target: Element): boolean {
+  return Boolean(target.closest("[data-probe], .text-edit, .yaml-editor"));
+}
+
 export function bindProbe(path: ProbePath, probe: ProbePath | null, onProbe?: (path: ProbePath) => void) {
   if (!onProbe) return {};
   return {

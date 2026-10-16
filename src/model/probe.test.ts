@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caretSelection, locateProbe, probeAt, probeKey } from "./probe";
+import { caretSelection, clickKeepsSelection, locateProbe, probeAt, probeKey } from "./probe";
 
 const source = `id: review
 title: Review
@@ -13,6 +13,19 @@ slides:
           - text: First
           - text: Second
 `;
+
+describe("click outside text", () => {
+  function target(hits: string[]): Element {
+    return { closest: (selector: string) => (hits.some((hit) => selector.includes(hit)) ? {} : null) } as unknown as Element;
+  }
+
+  it("keeps a click on the text or the YAML editor, and clears anywhere else", () => {
+    expect(clickKeepsSelection(target(["data-probe"]))).toBe(true);
+    expect(clickKeepsSelection(target(["text-edit"]))).toBe(true);
+    expect(clickKeepsSelection(target(["yaml-editor"]))).toBe(true);
+    expect(clickKeepsSelection(target([]))).toBe(false);
+  });
+});
 
 describe("YAML cross-probe", () => {
   it("finds a slide title and a bullet from a path", () => {

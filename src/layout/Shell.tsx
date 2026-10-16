@@ -7,7 +7,7 @@ import { deckToYaml } from "../export/yaml";
 import { shareBuild } from "../model/build";
 import { editParsed, insertBlock, insertSlide, insertWidget, removeParsed } from "../model/insert";
 import { layoutNames } from "../model/regions";
-import { caretSelection, locateProbe, removableNode, selectionTarget, slideIndexInProbe, type ProbePath } from "../model/probe";
+import { caretSelection, clickKeepsSelection, locateProbe, removableNode, selectionTarget, slideIndexInProbe, type ProbePath } from "../model/probe";
 import { resolveTheme, type Block, type Deck, type Widget } from "../model/schema";
 import { clampPane, formatSessionBlock, type DeckSession, type PaneSize, type WidgetAnswer } from "../model/session";
 import { jumpTo, jumpToVisibleNumber, moveBack, moveForward, revealThresholds, visibleIndexes, visibleNumber } from "../model/steps";
@@ -243,6 +243,18 @@ export function Shell({
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
+
+  useEffect(() => {
+    if (embed) return;
+    const clear = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || clickKeepsSelection(target)) return;
+      setProbe(null);
+      setProbeSelection(null);
+    };
+    document.addEventListener("pointerdown", clear);
+    return () => document.removeEventListener("pointerdown", clear);
+  }, [embed]);
 
   useEffect(() => {
     if (embed || !sourceYaml) return;
@@ -514,6 +526,7 @@ export function Shell({
       data-theme={mode}
       data-toc-pin={session.ui.toc && session.ui.tocPinned ? "open" : "closed"}
       data-side-pin={session.ui.side && session.ui.sidePinned ? "open" : "closed"}
+      data-yaml={session.ui.yaml ? "open" : "closed"}
       data-yaml-pin={session.ui.yaml && session.ui.yamlPinned ? "open" : "closed"}
       data-help-pin={session.ui.help && session.ui.helpPinned ? "open" : "closed"}
       data-bottom={session.ui.bottom ? "open" : "closed"}
@@ -1023,7 +1036,7 @@ export function Shell({
             onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: true } }))}
             onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
             onInsertSlide={insertSlideAfterCaret}
-            layouts={layoutNames(deck.theme)}
+            layouts={layoutNames(deck.theme, deck)}
             onInsertBlock={insertBlockOnSlide}
             onInsertWidget={insertWidgetOnSlide}
             onRemove={removeSelected}
@@ -1110,7 +1123,7 @@ export function Shell({
           onPin={() => onSession((current) => ({ ...current, ui: { ...current.ui, yamlPinned: false } }))}
           onHide={() => onSession((current) => ({ ...current, ui: { ...current.ui, yaml: false } }))}
           onInsertSlide={insertSlideAfterCaret}
-          layouts={layoutNames(deck.theme)}
+          layouts={layoutNames(deck.theme, deck)}
           onInsertBlock={insertBlockOnSlide}
           onInsertWidget={insertWidgetOnSlide}
           onRemove={removeSelected}

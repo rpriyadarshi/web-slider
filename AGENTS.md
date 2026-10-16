@@ -39,7 +39,13 @@ That command is the presenter's check. It parses the talk with `deckSchema`, and
 
 ### Aspect
 
-The theme manifest sets `aspect` (`16:9` or `4:3`). Every slide shares that page. Theme agents define the layout collection: named maps of percentage boxes under `theme.layouts`. Deck agents choose one of those names with `layout`. A deck cannot contain `regions` or any other box map. Both write so the type and the graphic fit at scale 1. The presenter shrinks a region only when they miss, down to 0.65. Do not write decks that need a taller or scrolling stage to show the content. One primary visual per content slide; put a second visual on the next slide or in `side`. A Mermaid diagram whose labels would render smaller than the theme footer type does not fit: split the slide. The presenter will not draw that diagram. Author checklist: [prompts/generate-deck.md](prompts/generate-deck.md). Theme checklist: [prompts/admin-theme.md](prompts/admin-theme.md).
+The theme manifest sets `aspect` (`16:9` or `4:3`). Every slide shares that page. Theme agents define the layout collection: named maps of percentage boxes under `theme.layouts`. A talk may declare `layouts` of the same shape. A name there replaces the theme layout of that name for this talk. Deck agents choose one of those names with `layout`. A slide may fill any other region through `slots`. A slide cannot contain `regions` or its own boxes. A provided PowerPoint is compiled, not rewritten. From this repository:
+
+```bash
+npm run import-pptx -- --pptx /absolute/file.pptx --out /absolute/directory
+```
+
+That command keeps each text box at the source box, draws a fill as a ground behind the text, and writes each picture beside the talk. Then run the pack command on the yaml it prints. Do not merge a column of rows into one flowing region. Do not round a square. A round rectangle stays round and a circle stays a circle. Body text stays in the theme body font. Bold, italic, and size carry emphasis. Code stays monospace. A dark ground is the theme text color with the theme background as type. Other grounds are the theme accent or highlight. Do not switch the body face. Do not drop italics, arrows, or the fill behind them. Do not invent hex. Both write so the type and the graphic fit at scale 1. The presenter shrinks a region's type until the text fits the box, and stops at 0.15. Do not write decks that need a taller or scrolling stage to show the content. One primary visual per content slide; put a second visual on the next slide or in `side`. A Mermaid diagram whose labels would render smaller than the theme footer type does not fit: split the slide. The presenter will not draw that diagram. Author checklist: [prompts/generate-deck.md](prompts/generate-deck.md). Theme checklist: [prompts/admin-theme.md](prompts/admin-theme.md).
 
 ### Diagrams
 

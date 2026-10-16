@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import { localFileUrl, resolveYamlRef } from "../model/install";
-import type { Block, Deck } from "../model/schema";
+import { slidePieces, type Block, type Deck } from "../model/schema";
 
 export async function readDeckPackage(data: ArrayBuffer): Promise<{ yaml: string; files: Map<string, Uint8Array> }> {
   const zip = await JSZip.loadAsync(data);
@@ -45,7 +45,7 @@ export function packageAssetRefs(deck: Deck): string[] {
     add(face.semibold);
   }
   for (const slide of deck.slides) {
-    for (const block of [...(slide.blocks ?? []), ...(slide.side ?? [])]) {
+    for (const block of slidePieces(slide)) {
       if (block.type === "image") add(block.src);
     }
   }
@@ -120,6 +120,9 @@ export function deckWithAssetUrls(deck: Deck, urls: Map<string, string>): Deck {
       ...slide,
       blocks: mapBlocks(slide.blocks),
       side: mapBlocks(slide.side),
+      slots: slide.slots
+        ? Object.fromEntries(Object.entries(slide.slots).map(([name, blocks]) => [name, mapBlocks(blocks) ?? blocks]))
+        : undefined,
     })),
   };
 }

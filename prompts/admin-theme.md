@@ -132,7 +132,7 @@ layouts:
     footer: { x: 6, y: 88, w: 88, h: 8 }
 ```
 
-Region names the presenter places are `title`, `subtitle`, `author`, `body`, `side`, and `footer`. The presenter scales type and graphics inside a box only when the content does not fit, from 1 down to 0.65, then clips. Authors are told to fit at scale 1. Do not build a layout that only works after that shrink.
+Region names the presenter places are `title`, `subtitle`, `author`, `body`, `side`, and `footer`. The presenter scales type and graphics inside a box only when the content does not fit, from 1 down until the text fits, and stops at 0.15. Authors are told to fit at scale 1. Do not build a layout that only works after that shrink. A row of aligned columns shares that size. The theme accent marks the recommended column's labels, and the theme highlight is the second emphasis. Do not add a hex so a column can imitate another deck's navy, cyan, or orange.
 
 ## Fonts
 

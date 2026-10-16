@@ -1,7 +1,7 @@
 import { BrandLockup, resolveBrand, withAssetUrls } from "../brand/kit";
 import type { Deck, Slide } from "../model/schema";
 import { resolveTheme } from "../model/schema";
-import { slideRegions } from "../model/regions";
+import { FIELD_REGIONS, slideRegions, tableCells } from "../model/regions";
 import { isRevealed, visibleIndexes, visibleNumber } from "../model/steps";
 import { isDarkHex } from "../highlight";
 import { bindProbe, type ProbePath } from "../model/probe";
@@ -42,14 +42,18 @@ export function SlideView({
   const quoteCandidate = slide.layout === "quote" ? slide.blocks?.find((block) => block.type === "quote") : undefined;
   const quote = quoteCandidate && isRevealed(quoteCandidate.step, revealed) ? quoteCandidate : undefined;
   const dark = isDarkHex(theme.background);
-  const regions = slideRegions(deck.theme, slide);
+  const regions = slideRegions(deck.theme, slide, deck);
   const layoutClass = slide.layout === "title" || slide.layout === "section" || slide.layout === "quote" ? slide.layout : "content";
   const align = layoutClass === "content" ? theme.align : "center";
   const titleInBody = !regions.title;
+  const cells = tableCells(regions, (name) =>
+    (slide.slots?.[name] ?? []).flatMap((block) => (block.type === "paragraph" ? [block.text] : [])),
+  );
 
   return (
     <article
       className={`slide layout-${layoutClass}`}
+      data-editable={onEditTitle || onEditItem ? "true" : undefined}
       data-layout={slide.layout}
       data-align={align}
       data-aspect={deck.aspect ?? "16:9"}
@@ -166,6 +170,44 @@ export function SlideView({
           <Blocks blocks={slide.side} revealed={revealed} dark={dark} onOpenSlide={onOpenSlide} slideIndex={slideIndex} />
         </Region>
       ) : null}
+      {Object.entries(regions).map(([name, box]) => {
+        if (!box.ground) return null;
+        return <Region key={name} name={name} box={box} align="center" className="region-ground">{null}</Region>;
+      })}
+      {Object.entries(regions).map(([name, box]) => {
+        if ((FIELD_REGIONS as readonly string[]).includes(name) || box.ground) return null;
+        const blocks = slide.slots?.[name];
+        if (!blocks?.length) return null;
+        const place = cells[name];
+        const arrow = blocks.length === 1 && blocks[0]?.type === "paragraph" && /^[→←↑↓↔]+$/.test(blocks[0].text.trim());
+        const media = blocks.length === 1 && blocks[0]?.type === "image";
+        return (
+          <Region
+            key={name}
+            name={name}
+            box={box}
+            align={arrow || box.align === "center" ? "center" : "left"}
+            tableRow={place?.row}
+            tableCol={place?.col}
+            emphasis={place?.emphasis}
+            comparison={place?.comparison}
+            arrow={arrow}
+            media={media}
+          >
+            <Blocks
+              blocks={blocks}
+              revealed={revealed}
+              dark={dark}
+              onOpenSlide={onOpenSlide}
+              slideIndex={slideIndex}
+              probe={probe}
+              onProbe={onProbe}
+              at={["slots", name]}
+              labels={place?.comparison === true}
+            />
+          </Region>
+        );
+      })}
       {laser ? <span className="laser" style={{ left: `${laser.x * 100}%`, top: `${laser.y * 100}%` }} /> : null}
       {regions.footer ? (
         <Region name="footer" box={regions.footer} align="left" className="slide-footer">

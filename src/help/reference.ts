@@ -55,21 +55,23 @@ const DECK: { [K in keyof DeckTalk]: string } = {
   footer: "The line beside the lockup. The lockup itself comes from the theme.",
   showSlideNumber: "Set this only when this talk should differ from the theme.",
   aspect: "16:9 or 4:3. Set this only when this talk should differ from the theme.",
+  layouts: "Named region maps for this talk. A name here replaces the theme layout of the same name. Slides still only choose a name.",
   slides: "The slides. At least one.",
 };
 
 const SLIDE: { [K in keyof Slide]: string } = {
   id: `${ID} Unique in the talk.`,
   title: "The heading on the slide.",
-  layout: "The theme layout for this slide. The theme defines the boxes. Built-in names are title, section, content, and quote. A theme may add more.",
+  layout: "The layout for this slide. The theme defines the usual names. This talk's layouts replace a theme layout of the same name. Built-in names are title, section, content, and quote.",
   subtitle: "A second line under the title.",
   notes: "The speaker script. Shown to you, not on the audience window.",
   takenNotes: "Notes taken during the talk. Leave this out of a new talk. A download puts it back.",
   hidden: "Keeps the slide in the outline. Arrow keys skip it, and every export leaves it out. A click in the outline still opens it.",
   autoAdvance: "Seconds to wait after the last build before the next slide, above 0 and at most 3600. The slide does not advance while the audience window is blank. Leave it out unless the deck runs unattended.",
   theme: "Colors for this slide only. Anything left out comes from the theme.",
-  blocks: "The main column.",
-  side: "A short reference beside the slide, not a second essay.",
+  blocks: "The main column. This fills the body region.",
+  side: "A short reference beside the slide, not a second essay. This fills the side region.",
+  slots: "Blocks for regions other than title, subtitle, author, footer, body, and side. The name is a region on this slide's layout.",
   widgets: "Questions on the decision row. In an embedded talk that row is the feedback form.",
 };
 
@@ -82,7 +84,17 @@ function blockFields<T extends Block["type"]>(fields: { [K in keyof Extract<Bloc
 const BLOCKS: { [T in Block["type"]]: { about: string; fields: { [K in keyof Extract<Block, { type: T }>]: string } } } = {
   paragraph: {
     about: "A paragraph of text.",
-    fields: blockFields<"paragraph">({ type: BLOCK_TYPE, text: "The words to show.", step: STEP }),
+    fields: blockFields<"paragraph">({
+      type: BLOCK_TYPE,
+      text: "The words to show. The face stays the body font.",
+      bold: "Set when the paragraph is bold. The face stays the body font.",
+      italic: "Set when the paragraph is italic. The face stays the body font.",
+      display: "A large figure, such as a percent. The face stays the body font.",
+      size: "The type size in points. The face stays the body font. One point is one pixel on the page.",
+      tone: "accent, highlight, muted, or inverse. These are theme colors.",
+      runs: "Pieces of one paragraph when weight, italics, or color change mid-sentence. The face stays the body font.",
+      step: STEP,
+    }),
   },
   bullets: {
     about: "A bulleted list. Each item can appear on its own build.",
@@ -220,6 +232,13 @@ const WIDGETS: { [T in Widget["type"]]: { about: string; fields: { [K in keyof E
 const NESTED: Record<string, Record<string, string>> = {
   theme: COLORS,
   items: ITEMS,
+  runs: {
+    text: "The words in this piece. The face stays the body font.",
+    bold: "Set when this piece is bold. The face stays the body font.",
+    italic: "Set when this piece is italic. The face stays the body font.",
+    size: "The type size of this piece, in points. The face stays the body font.",
+    tone: "accent, highlight, muted, or inverse. These are theme colors.",
+  },
 };
 
 function unwrap(schema: z.ZodTypeAny): z.ZodTypeAny {

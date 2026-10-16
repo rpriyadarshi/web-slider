@@ -52,7 +52,9 @@ These are the mistakes that make the presenter reject the work, or that put a se
 - A second schema, written in prose or in a new parser, that disagrees with `src/model/schema.ts`.
 - A Mermaid flowchart or sequence pre-rendered to PNG on an `image` block when `type: mermaid` would do. Prefer the native block.
 - A content slide that stacks several visuals (chart + Mermaid + video, or a diagram beside a code block and a callout). The body has room for one visual. A diagram whose labels would fall below the theme footer type is unreadable; split the slide and rebuild the deck. The presenter will not draw it.
-- A deck that contains `regions` or any other box map. The theme defines the layouts. The deck chooses a name with `layout`.
+- A slide that contains `regions` or its own boxes. Layout boxes live once, on the theme or in the talk's `layouts`. The slide chooses a name with `layout` and fills other regions with `slots`.
+- Aligned columns drawn as separate cards, each with its own type size, or colored with a hex that is not the theme accent, highlight, or muted type. A row shares one size. The recommended labels use the accent.
+- A PowerPoint retyped by hand, or compiled by merging rows into one region, rounding a square, or dropping a picture. Compile with `npm run import-pptx`. Each text box keeps its box. A fill is a ground. A round rectangle stays round and a circle stays a circle. The body face stays. Bold, italic, and size change.
 - A slide that only fits because the presenter scaled it down. Both seats write for a fit at scale 1.
 
 ## After you write

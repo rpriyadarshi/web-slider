@@ -4,7 +4,7 @@ import { rasterFromBytes, rasterFromDeclaredSource } from "../export/images";
 import { highlightLanguageError } from "../highlight";
 import { parseDeck } from "../model/parse";
 import { resolvePath } from "../model/resolvePath";
-import { isAssetRef, type Block, type Deck } from "../model/schema";
+import { isAssetRef, slidePieces, type Block, type Deck } from "../model/schema";
 import { checkPackageFiles, packageAssetRefs, readDeckPackage, writeDeckPackage } from "./deckPackage";
 
 export type PackSuccess = {
@@ -109,7 +109,7 @@ export async function packDeckFile(deckPath: string, outPath?: string): Promise<
 function dataImageProblems(deck: Deck): string[] {
   const problems: string[] = [];
   for (const slide of deck.slides) {
-    for (const block of [...(slide.blocks ?? []), ...(slide.side ?? [])]) {
+    for (const block of slidePieces(slide)) {
       if (block.type !== "image" || !block.src.startsWith("data:")) continue;
       try {
         rasterFromDeclaredSource(block.src);
@@ -124,7 +124,7 @@ function dataImageProblems(deck: Deck): string[] {
 function languageProblems(deck: Deck): string[] {
   const problems: string[] = [];
   for (const slide of deck.slides) {
-    for (const block of [...(slide.blocks ?? []), ...(slide.side ?? [])]) {
+    for (const block of slidePieces(slide)) {
       const problem = codeLanguageProblem(slide.id, block);
       if (problem) problems.push(problem);
     }
